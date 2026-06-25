@@ -189,3 +189,46 @@ cost of annual-step is a small, monotonic timing bias (a year-end figure held ac
 rising capacity makes late-year capacity-factor denominators run slightly low); it is disclosed in
 the file's `basis_note`, not modelled away. A monthly capacity series, or labelled interpolation,
 is a later-version question once modelled figures are explicitly permitted.
+
+## 8. Derived series — CF basis, share basis, the cross-year artifact *(Stage 5, 2026-06-25)*
+
+`engine/derived.py` computes the daily cards from the settled store + the annual nameplate
+series: the wind stripe, the failure counters (<10%, <5%), the records, and the year-to-date
+shares → `site/data/{stripe,counters,records,ytd_shares}.json`. No modelled figures; every value
+is a settled Elexon figure over a published DUKES capacity. Each file carries its `basis` string
+inline so a card cannot be lifted out of context and read on the wrong basis.
+
+**Wind capacity factor — a conservative *lower bound* (Richard-confirmed).** FUELHH `WIND` is
+transmission-metered only; it excludes the embedded (distribution-connected) wind NESO estimates
+separately (the same series the live layer adds back). The denominator is **DUKES total UK wind**
+nameplate (annual-step). A transmission-only numerator over a total-installed denominator makes the
+daily CF a **lower bound** — the true output/total-installed ratio is higher because embedded wind
+output is missing from the top. The bias direction (understatement) is fixed and disclosed; the CF
+is never presented as the literal load factor. The alternative (sourcing a transmission-only annual
+capacity series to match the numerator) was considered and deferred; this basis ships with the bias
+made loud instead.
+
+**Mean-power definition.** CF = mean(`WIND` MW over the day's *present* periods) / nameplate MW.
+For a normal 48-period day this equals daily energy ÷ (capacity × 24 h); on a 46/50-period
+clock-change day or a known-gap short day it **normalises** rather than penalising the day for
+fewer half-hours — so a settlement hole never manufactures a phantom low-wind day. The stripe's
+mean line and `per_year_mean_cf` are the equal-weight mean of the daily CFs (one weight per
+column), matching what the eye reads off the stripe.
+
+**The cross-year artifact — must stay disclosed.** The lower-bound understatement is **not
+uniform across years**. In 2016 a large share of wind was embedded onshore (outside FUELHH), so
+transmission-wind ÷ total-nameplate is heavily depressed (mean CF 0.15; 132 days < 10%). As
+offshore — all transmission-metered — grew, the transmission share of total capacity rose and the
+apparent CF climbs (2025: 0.244; 47 days < 10%). **This upward drift is largely a denominator-mix
+artifact, not a real improvement in wind performance**, and the all-time records skew to the most
+biased year (longest sub-10% run, 17 days, falls in 2016). The honest reading: the stripe shows
+**within-year** daily variability ("the wind rarely blows") truthfully; **cross-year** comparison
+of the level is confounded and must be annotated, never sold as a trend.
+
+**YTD shares — transmission-system basis, *not* the national verdict (Richard-confirmed).** The
+store is settled FUELHH only, with no embedded solar/wind, so a national-demand share (as the live
+verdict uses) is impossible from settled data. `ytd_shares.json` is therefore a **transmission-
+system mix**: settled generation + net interconnector flow over transmission supply, with
+pumped-storage round-trip and embedded both excluded — internally consistent and 100%-summing, but
+explicitly **not comparable** to the live national-demand verdict (the file says so, and flags that
+embedded solar cannot appear in a settled-data share). Pinned by `tests/test_derived.py`.

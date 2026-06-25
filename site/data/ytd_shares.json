@@ -1,0 +1,145 @@
+{
+  "basis": "Transmission-system mix: settled FUELHH generation + net interconnector flow over transmission supply. Pumped-storage round-trip and embedded solar/wind are both excluded. This is NOT the live national-demand verdict and must not be compared to it: embedded solar is netted off national demand and cannot appear in a settled-data transmission share. Source: Elexon FUELHH (settled).",
+  "source": "Elexon FUELHH (settled)",
+  "generated_utc": "2026-06-25T19:14:37.470838+00:00",
+  "no_solar_note": "Embedded solar is netted off national demand and absent from settled FUELHH; it cannot appear in a settled-data transmission share.",
+  "signed_imports_note": "net_imports is a signed net flow: a net-export year is negative (e.g. 2022). Shares still sum to 100% but a pie/stacked chart must render net interconnectors as a signed bar, not a wedge.",
+  "latest_year": 2026,
+  "partial_years": [
+    2026
+  ],
+  "years": {
+    "2016": {
+      "supply_mwh": 278370269.5,
+      "shares_pct": {
+        "wind": 7.61,
+        "gas": 45.67,
+        "nuclear": 23.96,
+        "biomass": 0.0,
+        "other": 16.35,
+        "net_imports": 6.41
+      },
+      "partial": false
+    },
+    "2017": {
+      "supply_mwh": 271695956.5,
+      "shares_pct": {
+        "wind": 11.89,
+        "gas": 43.87,
+        "nuclear": 24.11,
+        "biomass": 0.82,
+        "other": 13.54,
+        "net_imports": 5.77
+      },
+      "partial": false
+    },
+    "2018": {
+      "supply_mwh": 269709445.5,
+      "shares_pct": {
+        "wind": 14.6,
+        "gas": 42.71,
+        "nuclear": 22.45,
+        "biomass": 5.96,
+        "other": 7.15,
+        "net_imports": 7.13
+      },
+      "partial": false
+    },
+    "2019": {
+      "supply_mwh": 262033123.5,
+      "shares_pct": {
+        "wind": 17.7,
+        "gas": 43.62,
+        "nuclear": 20.1,
+        "biomass": 6.56,
+        "other": 3.92,
+        "net_imports": 8.11
+      },
+      "partial": false
+    },
+    "2020": {
+      "supply_mwh": 243478794.5,
+      "shares_pct": {
+        "wind": 22.44,
+        "gas": 39.03,
+        "nuclear": 19.45,
+        "biomass": 7.38,
+        "other": 4.17,
+        "net_imports": 7.53
+      },
+      "partial": false
+    },
+    "2021": {
+      "supply_mwh": 253331843.5,
+      "shares_pct": {
+        "wind": 19.3,
+        "gas": 42.36,
+        "nuclear": 17.11,
+        "biomass": 7.49,
+        "other": 3.96,
+        "net_imports": 9.79
+      },
+      "partial": false
+    },
+    "2022": {
+      "supply_mwh": 238351996.5,
+      "shares_pct": {
+        "wind": 25.83,
+        "gas": 46.67,
+        "nuclear": 18.73,
+        "biomass": 6.27,
+        "other": 4.26,
+        "net_imports": -1.76
+      },
+      "partial": false
+    },
+    "2023": {
+      "supply_mwh": 233732224.5,
+      "shares_pct": {
+        "wind": 27.12,
+        "gas": 37.13,
+        "nuclear": 16.36,
+        "biomass": 5.71,
+        "other": 3.67,
+        "net_imports": 10.01
+      },
+      "partial": false
+    },
+    "2024": {
+      "supply_mwh": 237364668.5,
+      "shares_pct": {
+        "wind": 27.65,
+        "gas": 30.66,
+        "nuclear": 16.15,
+        "biomass": 7.92,
+        "other": 3.58,
+        "net_imports": 14.03
+      },
+      "partial": false
+    },
+    "2025": {
+      "supply_mwh": 237391374.0,
+      "shares_pct": {
+        "wind": 28.93,
+        "gas": 32.59,
+        "nuclear": 14.38,
+        "biomass": 8.39,
+        "other": 3.44,
+        "net_imports": 12.28
+      },
+      "partial": false
+    },
+    "2026": {
+      "supply_mwh": 114693022.5,
+      "shares_pct": {
+        "wind": 32.6,
+        "gas": 30.06,
+        "nuclear": 13.86,
+        "biomass": 7.96,
+        "other": 3.98,
+        "net_imports": 11.53
+      },
+      "partial": true
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "basis": "Daily wind capacity factor = mean(transmission WIND MW over the day's present periods) / total UK wind nameplate (DUKES 6.2, annual-step). CONSERVATIVE LOWER BOUND: FUELHH WIND is transmission-metered only and excludes embedded (distribution-connected) wind output, while the denominator is total installed wind \u2014 so the true load factor is higher than shown. Mean-power basis normalises short clock-change and known-gap days. Source: Elexon FUELHH (settled) / DUKES 6.2.",
+  "cross_year_caveat": "Cross-year comparison is confounded: the lower-bound understatement is largest in early years (more wind was embedded/off-FUELHH then) and shrinks as transmission-metered offshore grows, so the year-on-year rise is largely a denominator-mix artifact \u2014 not a real improvement in wind output \u2014 and all-time records skew to the earliest years. Read within-year variability, not the cross-year level. See engine/NOTES.md \u00a78.",
+  "metric": "Days with daily wind capacity factor below 10% / 5% of total nameplate",
+  "source": "Elexon FUELHH (settled) / DUKES 6.2 nameplate (annual-step)",
+  "generated_utc": "2026-06-25T19:14:37.470838+00:00",
+  "thresholds": {
+    "below_10pct": 0.1,
+    "below_5pct": 0.05
+  },
+  "latest_year": 2026,
+  "partial_years": [
+    2026
+  ],
+  "years": {
+    "2016": {
+      "days_observed": 366,
+      "below_10pct": 132,
+      "below_5pct": 47
+    },
+    "2017": {
+      "days_observed": 365,
+      "below_10pct": 84,
+      "below_5pct": 20
+    },
+    "2018": {
+      "days_observed": 365,
+      "below_10pct": 91,
+      "below_5pct": 30
+    },
+    "2019": {
+      "days_observed": 365,
+      "below_10pct": 61,
+      "below_5pct": 17
+    },
+    "2020": {
+      "days_observed": 366,
+      "below_10pct": 60,
+      "below_5pct": 19
+    },
+    "2021": {
+      "days_observed": 365,
+      "below_10pct": 93,
+      "below_5pct": 33
+    },
+    "2022": {
+      "days_observed": 365,
+      "below_10pct": 64,
+      "below_5pct": 22
+    },
+    "2023": {
+      "days_observed": 365,
+      "below_10pct": 57,
+      "below_5pct": 11
+    },
+    "2024": {
+      "days_observed": 366,
+      "below_10pct": 54,
+      "below_5pct": 15
+    },
+    "2025": {
+      "days_observed": 365,
+      "below_10pct": 47,
+      "below_5pct": 10
+    },
+    "2026": {
+      "days_observed": 171,
+      "below_10pct": 13,
+      "below_5pct": 1
+    }
+  }
+}
