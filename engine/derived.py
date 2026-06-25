@@ -44,6 +44,7 @@ from engine.history import read_store
 from engine.models import NameplateSeries
 
 NAMEPLATE_SERIES_PATH = Path("data/nameplate_series.json")
+NAMEPLATE_ANCHOR_PATH = Path("data/nameplate.json")
 SITE_DATA = Path("site/data")
 
 BELOW_10PCT = 0.10
@@ -342,9 +343,15 @@ def build(out_dir: Path = SITE_DATA) -> int:
         },
     }
 
+    # Publish the DUKES nameplate anchor to the web root so the capacity-trap card has a
+    # sound, dated denominator (the live NESO embedded-wind capacity is embedded-only —
+    # it would read ~146% of capacity; see engine/NOTES.md §2 and §8).
+    nameplate = json.loads(NAMEPLATE_ANCHOR_PATH.read_text())
+
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("stripe", stripe), ("counters", counters_out),
-                          ("records", records_out), ("ytd_shares", ytd)]:
+                          ("records", records_out), ("ytd_shares", ytd),
+                          ("nameplate", nameplate)]:
         _atomic_write(out_dir / f"{name}.json", json.dumps(payload, indent=2) + "\n")
         print(f"wrote {out_dir / f'{name}.json'}")
     return 0

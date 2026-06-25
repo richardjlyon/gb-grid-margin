@@ -1,0 +1,12 @@
+{
+  "as_of": "2024-12-31",
+  "source": "DUKES 2025, Table 6.2 (Capacity of, and electricity generated from, renewable sources), 2024 column. UK-wide, full installed capacity (not de-rated).",
+  "source_url": "https://assets.publishing.service.gov.uk/media/688a195a6478525675739026/DUKES_6.2.xlsx",
+  "published": "2025-07-31",
+  "wind_onshore_gw": 16.166,
+  "wind_offshore_gw": 15.916,
+  "wind_gw": 32.082,
+  "solar_gw": 18.28,
+  "wind_plus_solar_gw": 50.362,
+  "basis_note": "UK-wide (not GB only). Wind offshore includes 0.08 GW floating; the wind subtotal reconciles to onshore + offshore. Solar 18.28 GW is end-2024 DUKES; the live layer's NESO/PV_Live solar capacity (~22-23 GW) is GB, DC/MWp and 2026-vintage, so a live capacity-share must use that GB-DC denominator, never this one. End-2025 provisional (Energy Trends ET 6.1): wind 33.09 GW, solar 21.74 GW. See engine/NOTES.md #2."
+}

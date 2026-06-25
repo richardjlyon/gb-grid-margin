@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Gauge — how reliable is Britain's grid, right now?</title>
+<meta name="description" content="A live, sourced gauge of GB electricity grid reliability: how little wind and solar deliver, how much Britain leans on gas and imports, and how often the wind falls below 10% of capacity. Every figure traces to Elexon, NESO and DUKES.">
+<meta property="og:title" content="Grid Gauge">
+<meta property="og:description" content="How reliable is Britain's grid, right now? Wind and solar vs gas and imports — audited half-hour by half-hour, every figure sourced.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Grid Gauge">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container masthead-inner">
+    <div>
+      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>Grid Gauge</a></p>
+      <p class="brand-strap">Britain's grid reliability, audited half-hour by half-hour</p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="methodology.html">Methodology</a>
+      <a href="about.html">About</a>
+      <span class="live-dot" id="live-dot" aria-live="polite">Live</span>
+    </nav>
+  </div>
+</header>
+<div class="clockstrip"><div class="container" id="clockstrip">Reading the grid…</div></div>
+
+<main class="container">
+  <h1 class="visually-hidden">Grid Gauge — Britain's grid reliability, live</h1>
+
+  <!-- ENTRY 01 · the verdict pair, as a half-dial -->
+  <section class="entry" id="entry-verdict" aria-labelledby="h-verdict">
+    <p class="eyebrow">Entry 01 · The dependence gauge<span class="live-tag" id="verdict-mode">live</span></p>
+    <h2 class="headline" id="h-verdict">Gas &amp; imports vs wind &amp; solar, right now</h2>
+    <p class="def">The share of national demand met by gas and interconnector imports, against the share met by wind and solar — read live from Elexon's generation snapshot.</p>
+    <div id="verdict-body"><p class="def">Reading the live grid…</p></div>
+  </section>
+
+  <!-- ENTRY 02 · the capacity trap -->
+  <section class="entry" id="entry-trap" aria-labelledby="h-trap">
+    <p class="eyebrow">Entry 02 · The capacity trap<span class="live-tag" id="trap-mode">live</span></p>
+    <h2 class="headline ink" id="h-trap">Britain has built far more wind &amp; solar than it's generating right now</h2>
+    <p class="def">Total installed wind and solar capacity, against what the whole fleet is actually delivering this minute.</p>
+    <div id="trap-body"></div>
+  </section>
+
+  <!-- ENTRY 03 · gas vs all wind (shown only when true) -->
+  <section class="entry" id="entry-duel" aria-labelledby="h-duel" hidden>
+    <p class="eyebrow">Entry 03 · Gas vs every wind farm<span class="live-tag">live</span></p>
+    <h2 class="headline" id="h-duel">Right now the gas fleet out-produces every wind farm in Britain</h2>
+    <p class="def">The entire wind fleet's live output against the gas fleet's, both metered by Elexon. Shown only while it holds true.</p>
+    <div id="duel-body"></div>
+  </section>
+
+  <!-- ENTRY 04 · the wind stripe -->
+  <section class="entry" id="entry-stripe" aria-labelledby="h-stripe">
+    <p class="eyebrow">Entry 04 · The wind stripe</p>
+    <h2 class="headline" id="h-stripe">The wind rarely blows</h2>
+    <p class="def">Each column is one day's wind capacity factor since 2016 — pale where the wind blew, dark ink where it failed. The rail beneath marks every day wind ran below a tenth of its capacity.</p>
+    <div id="stripe-body"></div>
+  </section>
+
+  <!-- ENTRY 05 · the failure tally + records -->
+  <section class="entry" id="entry-tally" aria-labelledby="h-tally">
+    <p class="eyebrow">Entry 05 · The tally that writes itself</p>
+    <h2 class="headline ink" id="h-tally">Days the wind ran below a tenth of its capacity</h2>
+    <p class="def">One stroke per day under 10% of installed wind; struck through in red on the days it fell below 5%. The count writes itself as the year runs.</p>
+    <div id="tally-body"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p class="freshness" id="freshness"></p>
+    <p class="links">
+      <a href="methodology.html">Methodology &amp; sources</a> ·
+      <a href="about.html">About</a> ·
+      <a href="https://github.com/richardjlyon/grid-gauge">Source &amp; data</a>
+    </p>
+    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+  </div>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

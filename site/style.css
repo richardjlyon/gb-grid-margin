@@ -1,0 +1,284 @@
+/* ============================================================
+   GRID GAUGE — "The Settlement Ledger"
+   A two-ink system: black = in balance, red = a limit has failed.
+   Sibling to the Subsidy Clock (masthead / card / source-line / footer
+   grammar) but its own voice: red-on-white, sans display + serif read,
+   the half-dial gauge as the instrument. No green, no amber, no navy.
+   ============================================================ */
+
+:root {
+  --field:     #f4f5f6;   /* settlement grey — the ground (cool, not warm oat) */
+  --paper:     #ffffff;   /* leaf — cards/tables lift a hair off the field */
+  --ink:       #15181c;   /* ledger ink — all neutral figures, rules, needle at rest */
+  --slate:     #565e66;   /* secondary text, every baked source line, year ticks */
+  --rule:      #d7dbdf;   /* hairlines, card borders */
+  --rule-soft: #eaecee;   /* intra-table rules, the stripe's pale (windy) end */
+  --red:       #d6121f;   /* debit red — THE accent: headline, armed needle, failures */
+  --red-deep:  #a8101b;   /* deep debit — failing body ink at small sizes, sub-5% ticks */
+  --hatch:     #c9c6c0;   /* known-gap days only (never white, never red) */
+  --hatch-bg:  #edebe6;
+
+  --display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --read: "Newsreader", Georgia, "Times New Roman", serif;
+  --mono: "Spline Sans Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius: 2px;
+  --container: 1040px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--field);
+  color: var(--ink);
+  font-family: var(--read);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width: var(--container); margin: 0 auto; padding: 0 22px; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums lining-nums; }
+
+a { color: var(--red-deep); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--red); }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- masthead ---------- */
+.masthead { background: var(--paper); border-bottom: 2px solid var(--ink); }
+.masthead-inner {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px 24px; flex-wrap: wrap; padding: 16px 0 14px;
+}
+.brand {
+  margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.2rem;
+  letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink);
+  display: flex; align-items: center;
+}
+.brand a { color: inherit; text-decoration: none; }
+.brand-tick {
+  width: 10px; height: 10px; border-radius: 2px; background: var(--red);
+  margin-right: 11px; display: inline-block; animation: tick 2s steps(1) infinite;
+}
+@keyframes tick { 50% { opacity: 0.28; } }
+.brand-strap {
+  font-family: var(--read); font-style: italic; font-size: 0.95rem;
+  color: var(--slate); margin: 2px 0 0;
+}
+.masthead nav { display: flex; gap: 18px; flex-wrap: wrap; }
+.masthead nav a {
+  font-family: var(--display); font-size: 0.72rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--slate);
+  text-decoration: none; padding-bottom: 2px; border-bottom: 1px solid transparent;
+}
+.masthead nav a:hover { color: var(--ink); border-bottom-color: var(--red); }
+.live-dot {
+  font-family: var(--display); font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.12em; color: var(--red); display: inline-flex; align-items: center; gap: 6px;
+}
+.live-dot::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* clock strip under the masthead */
+.clockstrip {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--slate);
+  padding: 9px 0; border-bottom: 1px solid var(--rule); background: var(--paper);
+}
+
+/* ---------- the ledger: entries separated by a double rule ---------- */
+main { padding-bottom: 40px; }
+.entry { padding: 30px 0 26px; border-top: 3px double var(--rule); }
+.entry:first-of-type { border-top: none; }
+.eyebrow {
+  font-family: var(--display); font-size: 0.74rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 0.13em; color: var(--slate); margin: 0 0 6px;
+}
+.eyebrow .live-tag { color: var(--red); margin-left: 8px; }
+.headline {
+  font-family: var(--display); font-weight: 700; line-height: 1.05;
+  font-size: clamp(1.7rem, 4.2vw, 2.7rem); letter-spacing: -0.02em;
+  color: var(--red); margin: 0 0 8px; max-width: 18em;
+}
+.headline.ink { color: var(--ink); }
+.def {
+  font-family: var(--read); font-style: italic; color: var(--slate);
+  margin: 0 0 18px; max-width: 34em;
+}
+.src {
+  font-family: var(--mono); font-size: 0.74rem; color: var(--slate);
+  margin: 14px 0 0; letter-spacing: -0.01em;
+}
+.src a { color: var(--slate); text-decoration-color: var(--rule); }
+.src a:hover { color: var(--red); }
+
+/* a limit-is-attached caveat — full ink, red left-rule, never grey, never buried */
+.caveat {
+  font-family: var(--read); font-style: italic; color: var(--ink);
+  border-left: 3px solid var(--red); padding: 4px 0 4px 14px; margin: 16px 0 0;
+  max-width: 40em;
+}
+.caveat strong { font-style: normal; font-weight: 600; }
+
+/* ---------- the half-dial gauge (the signature) ---------- */
+.gauge-block { text-align: center; margin: 6px 0 2px; }
+.gauge { width: min(440px, 92%); height: auto; display: block; margin: 0 auto; }
+.gauge-zonelabels {
+  display: flex; justify-content: center; gap: 26px; margin: 2px 0 0;
+  font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--slate);
+}
+.stamp-pair {
+  display: flex; justify-content: center; gap: clamp(20px, 7vw, 70px);
+  margin: 10px 0 0; flex-wrap: wrap;
+}
+.stamp { text-align: center; }
+.stamp-val {
+  font-family: var(--display); font-weight: 700; font-size: clamp(1.9rem, 5vw, 2.8rem);
+  letter-spacing: -0.02em; line-height: 1; display: block;
+}
+.stamp-val.red { color: var(--red); }
+.stamp-label {
+  font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--slate); margin-top: 6px; display: block;
+}
+.status-line {
+  font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center; margin: 14px 0 0; color: var(--ink);
+}
+.status-line.armed { color: var(--red); }
+
+/* ---------- the receipt table ---------- */
+.receipt { width: 100%; border-collapse: collapse; margin: 20px 0 0; font-family: var(--mono); }
+.receipt caption {
+  font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--slate); text-align: left;
+  padding-bottom: 8px; border-bottom: 1px solid var(--ink);
+}
+.receipt th, .receipt td { padding: 7px 8px; font-size: 0.86rem; }
+.receipt thead th {
+  font-family: var(--display); font-weight: 500; font-size: 0.66rem;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--slate);
+  text-align: right; border-bottom: 1px solid var(--rule);
+}
+.receipt thead th:first-child { text-align: left; }
+.receipt td { border-bottom: 1px solid var(--rule-soft); }
+.receipt td.fuel { text-align: left; font-family: var(--read); font-style: normal; }
+.receipt td.n { text-align: right; }
+.receipt .bar-cell { width: 34%; }
+.bar { height: 9px; background: var(--ink); border-radius: 1px; }
+.bar.red { background: var(--red); }
+.receipt tr.total td {
+  border-top: 2px solid var(--ink); border-bottom: none; font-weight: 600;
+  padding-top: 9px; color: var(--ink);
+}
+.receipt tr.fail td.fuel, .receipt tr.fail td.n { color: var(--red-deep); }
+
+/* ---------- duel bars (gas vs wind) ---------- */
+.duel { margin: 14px 0 0; }
+.duel-row { display: grid; grid-template-columns: 8.5em 1fr auto; align-items: center; gap: 12px; margin: 9px 0; }
+.duel-row .lab { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate); }
+.duel-bar { height: 22px; border-radius: 1px; background: var(--ink); }
+.duel-bar.red { background: var(--red); }
+.duel-row .amt { font-family: var(--mono); font-size: 0.9rem; font-weight: 600; }
+.duel-punch { font-family: var(--read); font-size: 1.05rem; margin: 12px 0 0; max-width: 34em; }
+.duel-punch strong { color: var(--red); }
+
+/* ---------- the wind stripe ---------- */
+.stripe-wrap { margin: 12px 0 0; }
+.stripe-meanrow {
+  display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--slate);
+}
+.stripe-meanrow b { color: var(--ink); font-weight: 600; }
+#stripe-canvas { width: 100%; height: 160px; display: block; border: 1px solid var(--rule); background: var(--paper); }
+.stripe-axis {
+  display: flex; justify-content: space-between; margin: 5px 2px 0;
+  font-family: var(--mono); font-size: 0.68rem; color: var(--slate);
+}
+.stripe-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0;
+  font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--slate); align-items: center;
+}
+.swatch { display: inline-block; width: 14px; height: 10px; vertical-align: -1px; margin-right: 5px; border: 1px solid var(--rule); }
+.tick-mark { display: inline-block; width: 2px; height: 11px; background: var(--red); vertical-align: -2px; margin-right: 5px; }
+.tick-mark.deep { background: var(--red-deep); height: 14px; }
+
+/* ---------- the self-writing tally ---------- */
+.tally { width: 100%; border-collapse: collapse; margin: 8px 0 0; }
+.tally th {
+  font-family: var(--display); font-size: 0.66rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--slate); text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--ink);
+}
+.tally th:first-child { text-align: left; }
+.tally td { padding: 7px 10px; border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
+.tally td.year { font-family: var(--mono); color: var(--slate); }
+.tally td.marks { width: 62%; line-height: 1; }
+.tally td.n { font-family: var(--mono); text-align: right; font-weight: 600; }
+.tally td.n.red { color: var(--red); }
+.tally tr.partial td.year::after { content: " · so far"; color: var(--slate); font-family: var(--read); font-style: italic; font-size: 0.8em; }
+.mark { display: inline-block; width: 2px; height: 13px; background: var(--ink); margin: 0 2px 0 0; vertical-align: middle; }
+/* sub-5% days carry a second, non-colour signal: taller + a foot, so they are
+   distinguishable from sub-10% strokes without relying on the red alone. */
+.mark.sub5 { background: var(--red); height: 18px; border-bottom: 2px solid var(--red-deep); }
+.mark-gap { display: inline-block; width: 9px; }
+
+/* ---------- records ---------- */
+.records { margin: 18px 0 0; font-family: var(--read); }
+.records .rec { margin: 6px 0; }
+.records .rec b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
+
+/* ---------- footer ---------- */
+.footer { border-top: 2px solid var(--ink); background: var(--paper); padding: 22px 0 30px; margin-top: 8px; }
+.footer .freshness { font-family: var(--mono); font-size: 0.78rem; color: var(--slate); }
+.footer .links { font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.04em; margin: 8px 0 0; }
+.footer .links a { color: var(--slate); text-decoration: none; }
+.footer .links a:hover { color: var(--red); }
+.footer .trace { font-family: var(--read); font-style: italic; color: var(--slate); margin: 8px 0 0; }
+
+/* ---------- mode badge / fallback states ---------- */
+.modebadge {
+  font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 2px 8px; border: 1px solid var(--rule); border-radius: var(--radius); color: var(--slate);
+}
+.modebadge.fallback { color: var(--red-deep); border-color: var(--red-deep); }
+.modebadge.unavailable { color: var(--red); border-color: var(--red); }
+.warn { font-family: var(--read); font-style: italic; color: var(--red-deep); margin: 8px 0 0; }
+
+/* ---------- prose pages (methodology / about) ---------- */
+.prose { padding: 30px 0 50px; }
+.prose h1 { font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.5rem); letter-spacing: -0.02em; margin: 0 0 6px; }
+.prose .lede { font-family: var(--read); font-size: 1.18rem; color: var(--ink); max-width: 38em; margin: 0 0 6px; }
+.prose h2 { font-family: var(--display); font-weight: 700; font-size: 1.3rem; margin: 30px 0 4px; padding-top: 22px; border-top: 1px solid var(--rule); }
+.prose h2:first-of-type { border-top: none; }
+.prose p { max-width: 40em; }
+.prose .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--slate); }
+.prose .formula { font-family: var(--mono); font-size: 0.84rem; background: var(--paper); border: 1px solid var(--rule); border-left: 3px solid var(--ink); padding: 12px 14px; white-space: pre-wrap; max-width: 40em; }
+.prose .index { font-family: var(--display); font-size: 0.8rem; letter-spacing: 0.04em; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 640px) {
+  body { font-size: 1rem; }
+  .container { padding: 0 16px; }
+  .receipt .bar-cell { display: none; }
+  .duel-row { grid-template-columns: 1fr auto; }
+  .duel-row .lab { grid-column: 1 / -1; margin-bottom: -4px; }
+  .tally td.marks { display: none; }
+  #stripe-canvas { height: 130px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-tick, .live-dot::before { animation: none !important; }
+  * { scroll-behavior: auto !important; }
+}

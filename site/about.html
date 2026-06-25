@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Grid Gauge</title>
+<meta name="description" content="Grid Gauge is a sceptic's gauge of GB electricity grid reliability, companion to The Energy Trap. Open data, open methodology, every figure sourced — and its biases disclosed on the page.">
+<meta property="og:title" content="About Grid Gauge">
+<meta property="og:description" content="A sceptic's gauge of GB grid reliability — open data, disclosed biases.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container masthead-inner">
+    <div>
+      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>Grid Gauge</a></p>
+      <p class="brand-strap">About this site</p>
+    </div>
+    <nav aria-label="Primary"><a href="/">← The gauge</a><a href="methodology.html">Methodology</a></nav>
+  </div>
+</header>
+
+<main class="container prose">
+  <h1>About</h1>
+  <p class="lede">Grid Gauge is a sceptic's gauge of how reliable Britain's electricity grid really is — the live companion to <a href="https://theenergytrap.org">The Energy Trap</a>, and sibling to the Subsidy Clock. The Clock measures the cost; Grid Gauge measures the risk: how little wind and solar deliver, how much the system leans on gas and imports, and how close it runs to its limits.</p>
+
+  <h2>What this is</h2>
+  <p>The wind rarely blows; when it doesn't, gas and imports carry Britain. This site reads that off the grid's own settled records, half-hour by half-hour, and live in your browser. It is written in the sceptic's voice — but it counts and contextualises, it does not catastrophise.</p>
+
+  <h2>The bargain</h2>
+  <p>The data and the methodology are open on purpose: open figures are hard to dismiss. The cost of that openness is discipline — every number here is a settled or live Elexon/NESO/DUKES figure, with no modelled values in this first version. Where a figure has a known bias, we disclose it <em>on the page</em>, not in a footnote: the wind capacity factor is a deliberate conservative lower bound, and its cross-year level is a denominator-mix artifact. Both are stated where the figure is shown.</p>
+
+  <h2>Who, and corrections</h2>
+  <p>Made by <a href="https://theenergytrap.org">Richard Lyon</a>. Found something wrong? The figures and the code are in the <a href="https://github.com/richardjlyon/grid-gauge">open repository</a> — corrections are welcome and will be logged. The full methodology is <a href="methodology.html">here</a>.</p>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p class="links"><a href="/">The gauge</a> · <a href="methodology.html">Methodology</a> · <a href="https://github.com/richardjlyon/grid-gauge">Source &amp; data</a></p>
+    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+  </div>
+</footer>
+</body>
+</html>

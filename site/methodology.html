@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methodology &amp; sources — Grid Gauge</title>
+<meta name="description" content="How every figure on Grid Gauge is computed: the sources, the formulas, the denominators, and the disclosed biases — the conservative lower bound and the cross-year artifact.">
+<meta property="og:title" content="Grid Gauge — methodology &amp; sources">
+<meta property="og:description" content="Every figure, every denominator, every disclosed bias.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container masthead-inner">
+    <div>
+      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>Grid Gauge</a></p>
+      <p class="brand-strap">Methodology &amp; sources</p>
+    </div>
+    <nav aria-label="Primary"><a href="/">← The gauge</a><a href="about.html">About</a></nav>
+  </div>
+</header>
+
+<main class="container prose">
+  <h1>Methodology &amp; sources</h1>
+  <p class="lede">Every figure traces to a settled or live figure from Elexon, NESO or DUKES. No modelled numbers. This page sets out, figure by figure, the source, the formula in words, and the known limitations — including the two we disclose rather than hide: the conservative lower bound and the cross-year artifact.</p>
+  <p class="index">On this page:
+    <a href="#denominator">Denominator</a> · <a href="#nameplate">Nameplate</a> ·
+    <a href="#verdict">Verdict pair</a> · <a href="#capacity-trap">Capacity trap</a> ·
+    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#stripe">Wind stripe &amp; counter</a> ·
+    <a href="#store">The history store</a></p>
+
+  <h2 id="denominator">The denominator — national demand</h2>
+  <p>Every live share divides by <strong>national demand</strong>, reconstructed from the supply side so the shares sum to 100% by construction:</p>
+  <p class="formula">national demand = positive transmission generation (excl. interconnectors and pumped storage)
+                + net interconnector imports (all INT*, exports net off)
+                + embedded solar (NESO)  + embedded wind (NESO)</p>
+  <p>Pumped-storage pumping is demand, not supply, so it is excluded; interconnector exports net off inside net imports. A build-time guard reconciles this against Elexon's ITSDO (+ the same embedded estimate) and fails past a 12% gap — a tripwire for a gross feed failure, not a precision claim.</p>
+
+  <h2 id="nameplate">Nameplate (installed capacity)</h2>
+  <p class="meta">Source: <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6">DUKES 2025, Table 6.2</a> · UK, end-2024 · full installed (not de-rated)</p>
+  <p>Wind 32.082 GW (onshore 16.166 + offshore 15.916), solar 18.28 GW — 50.4 GW of wind + solar combined. These are UK-wide; the small NI capacity makes a published share mildly conservative, never inflated. <strong>Which denominator powers which figure matters:</strong> the static capacity trap and the wind stripe divide by this DUKES figure; a <em>live</em> solar capacity-share would instead use NESO's GB, DC-basis figure (~22 GW, 2026) — the two bases must never be mixed.</p>
+
+  <h2 id="verdict">The verdict pair</h2>
+  <p class="meta">Source: Elexon FUELINST (5-min) + NESO embedded forecast · live in the browser · cadence: ~5 min</p>
+  <p><strong>Formula in words:</strong> wind = transmission WIND + embedded wind; solar = embedded solar; gas = CCGT + OCGT; imports = net of all interconnectors; each over national demand. The dependence gauge reads gas + imports as a share of demand; the needle stays ink until that share passes 40% (or wind falls below 10% of capacity), then it arms red. The same verdict is computed in the build (Python) and the browser (JavaScript), pinned identical by a parity gate.</p>
+
+  <h2 id="capacity-trap">The capacity trap</h2>
+  <p class="meta">Source: Elexon FUELINST + NESO output ÷ DUKES 6.2 nameplate · live ÷ quarterly nameplate</p>
+  <p><strong>Formula in words:</strong> live wind + solar output as a share of the 50.4 GW of wind + solar Britain has installed. The numerator is live GB output; the denominator is DUKES UK installed capacity — a slightly large denominator, so the share is mildly conservative. (We deliberately do not use NESO's live embedded-wind capacity here: it is the embedded slice only, and would read a nonsensical share.)</p>
+
+  <h2 id="gas-vs-wind">Gas vs every wind farm</h2>
+  <p class="meta">Source: Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot · live</p>
+  <p><strong>Formula in words:</strong> the whole wind fleet's metered output against the whole gas fleet's, from one snapshot. The card is shown only while gas genuinely out-produces all wind. The per-station version ("one gas plant beats the lot") needs per-unit data (Elexon B1610) and is a deliberate fast-follow — asserted only when true.</p>
+
+  <h2 id="stripe">The wind stripe &amp; the failure counter — a conservative lower bound</h2>
+  <p class="meta">Source: Elexon FUELHH (settled) ÷ DUKES 6.2 nameplate (annual-step) · daily</p>
+  <p><strong>Formula in words:</strong> each day's wind capacity factor is the mean transmission wind output that day ÷ total installed wind nameplate for that year. The counter tallies days below 10% and 5% of capacity.</p>
+  <p><strong>Why it is a lower bound (disclosed, not hidden):</strong> FUELHH wind is transmission-metered only — it excludes embedded (distribution-connected) wind output — while the denominator is total installed wind. So the true load factor is higher than the figure shown; we publish the conservative number and say so.</p>
+  <p class="caveat"><strong>The cross-year artifact.</strong> The understatement is largest in early years, when more wind was embedded and off the transmission meter; as offshore (all transmission-metered) grew, the apparent capacity factor rises. That upward drift is largely a denominator-mix artifact, not improving wind — and the all-time records cluster in the earliest, most-understated years. Read the stripe <em>within</em> a year, never as a cross-year trend.</p>
+
+  <h2 id="store">The history store</h2>
+  <p>Settled half-hourly FUELHH and demand from Elexon back to the clean-data edge of 2016-01-01 (nothing earlier exists on the modern API). 77 days are genuine Elexon non-publications, recorded in a frozen manifest; we never fabricate the missing half-hours. The live clock is anchored to Elexon's server-stamped snapshot, not the device clock. Full notes and the open source are in the <a href="https://github.com/richardjlyon/grid-gauge">repository</a>.</p>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p class="links"><a href="/">The gauge</a> · <a href="about.html">About</a> · <a href="https://github.com/richardjlyon/grid-gauge">Source &amp; data</a></p>
+    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+  </div>
+</footer>
+</body>
+</html>
