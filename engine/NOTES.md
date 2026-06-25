@@ -232,3 +232,19 @@ system mix**: settled generation + net interconnector flow over transmission sup
 pumped-storage round-trip and embedded both excluded — internally consistent and 100%-summing, but
 explicitly **not comparable** to the live national-demand verdict (the file says so, and flags that
 embedded solar cannot appear in a settled-data share). Pinned by `tests/test_derived.py`.
+
+**Validation gate.** Two layers: `tests/test_derived.py` pins the logic on synthetic inputs;
+`tests/test_derived_gate.py` recomputes CF, counters, records and shares straight from the
+committed CSVs via a separate code path (no `engine.derived` import) and asserts the engine agrees
+on **every day** — the half that catches a regression only the real data's quirks (DST, the 77
+known-gap days, blanks, leap years) would expose.
+
+**Open for a later version.**
+- *Transmission-matched denominator (the real fix for the lower bound).* Sourcing an annual
+  transmission-connected wind capacity series (DUKES total − embedded, per year) to match the
+  transmission-only numerator would remove both the understatement and the cross-year artifact.
+  Considered and deferred here; the lower bound ships with the bias made loud instead.
+- *Records grain.* `records.json` ships **all-time** extremes, which (per the artifact above) skew
+  to the earliest, most-understated years. Whether Stage 6 surfaces per-year or rolling-window
+  records instead — to avoid presenting a 2016-clustered figure as the headline — is an open
+  presentation decision, not yet made.
