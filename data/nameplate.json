@@ -1,0 +1,10 @@
+{
+  "_status": "UNVERIFIED — placeholders. Do not publish any '% of capacity' figure until sourced from REPD/DUKES and dated. See engine/NOTES.md #2.",
+  "as_of": null,
+  "source": "REPD / DUKES (to be cited)",
+  "wind_gw": null,
+  "wind_onshore_gw": null,
+  "wind_offshore_gw": null,
+  "solar_gw": null,
+  "wind_plus_solar_gw": null
+}

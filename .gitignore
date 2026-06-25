@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+
+# Private working notes — never commit (see _private/README.md)
+_private/
+
+# Local scratch
+/tmp/
+*.log
+
+# Node (site tooling, if any later)
+node_modules/
