@@ -32,6 +32,17 @@ engine/NOTES.md  Methodology decisions and known limitations
 site/          Static dashboard (no framework, no bundler)
 site/data/     Build-written JSON consumed by the site
 data/          Committed reference data (capacity figures, append-only store)
+tests/         Engine tests (methodology guards, feed-boundary models)
+```
+
+## Running
+
+The engine is a [uv](https://docs.astral.sh/uv/) project. From the repo root:
+
+```
+uv sync                              # create the environment
+uv run python -m engine.grid_engine  # print the live verdict
+uv run pytest                        # run the tests
 ```
 
 ## Data sources
@@ -39,10 +50,12 @@ data/          Committed reference data (capacity figures, append-only store)
 - **FUELINST** — 5-minute transmission generation by fuel type (live layer).
 - **FUELHH** — settled half-hourly generation by fuel type (history layer).
 - **Interconnectors** — the `INT*` fuel types (net import/export flows).
-- **Capacity (nameplate)** — installed wind and solar capacity from REPD / DUKES, used as the
-  denominator for capacity-factor figures. Cited and dated in `data/nameplate.json`.
-- **Solar** — not present in FUELINST (embedded solar is netted off demand); ingested
-  separately. See `engine/NOTES.md`.
+- **Capacity (nameplate)** — installed wind and solar capacity from DUKES 2025 (Table 6.2,
+  UK, end-2024), used as the denominator for capacity-factor figures. Cited and dated in
+  `data/nameplate.json`.
+- **Solar** — not present in FUELINST (embedded solar is netted off demand). The published
+  figure is NESO's embedded estimate, cross-checked at build time against Sheffield Solar
+  PV_Live. See `engine/NOTES.md`.
 
 ## Methodology and provenance
 

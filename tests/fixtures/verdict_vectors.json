@@ -1,0 +1,364 @@
+{
+  "_note": "Golden parity vectors. Regenerate ONLY via `uv run python -m engine.build_site emit-vectors` (never in CI). Expected values are compute_verdict output \u2014 correct-by-construction.",
+  "verdict_cases": [
+    {
+      "name": "baseline",
+      "mix": {
+        "CCGT": 6000,
+        "OCGT": 0,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": 1000,
+        "INTIRL": -300,
+        "OTHER": 500,
+        "NPSHYD": 100,
+        "PS": -800
+      },
+      "embedded": {
+        "solar_mw": 10000,
+        "wind_mw": 1000,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 28300,
+        "wind_mw": 6000,
+        "solar_mw": 10000,
+        "gas_mw": 6000,
+        "net_import_mw": 700,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 600,
+        "wind_pct": 21.2,
+        "solar_pct": 35.3,
+        "gas_pct": 21.2,
+        "import_pct": 2.5,
+        "gas_plus_imports_pct": 23.7,
+        "renewables_pct": 56.5,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "high_solar_midday",
+      "mix": {
+        "CCGT": 4000,
+        "WIND": 6000,
+        "NUCLEAR": 3500,
+        "BIOMASS": 1500,
+        "INTFR": 1500,
+        "OTHER": 300
+      },
+      "embedded": {
+        "solar_mw": 13000,
+        "wind_mw": 1200,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 31000,
+        "wind_mw": 7200,
+        "solar_mw": 13000,
+        "gas_mw": 4000,
+        "net_import_mw": 1500,
+        "nuclear_mw": 3500,
+        "biomass_mw": 1500,
+        "other_mw": 300,
+        "wind_pct": 23.2,
+        "solar_pct": 41.9,
+        "gas_pct": 12.9,
+        "import_pct": 4.8,
+        "gas_plus_imports_pct": 17.7,
+        "renewables_pct": 65.2,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "low_wind_lull",
+      "mix": {
+        "CCGT": 18000,
+        "WIND": 800,
+        "NUCLEAR": 3500,
+        "BIOMASS": 2000,
+        "INTFR": 3000,
+        "OTHER": 400
+      },
+      "embedded": {
+        "solar_mw": 200,
+        "wind_mw": 150,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 28050,
+        "wind_mw": 950,
+        "solar_mw": 200,
+        "gas_mw": 18000,
+        "net_import_mw": 3000,
+        "nuclear_mw": 3500,
+        "biomass_mw": 2000,
+        "other_mw": 400,
+        "wind_pct": 3.4,
+        "solar_pct": 0.7,
+        "gas_pct": 64.2,
+        "import_pct": 10.7,
+        "gas_plus_imports_pct": 74.9,
+        "renewables_pct": 4.1,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "net_export",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 9000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": -1500,
+        "INTNED": -800,
+        "OTHER": 300
+      },
+      "embedded": {
+        "solar_mw": 1000,
+        "wind_mw": 500,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 19500,
+        "wind_mw": 9500,
+        "solar_mw": 1000,
+        "gas_mw": 6000,
+        "net_import_mw": -2300,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 300,
+        "wind_pct": 48.7,
+        "solar_pct": 5.1,
+        "gas_pct": 30.8,
+        "import_pct": -11.8,
+        "gas_plus_imports_pct": 19.0,
+        "renewables_pct": 53.8,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "ps_pumping",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": 700,
+        "PS": -1200,
+        "OTHER": 300
+      },
+      "embedded": {
+        "solar_mw": 4000,
+        "wind_mw": 600,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 21600,
+        "wind_mw": 5600,
+        "solar_mw": 4000,
+        "gas_mw": 6000,
+        "net_import_mw": 700,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 300,
+        "wind_pct": 25.9,
+        "solar_pct": 18.5,
+        "gas_pct": 27.8,
+        "import_pct": 3.2,
+        "gas_plus_imports_pct": 31.0,
+        "renewables_pct": 44.4,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "nonpositive_fuel_excluded_from_other",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": 700,
+        "COAL": 0,
+        "OIL": -50,
+        "OTHER": 300
+      },
+      "embedded": {
+        "solar_mw": 4000,
+        "wind_mw": 600,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 21600,
+        "wind_mw": 5600,
+        "solar_mw": 4000,
+        "gas_mw": 6000,
+        "net_import_mw": 700,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 300,
+        "wind_pct": 25.9,
+        "solar_pct": 18.5,
+        "gas_pct": 27.8,
+        "import_pct": 3.2,
+        "gas_plus_imports_pct": 31.0,
+        "renewables_pct": 44.4,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "unknown_fuel_enters_other",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": 700,
+        "UNOBTANIUM": 120
+      },
+      "embedded": {
+        "solar_mw": 4000,
+        "wind_mw": 600,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 21420,
+        "wind_mw": 5600,
+        "solar_mw": 4000,
+        "gas_mw": 6000,
+        "net_import_mw": 700,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 120,
+        "wind_pct": 26.1,
+        "solar_pct": 18.7,
+        "gas_pct": 28.0,
+        "import_pct": 3.3,
+        "gas_plus_imports_pct": 31.3,
+        "renewables_pct": 44.8,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "lowercase_interconnector",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "intfr": 700,
+        "OTHER": 300
+      },
+      "embedded": {
+        "solar_mw": 4000,
+        "wind_mw": 600,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 21600,
+        "wind_mw": 5600,
+        "solar_mw": 4000,
+        "gas_mw": 6000,
+        "net_import_mw": 700,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 300,
+        "wind_pct": 25.9,
+        "solar_pct": 18.5,
+        "gas_pct": 27.8,
+        "import_pct": 3.2,
+        "gas_plus_imports_pct": 31.0,
+        "renewables_pct": 44.4,
+        "solar_included": true
+      }
+    },
+    {
+      "name": "half_even_boundary",
+      "mix": {
+        "CCGT": 2450,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "BIOMASS": 2000,
+        "INTFR": 550
+      },
+      "embedded": {
+        "solar_mw": 6000,
+        "wind_mw": 1000,
+        "time": "2026-06-25T13:30Z"
+      },
+      "expected": {
+        "snapshot": null,
+        "embedded_time": "2026-06-25T13:30Z",
+        "national_demand_mw": 20000,
+        "wind_mw": 6000,
+        "solar_mw": 6000,
+        "gas_mw": 2450,
+        "net_import_mw": 550,
+        "nuclear_mw": 3000,
+        "biomass_mw": 2000,
+        "other_mw": 0,
+        "wind_pct": 30.0,
+        "solar_pct": 30.0,
+        "gas_pct": 12.2,
+        "import_pct": 2.8,
+        "gas_plus_imports_pct": 15.0,
+        "renewables_pct": 60.0,
+        "solar_included": true
+      }
+    }
+  ],
+  "snapshot_cases": [
+    {
+      "name": "complete_bucket",
+      "mix": {
+        "CCGT": 6000,
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "INTFR": 700
+      },
+      "demand": 20000,
+      "expected_valid": true
+    },
+    {
+      "name": "incomplete_missing_ccgt",
+      "mix": {
+        "WIND": 5000,
+        "NUCLEAR": 3000,
+        "INTFR": 700
+      },
+      "demand": 20000,
+      "expected_valid": false
+    }
+  ],
+  "embedded_cases": [
+    {
+      "name": "in_window",
+      "embedded_time": "2026-06-25T14:00Z",
+      "snapshot_time": "2026-06-25T13:40:00Z",
+      "expected_valid": true
+    },
+    {
+      "name": "out_of_window",
+      "embedded_time": "2026-06-25T14:30Z",
+      "snapshot_time": "2026-06-25T13:40:00Z",
+      "expected_valid": false
+    }
+  ]
+}

@@ -4,16 +4,23 @@ __pycache__/
 .venv/
 venv/
 .env
+.pytest_cache/
 
 # OS
 .DS_Store
 
-# Private working notes — never commit (see _private/README.md)
+# Private working notes & local agent context — never commit
 _private/
+CLAUDE.md
 
 # Local scratch
 /tmp/
 *.log
+.playwright-mcp/
+.memsearch/
 
 # Node (site tooling, if any later)
 node_modules/
+
+# Dev-only live-layer validation harness — never shipped to prod (fault-injection page)
+site/validate.html
