@@ -129,3 +129,63 @@ anchored by a `TODO(stage3-audit Lx)` comment at the relevant line (`grep -rn "s
 - **L6 — forward-skew suppresses fresh fallback** (`site/live.js:buildFallback`). A device clock
   12 h+ fast makes a genuinely-fresh fallback read as >12 h old → UNAVAILABLE. Extreme and
   conservative (shows nothing, never a wrong number).
+
+## 6. History pipeline — store, edge, gate *(Stage 4, 2026-06-25)*
+
+`engine/history.py` pulls settled half-hourly **FUELHH** (generation by fuel type + signed
+interconnector flows) and the **demand outturn** (INDO/ITSDO) from Elexon, into an append-only,
+git-diffable CSV store under `data/history/` — the source of truth for every historical figure.
+No modelled numbers: each value is a settled Elexon figure keyed to a settlement date and period.
+
+**Clean-data edge — 2016-01-01, not 2009.** FUELHH on the modern Elexon Insights API returns an
+empty array before **2016-01-01** (verified live, both directions). National demand
+(`/demand/outturn`) starts later still, **2016-03-01**; the ~2-month gap carries fuel mix with
+blank INDO/ITSDO. Pre-2016 exists only in NESO's *derived* historic-generation-mix CSV (modelled
+embedded estimates) and is excluded from v1 to keep the store 100% settled-Elexon. Endpoints use
+the `/stream` variants (`FUELHH/stream`, `demand/outturn/stream`) — the non-stream routes 400 on
+any range over 7 days.
+
+**Store format — wide CSV, one row per settlement half-hour** (`fuelhh_YYYY.csv`, one file per
+settlement-date year, identical header). Columns: `settlement_date, settlement_period,
+period_start_utc`, one MW column per fuel/interconnector code, then `INDO, ITSDO`. A **blank cell**
+means the series did not exist that period (an interconnector before commissioning, BIOMASS before
+2017, demand before 2016-03-01); **0** means present and zero — the distinction is preserved. Wide
+(≈158k rows, ~20 MB) was chosen over long (≈2.7M rows, ~240 MB) for clone/diff weight. The fuel
+roster is a fixed superset (10 fuels + 10 interconnectors as of 2026-06); a `fuelType` outside it
+**fails the pivot loudly** so a feed change is noticed, never silently dropped. Parquet is deferred
+(CSV is canonical; a columnar cache can be regenerated later if a stage proves slow).
+
+**Validation gate — completeness by COUNT, not contiguity.** A UK settlement day holds 48
+half-hours, except **46** on the spring clock-forward Sunday and **50** on the autumn clock-back
+Sunday; `expected_periods()` derives this from `Europe/London` tzdata, not a hardcoded calendar.
+The gate asserts each day's row count equals that DST-aware expectation and that no
+`(date, period)` key repeats. It deliberately does **not** require periods to be a contiguous
+`1..N` set: early Elexon days are occasionally numbered non-contiguously (e.g. 2016-03-27's 46
+half-hours run 1..45, 48) yet are complete — count is the honest signal, numbering is not. The
+wind spot-check (`daily_mwh`, Σ MW×0.5) reproduces Elexon's own daily total exactly.
+
+**Known early-data holes — a frozen manifest.** Across the 2016-01-01→edge backfill (183,418
+rows), **77 settlement days are genuinely short — 132 missing half-hours (0.072%)**, all Elexon
+non-publications, not fetch errors (e.g. 2016-10-30 has 49 rows where 50 are due). They cluster in
+2016–2022; 2024–2026 are pristine (zero gaps). We do not fabricate the missing half-hours. Instead
+`data/history/known_gaps.csv` is a **frozen record** of each short day `(date, actual, expected,
+shortfall, note)`. The gate (`validate`) **passes** when every incomplete day matches the manifest
+and there are no duplicates, and **fails** on any *new or changed* gap — so a future append that
+silently drops a half-hour is caught as a regression. The manifest is regenerated only by a
+deliberate, reviewed re-baseline, never automatically (that would launder a real regression).
+
+## 7. Historical nameplate — annual series, annual-step *(Stage 4, 2026-06-25)*
+
+Historical capacity factors need installed capacity *as of each year*, not the single end-2024
+anchor in `data/nameplate.json`. `data/nameplate_series.json` carries the **DUKES 2025 Table 6.2**
+annual series 2009–2024 (onshore wind, offshore wind incl. floating, solar PV), independently
+re-downloaded and reconciled — its 2024 row is byte-identical to the live anchor.
+
+**Interpolation rule — annual-step.** Each year's published year-end value is held until the next.
+Every denominator is therefore a verbatim, citable DUKES figure. **Linear interpolation is
+rejected**: its in-between values appear in no published table and would breach the v1 "no modelled
+figures" rule (`NameplateSeries` enforces this — `interpolation` must be `annual-step`). The honest
+cost of annual-step is a small, monotonic timing bias (a year-end figure held across a year of
+rising capacity makes late-year capacity-factor denominators run slightly low); it is disclosed in
+the file's `basis_note`, not modelled away. A monthly capacity series, or labelled interpolation,
+is a later-version question once modelled figures are explicitly permitted.

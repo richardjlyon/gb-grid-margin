@@ -40,10 +40,16 @@ tests/         Engine tests (methodology guards, feed-boundary models)
 The engine is a [uv](https://docs.astral.sh/uv/) project. From the repo root:
 
 ```
-uv sync                              # create the environment
-uv run python -m engine.grid_engine  # print the live verdict
-uv run pytest                        # run the tests
+uv sync                                   # create the environment
+uv run python -m engine.grid_engine       # print the live verdict
+uv run python -m engine.history append    # append newly-settled half-hours to the store
+uv run python -m engine.history validate  # check the store (counts, gaps, duplicates)
+uv run pytest                             # run the tests
 ```
+
+The settled history store lives in `data/history/` (`fuelhh_YYYY.csv`, wide, one row per
+half-hour, back to 2016-01-01 — the Elexon clean-data edge). `known_gaps.csv` is the frozen
+record of half-hours Elexon never published; `validate` passes on those but fails on any new gap.
 
 ## Data sources
 
@@ -51,8 +57,9 @@ uv run pytest                        # run the tests
 - **FUELHH** — settled half-hourly generation by fuel type (history layer).
 - **Interconnectors** — the `INT*` fuel types (net import/export flows).
 - **Capacity (nameplate)** — installed wind and solar capacity from DUKES 2025 (Table 6.2,
-  UK, end-2024), used as the denominator for capacity-factor figures. Cited and dated in
-  `data/nameplate.json`.
+  UK), used as the denominator for capacity-factor figures. The end-2024 anchor (live layer) is
+  in `data/nameplate.json`; the 2009–2024 annual series (historical capacity factors, applied
+  annual-step) is in `data/nameplate_series.json`. Cited and dated.
 - **Solar** — not present in FUELINST (embedded solar is netted off demand). The published
   figure is NESO's embedded estimate, cross-checked at build time against Sheffield Solar
   PV_Live. See `engine/NOTES.md`.

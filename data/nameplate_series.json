@@ -1,0 +1,25 @@
+{
+  "source": "DUKES 2025, Table 6.2 'Plant capacity: United Kingdom (renewable sources)', 'Installed Capacity (MW) [note 1]' block, UK-wide, end-of-year. Offshore = 'Offshore Wind' + 'Floating offshore wind' to match the nameplate anchor basis.",
+  "source_url": "https://assets.publishing.service.gov.uk/media/688a195a6478525675739026/DUKES_6.2.xlsx",
+  "published": "2025-07-31",
+  "interpolation": "annual-step",
+  "basis_note": "Each value is the published end-of-year installed capacity, held constant across the following year (annual-step). Because capacity is rising, holding a year-end figure across the whole year imparts a small, known, monotonic timing bias (capacity-factor denominators run slightly low late in each year); this is disclosed, not modelled away. Linear interpolation is deliberately not used — its in-between values appear in no DUKES table and would breach the v1 'no modelled figures' rule. The 2024 row is identical to data/nameplate.json (the live anchor). 2009 solar = 26.5 MW rounds to 0.026 GW.",
+  "series": [
+    {"year": 2009, "wind_onshore_gw": 3.468, "wind_offshore_gw": 0.951, "solar_gw": 0.026},
+    {"year": 2010, "wind_onshore_gw": 4.080, "wind_offshore_gw": 1.341, "solar_gw": 0.095},
+    {"year": 2011, "wind_onshore_gw": 4.758, "wind_offshore_gw": 1.838, "solar_gw": 1.000},
+    {"year": 2012, "wind_onshore_gw": 6.035, "wind_offshore_gw": 2.995, "solar_gw": 1.753},
+    {"year": 2013, "wind_onshore_gw": 7.586, "wind_offshore_gw": 3.696, "solar_gw": 2.937},
+    {"year": 2014, "wind_onshore_gw": 8.573, "wind_offshore_gw": 4.501, "solar_gw": 5.528},
+    {"year": 2015, "wind_onshore_gw": 9.212, "wind_offshore_gw": 5.093, "solar_gw": 9.601},
+    {"year": 2016, "wind_onshore_gw": 10.833, "wind_offshore_gw": 5.293, "solar_gw": 11.914},
+    {"year": 2017, "wind_onshore_gw": 12.597, "wind_offshore_gw": 6.988, "solar_gw": 12.760},
+    {"year": 2018, "wind_onshore_gw": 13.425, "wind_offshore_gw": 8.181, "solar_gw": 13.059},
+    {"year": 2019, "wind_onshore_gw": 13.999, "wind_offshore_gw": 9.888, "solar_gw": 13.345},
+    {"year": 2020, "wind_onshore_gw": 14.075, "wind_offshore_gw": 10.383, "solar_gw": 13.747},
+    {"year": 2021, "wind_onshore_gw": 14.493, "wind_offshore_gw": 11.255, "solar_gw": 14.151},
+    {"year": 2022, "wind_onshore_gw": 14.840, "wind_offshore_gw": 13.847, "solar_gw": 14.702},
+    {"year": 2023, "wind_onshore_gw": 15.424, "wind_offshore_gw": 14.732, "solar_gw": 16.198},
+    {"year": 2024, "wind_onshore_gw": 16.166, "wind_offshore_gw": 15.916, "solar_gw": 18.280}
+  ]
+}

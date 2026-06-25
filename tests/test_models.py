@@ -6,8 +6,10 @@ import pytest
 from pydantic import ValidationError
 
 from engine.models import (
+    DemandHhRow,
     DemandOutturnRow,
     EmbeddedRow,
+    FuelHhRow,
     FuelInstRecord,
     PvLiveResponse,
 )
@@ -100,3 +102,67 @@ def test_demand_outturn_row_rejects_missing_itsdo():
         DemandOutturnRow.model_validate(
             {"startTime": "2026-06-25T13:00:00Z", "settlementPeriod": 29}
         )
+
+
+FUELHH_ROW = {
+    "dataset": "FUELHH",
+    "publishTime": "2024-06-01T00:00:00Z",
+    "startTime": "2024-05-31T23:30:00Z",
+    "settlementDate": "2024-06-01",
+    "settlementPeriod": 2,
+    "fuelType": "CCGT",
+    "generation": 3114,
+}
+
+
+def test_fuelhh_row_parses_real_record():
+    row = FuelHhRow.model_validate(FUELHH_ROW)
+    assert row.settlement_date == "2024-06-01"
+    assert row.settlement_period == 2
+    assert row.start_time == "2024-05-31T23:30:00Z"
+    assert row.fuel_type == "CCGT"
+    assert row.generation == 3114
+
+
+def test_fuelhh_row_keeps_signed_interconnector_value():
+    row = FuelHhRow.model_validate({**FUELHH_ROW, "fuelType": "INTEW", "generation": -528})
+    assert row.generation == -528
+
+
+def test_fuelhh_row_rejects_missing_generation():
+    bad = {k: v for k, v in FUELHH_ROW.items() if k != "generation"}
+    with pytest.raises(ValidationError):
+        FuelHhRow.model_validate(bad)
+
+
+DEMAND_HH_ROW = {
+    "publishTime": "2024-05-31T23:30:00Z",
+    "startTime": "2024-05-31T23:00:00Z",
+    "settlementDate": "2024-06-01",
+    "settlementPeriod": 1,
+    "initialDemandOutturn": 20626,
+    "initialTransmissionSystemDemandOutturn": 22782,
+}
+
+
+def test_demand_hh_row_parses_both_series():
+    row = DemandHhRow.model_validate(DEMAND_HH_ROW)
+    assert row.settlement_date == "2024-06-01"
+    assert row.settlement_period == 1
+    assert row.indo == 20626
+    assert row.itsdo == 22782
+
+
+def test_demand_hh_row_rejects_missing_indo():
+    bad = {k: v for k, v in DEMAND_HH_ROW.items() if k != "initialDemandOutturn"}
+    with pytest.raises(ValidationError):
+        DemandHhRow.model_validate(bad)
+
+
+def test_demand_hh_row_allows_null_value_but_requires_the_key():
+    # Real historical rows carry a present-but-null ITSDO; that parses to None (a blank
+    # cell). A missing key is still a schema error (above) — null is data, absence is drift.
+    row = DemandHhRow.model_validate({**DEMAND_HH_ROW,
+                                      "initialTransmissionSystemDemandOutturn": None})
+    assert row.itsdo is None
+    assert row.indo == 20626

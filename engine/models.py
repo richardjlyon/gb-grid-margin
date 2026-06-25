@@ -67,6 +67,37 @@ class DemandOutturnRow(BaseModel):
     itsdo: int = Field(alias="initialTransmissionSystemDemandOutturn")
 
 
+class FuelHhRow(BaseModel):
+    """One Elexon FUELHH record: settled half-hourly generation for a fuel type.
+
+    Interconnector legs arrive here too (fuel_type INT*), signed: positive = import to
+    GB, negative = export. start_time is the period's UTC start — the unambiguous
+    timeline anchor that disambiguates the autumn clock-back fold.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    settlement_date: str = Field(alias="settlementDate")
+    settlement_period: int = Field(alias="settlementPeriod")
+    start_time: str = Field(alias="startTime")
+    fuel_type: str = Field(alias="fuelType")
+    generation: int
+
+
+class DemandHhRow(BaseModel):
+    """One Elexon demand-outturn record: national (INDO) and transmission (ITSDO) demand."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    settlement_date: str = Field(alias="settlementDate")
+    settlement_period: int = Field(alias="settlementPeriod")
+    start_time: str = Field(alias="startTime")
+    # Required to be present (schema guard) but nullable — historical rows occasionally
+    # carry a present-but-null demand value, which is kept as a blank cell.
+    indo: int | None = Field(alias="initialDemandOutturn")
+    itsdo: int | None = Field(alias="initialTransmissionSystemDemandOutturn")
+
+
 class Nameplate(BaseModel):
     """Published installed-capacity denominators (DUKES). Dated, cited, self-reconciling."""
 
@@ -92,3 +123,54 @@ class Nameplate(BaseModel):
                 f"wind_plus_solar_gw {self.wind_plus_solar_gw} != "
                 f"wind {self.wind_gw} + solar {self.solar_gw}")
         return self
+
+
+class NameplateYear(BaseModel):
+    """One year's installed-capacity point from the DUKES 6.2 annual series (GW)."""
+
+    year: int
+    wind_onshore_gw: float
+    wind_offshore_gw: float
+    solar_gw: float
+
+    @property
+    def wind_gw(self) -> float:
+        return round(self.wind_onshore_gw + self.wind_offshore_gw, 3)
+
+
+class NameplateSeries(BaseModel):
+    """The DUKES 6.2 annual capacity series, applied annual-step for historical denominators.
+
+    Annual-step (the v1 rule): each year's published value is held in force until the next
+    published year, so every capacity number used is a verbatim DUKES figure — never a
+    modelled in-between value. Linear interpolation is deliberately unsupported here.
+    """
+
+    source: str
+    source_url: str
+    published: str = ""
+    interpolation: str
+    basis_note: str = ""
+    series: list[NameplateYear]
+
+    @model_validator(mode="after")
+    def _check(self) -> "NameplateSeries":
+        years = [p.year for p in self.series]
+        if len(years) != len(set(years)):
+            raise ValueError("duplicate year in nameplate series")
+        if years != sorted(years):
+            raise ValueError("nameplate series must be year-ascending")
+        if self.interpolation != "annual-step":
+            raise ValueError(
+                f"unsupported interpolation rule {self.interpolation!r}; "
+                "only annual-step is implemented (v1: no modelled figures)")
+        return self
+
+    def capacity_for(self, year: int) -> NameplateYear:
+        """The published point in force for `year` under annual-step (held until the next)."""
+        candidates = [p for p in self.series if p.year <= year]
+        if not candidates:
+            raise ValueError(
+                f"no nameplate capacity published on/before {year} "
+                f"(series starts {self.series[0].year})")
+        return candidates[-1]
