@@ -7,7 +7,7 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import {
-  gaugeNeedleAngle, cfToInk, tallyGroups, dependenceStatus,
+  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW, fmtMW,
 } from './render.js';
 
@@ -36,8 +36,8 @@ function arcPath(cx, cy, R, a, b, max) {
 }
 
 // A flat half-dial: quiet base arc, an optional red danger arc, hairline ticks, one needle.
-// `redFrom` shades the dial face where a figure would fail; `armed` flips the needle red.
-function buildGauge(value, max, { armed = false, redFrom = null, label = 'gauge' } = {}) {
+// `danger` is a [lo, hi] band shaded red on the dial face; `armed` flips the needle red.
+function buildGauge(value, max, { armed = false, danger = null, label = 'gauge' } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
   for (let v = 0; v <= max; v += max / 6) {
@@ -47,8 +47,8 @@ function buildGauge(value, max, { armed = false, redFrom = null, label = 'gauge'
   }
   const [nx, ny] = arcPoint(cx, cy, R - 12, Math.min(value, max), max);
   const needleColor = armed ? '#d6121f' : '#15181c';
-  const dangerArc = redFrom != null
-    ? `<path d="${arcPath(cx, cy, R, redFrom, max, max)}" fill="none" stroke="#d6121f" stroke-width="7" opacity="0.18"/>`
+  const dangerArc = danger
+    ? `<path d="${arcPath(cx, cy, R, danger[0], danger[1], max)}" fill="none" stroke="#d6121f" stroke-width="7" opacity="0.18"/>`
     : '';
   return `
   <svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
@@ -76,45 +76,57 @@ function renderVerdict(state) {
     return;
   }
   const v = state.verdict;
-  const windGw = NAMEPLATE ? NAMEPLATE.wind_gw : 32.082;
-  const windBelow10 = Number.isFinite(v.wind_mw) && v.wind_mw / (windGw * 1000) < 0.10;
-  const status = dependenceStatus(v.gas_plus_imports_pct, windBelow10);
+  const f = firmShares(v);                 // robust to a pre-firm fallback latest.json
+  const status = firmStatus(f.firm_pct);
+  const d = v.national_demand_mw;
+  const share = (mw, pct) => (Number.isFinite(pct) ? pct : (d ? Math.round((mw / d) * 1000) / 10 : NaN));
 
-  // receipt rows (gas + imports are the failing inks; the rest stay ink-neutral)
-  const rows = [
-    { fuel: 'Gas (CCGT + OCGT)', mw: v.gas_mw, pct: v.gas_pct, fail: true },
-    { fuel: 'Imports (net)', mw: v.net_import_mw, pct: v.import_pct, fail: true },
-    { fuel: 'Wind', mw: v.wind_mw, pct: v.wind_pct },
-    { fuel: 'Solar', mw: v.solar_mw, pct: v.solar_pct },
-    { fuel: 'Nuclear', mw: v.nuclear_mw, pct: v.nuclear_pct },
-    { fuel: 'Biomass', mw: v.biomass_mw, pct: v.biomass_pct },
-    { fuel: 'Other', mw: v.other_mw, pct: v.other_pct },
-  ].filter((r) => Number.isFinite(r.pct));
-  const maxPct = Math.max(...rows.map((r) => r.pct), 1);
-  const receiptRows = rows.map((r) => `
-    <tr class="${r.fail ? 'fail' : ''}">
+  // Receipt grouped by the reliability cut: firm (dispatchable, weather-independent) over
+  // weather & imports (the correlated-failure bucket). Each group carries a subtotal; the
+  // weather & imports subtotal is the red one, tying back to the gauge.
+  const firmRows = [
+    { fuel: 'Gas (CCGT + OCGT)', mw: v.gas_mw, pct: share(v.gas_mw, v.gas_pct) },
+    { fuel: 'Nuclear', mw: v.nuclear_mw, pct: share(v.nuclear_mw, v.nuclear_pct) },
+    { fuel: 'Biomass', mw: v.biomass_mw, pct: share(v.biomass_mw, v.biomass_pct) },
+    { fuel: 'Hydro & other firm', mw: v.other_mw, pct: share(v.other_mw, v.other_pct) },
+  ];
+  const varRows = [
+    { fuel: 'Wind', mw: v.wind_mw, pct: share(v.wind_mw, v.wind_pct) },
+    { fuel: 'Solar', mw: v.solar_mw, pct: share(v.solar_mw, v.solar_pct) },
+    { fuel: 'Imports (net)', mw: v.net_import_mw, pct: share(v.net_import_mw, v.import_pct) },
+  ];
+  const maxPct = Math.max(...[...firmRows, ...varRows].map((r) => r.pct).filter(Number.isFinite), 1);
+  const row = (r, red) => Number.isFinite(r.pct) ? `
+    <tr>
       <td class="fuel">${esc(r.fuel)}</td>
       <td class="n">${fmtMW(r.mw)}</td>
       <td class="n">${fmtPct(r.pct)}</td>
-      <td class="bar-cell"><div class="bar ${r.fail ? 'red' : ''}" style="width:${(r.pct / maxPct * 100).toFixed(0)}%"></div></td>
-    </tr>`).join('');
+      <td class="bar-cell"><div class="bar ${red ? 'red' : ''}" style="width:${(Math.max(0, r.pct) / maxPct * 100).toFixed(0)}%"></div></td>
+    </tr>` : '';
+  const groupHead = (label, mw, pct, red) => `
+    <tr class="group ${red ? 'fail' : ''}"><td class="fuel">${label}</td>
+      <td class="n">${fmtMW(mw)}</td><td class="n">${fmtPct(pct)}</td><td class="bar-cell"></td></tr>`;
 
   $('verdict-body').innerHTML = `
     <div class="gauge-block">
-      ${buildGauge(v.gas_plus_imports_pct, 60, { armed: status.armed, redFrom: 40, label: 'Gas and imports share of demand' })}
-      <div class="gauge-zonelabels"><span>Nominal</span><span>Elevated</span><span>Dependent</span></div>
+      ${buildGauge(f.firm_pct, 100, { armed: status.armed, danger: [0, 40], label: 'Firm power share of demand' })}
+      <div class="gauge-zonelabels"><span>Exposed</span><span>Stretched</span><span>Firm</span></div>
     </div>
     <div class="stamp-pair">
-      <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${fmtPct(v.gas_plus_imports_pct)}</span>
-        <span class="stamp-label">Gas + imports</span></div>
-      <div class="stamp"><span class="stamp-val">${fmtPct(v.renewables_pct)}</span>
-        <span class="stamp-label">Wind + solar</span></div>
+      <div class="stamp"><span class="stamp-val">${fmtPct(f.firm_pct)}</span>
+        <span class="stamp-label">Firm power</span></div>
+      <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${fmtPct(f.notfirm_pct)}</span>
+        <span class="stamp-label">Weather &amp; imports</span></div>
     </div>
     <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
     <table class="receipt">
-      <caption>The receipt — supply meeting national demand</caption>
+      <caption>The receipt — what's meeting demand right now</caption>
       <thead><tr><th>Source</th><th>Output</th><th>Share</th><th class="bar-cell"></th></tr></thead>
-      <tbody>${receiptRows}
+      <tbody>
+        ${groupHead('Firm power', f.firm_mw, f.firm_pct, false)}
+        ${firmRows.map((r) => row(r, false)).join('')}
+        ${groupHead('Weather &amp; imports', f.notfirm_mw, f.notfirm_pct, true)}
+        ${varRows.map((r) => row(r, true)).join('')}
         <tr class="total"><td class="fuel">National demand</td><td class="n">${fmtMW(v.national_demand_mw)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
       </tbody>
     </table>

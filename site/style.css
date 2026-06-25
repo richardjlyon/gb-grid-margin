@@ -182,7 +182,16 @@ main { padding-bottom: 40px; }
   border-top: 2px solid var(--ink); border-bottom: none; font-weight: 600;
   padding-top: 9px; color: var(--ink);
 }
-.receipt tr.fail td.fuel, .receipt tr.fail td.n { color: var(--red-deep); }
+/* subtotal rows that head each reliability group (Firm power / Weather & imports) */
+.receipt tr.group td {
+  border-top: 1px solid var(--ink); border-bottom: none; padding-top: 11px;
+  font-family: var(--display); font-weight: 500; font-size: 0.74rem;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink);
+}
+.receipt tr.group.fail td.fuel, .receipt tr.group.fail td.n { color: var(--red-deep); }
+.receipt tr.group + tr td { padding-top: 8px; }
+.receipt td.fuel { padding-left: 16px; }
+.receipt tr.group td.fuel, .receipt tr.total td.fuel { padding-left: 8px; }
 
 /* ---------- duel bars (gas vs wind) ---------- */
 .duel { margin: 14px 0 0; }

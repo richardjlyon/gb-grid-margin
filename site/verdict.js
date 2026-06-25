@@ -60,6 +60,9 @@ export function computeVerdict(mix, embedded) {
   const wind = transWind + embeddedWind;
   const demand = transWind + gas + nuclear + biomass + other + netImports + solar + embeddedWind;
   const pct = (x) => (demand ? roundHalfEven1((x / demand) * 100) : 0.0);
+  // The reliability cut (mirrors Python): firm dispatchable power vs weather & imports.
+  const firm = gas + nuclear + biomass + other;
+  const notfirm = wind + solar + netImports;
   return {
     snapshot: null, // filled by caller, mirrors Python
     embedded_time: embedded.time,
@@ -71,10 +74,17 @@ export function computeVerdict(mix, embedded) {
     nuclear_mw: nuclear,
     biomass_mw: biomass,
     other_mw: other,
+    firm_mw: firm,
+    notfirm_mw: notfirm,
     wind_pct: pct(wind),
     solar_pct: pct(solar),
     gas_pct: pct(gas),
     import_pct: pct(netImports),
+    nuclear_pct: pct(nuclear),
+    biomass_pct: pct(biomass),
+    other_pct: pct(other),
+    firm_pct: pct(firm),
+    notfirm_pct: pct(notfirm),
     gas_plus_imports_pct: pct(gas + netImports),
     renewables_pct: pct(wind + solar),
     solar_included: true,

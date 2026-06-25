@@ -44,12 +44,13 @@ export function tallyGroups(n) {
 
 // --- the dependence gauge status -------------------------------------------
 
-// The gauge arms to red only when a figure genuinely fails: gas+imports in the
-// DEPENDENT band (>40% of demand) OR wind below 10% of capacity. Restraint is the
-// credibility — on a calm sunny midday the needle stays ink.
-export function dependenceStatus(gasImportsPct, windBelow10) {
-  const label = gasImportsPct > 40 ? 'DEPENDENT' : gasImportsPct >= 30 ? 'ELEVATED' : 'NOMINAL';
-  return { label, armed: label === 'DEPENDENT' || windBelow10 };
+// The firm-power gauge reads how much of demand firm, dispatchable generation is meeting
+// right now (gas + nuclear + biomass + other firm fuels). It arms red when firm power runs
+// low — the grid leaning hard on weather and imports, which fall away together in a calm.
+// A fuel-gauge metaphor: low needle = running on empty.
+export function firmStatus(firmPct) {
+  const label = firmPct < 40 ? 'EXPOSED' : firmPct < 55 ? 'STRETCHED' : 'FIRM';
+  return { label, armed: label === 'EXPOSED' };
 }
 
 // --- the capacity trap (static DUKES denominator) --------------------------
@@ -60,6 +61,25 @@ export function dependenceStatus(gasImportsPct, windBelow10) {
 export function capacityTrapStatic(deliveringMw, builtGw) {
   const share = builtGw ? Math.round((deliveringMw / (builtGw * 1000)) * 1000) / 10 : 0;
   return { built_gw: builtGw, delivering_mw: deliveringMw, share_pct: share };
+}
+
+// Firm vs weather-&-imports shares for display. Prefers the engine's own firm_pct/
+// notfirm_pct (parity-locked, round-half-even) when present; otherwise derives them from
+// the always-present MW fields, so a pre-firm fallback latest.json still renders the cut
+// instead of crashing.
+export function firmShares(v) {
+  const d = v.national_demand_mw;
+  const firmMw = Number.isFinite(v.firm_mw) ? v.firm_mw
+    : (v.gas_mw || 0) + (v.nuclear_mw || 0) + (v.biomass_mw || 0) + (v.other_mw || 0);
+  const notfirmMw = Number.isFinite(v.notfirm_mw) ? v.notfirm_mw
+    : (v.wind_mw || 0) + (v.solar_mw || 0) + (v.net_import_mw || 0);
+  const pct = (mw) => (d ? Math.round((mw / d) * 1000) / 10 : 0);
+  return {
+    firm_mw: firmMw,
+    notfirm_mw: notfirmMw,
+    firm_pct: Number.isFinite(v.firm_pct) ? v.firm_pct : pct(firmMw),
+    notfirm_pct: Number.isFinite(v.notfirm_pct) ? v.notfirm_pct : pct(notfirmMw),
+  };
 }
 
 // How many times the gas fleet out-produces the whole wind fleet, to one decimal.

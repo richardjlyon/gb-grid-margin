@@ -35,6 +35,22 @@ def _verdict():
     return compute_verdict(MIX, EMBEDDED)
 
 
+def test_firm_and_notfirm_partition_demand():
+    """Firm (dispatchable, weather-independent) vs weather & imports — the reliability cut.
+
+    Firm = gas + nuclear + biomass + other firm fuels (hydro etc.); weather & imports =
+    wind + solar + net interconnector imports (the sources that fail together in a
+    synoptic calm). The two buckets partition national demand exactly.
+    """
+    v = _verdict()
+    assert v["firm_mw"] == 6000 + 3000 + 2000 + 600          # gas+nuclear+biomass+other
+    assert v["notfirm_mw"] == 6000 + 10000 + 700             # wind+solar+net imports
+    assert v["firm_mw"] + v["notfirm_mw"] == v["national_demand_mw"]
+    assert v["firm_pct"] == 41.0
+    assert v["notfirm_pct"] == 59.0
+    assert round(v["firm_pct"] + v["notfirm_pct"], 1) == 100.0
+
+
 def test_latest_snapshot_picks_most_recent_and_builds_mix():
     records = [
         FuelInstRecord.model_validate(

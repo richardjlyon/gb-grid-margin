@@ -198,6 +198,12 @@ def compute_verdict(mix: dict[str, int], embedded: dict) -> dict:
     def pct(x: int) -> float:
         return round(x / demand * 100, 1) if demand else 0.0
 
+    # The reliability cut: firm, dispatchable, weather-independent generation Britain can
+    # call on (gas + nuclear + biomass + other firm fuels) vs the sources that fall away
+    # together in a synoptic calm (wind + solar + imports). These partition demand exactly.
+    firm = gas + nuclear + biomass + other
+    notfirm = wind + solar + net_imports
+
     return {
         "snapshot": None,        # filled by caller
         "embedded_time": embedded["time"],
@@ -209,10 +215,17 @@ def compute_verdict(mix: dict[str, int], embedded: dict) -> dict:
         "nuclear_mw": nuclear,
         "biomass_mw": biomass,
         "other_mw": other,
+        "firm_mw": firm,
+        "notfirm_mw": notfirm,
         "wind_pct": pct(wind),
         "solar_pct": pct(solar),
         "gas_pct": pct(gas),
         "import_pct": pct(net_imports),
+        "nuclear_pct": pct(nuclear),
+        "biomass_pct": pct(biomass),
+        "other_pct": pct(other),
+        "firm_pct": pct(firm),
+        "notfirm_pct": pct(notfirm),
         "gas_plus_imports_pct": pct(gas + net_imports),
         "renewables_pct": pct(wind + solar),
         "solar_included": True,

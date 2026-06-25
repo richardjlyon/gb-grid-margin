@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  gaugeNeedleAngle, cfToInk, tallyGroups, dependenceStatus,
+  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW,
 } from './render.js';
 
@@ -36,12 +36,26 @@ test('tallyGroups breaks a count into gate-of-five groups', () => {
   assert.deepEqual(tallyGroups(12), [5, 5, 2]);
 });
 
-test('dependenceStatus arms red on the DEPENDENT band or a sub-10% wind day', () => {
-  assert.deepEqual(dependenceStatus(20, false), { label: 'NOMINAL', armed: false });
-  assert.deepEqual(dependenceStatus(35, false), { label: 'ELEVATED', armed: false });
-  assert.deepEqual(dependenceStatus(45, false), { label: 'DEPENDENT', armed: true });
-  // A calm-wind day arms the gauge even when the dependence share is only ELEVATED.
-  assert.deepEqual(dependenceStatus(35, true), { label: 'ELEVATED', armed: true });
+test('firmStatus reads the firm-power share; arms red when firm power runs low', () => {
+  assert.deepEqual(firmStatus(70), { label: 'FIRM', armed: false });
+  assert.deepEqual(firmStatus(48), { label: 'STRETCHED', armed: false });
+  assert.deepEqual(firmStatus(35), { label: 'EXPOSED', armed: true });
+  // boundaries: 55 is still FIRM, exactly 40 is STRETCHED (armed below 40).
+  assert.deepEqual(firmStatus(55), { label: 'FIRM', armed: false });
+  assert.deepEqual(firmStatus(40), { label: 'STRETCHED', armed: false });
+});
+
+test('firmShares prefers the engine fields, derives from MW for a pre-firm fallback', () => {
+  // full verdict (current schema) — uses the parity-locked engine firm_pct/notfirm_pct
+  const full = firmShares({ national_demand_mw: 20000, firm_mw: 8000, notfirm_mw: 12000, firm_pct: 40.0, notfirm_pct: 60.0 });
+  assert.equal(full.firm_pct, 40.0);
+  assert.equal(full.notfirm_pct, 60.0);
+  // old fallback latest.json — no firm_* fields, derive from the per-fuel MW
+  const old = firmShares({ national_demand_mw: 20000, gas_mw: 6000, nuclear_mw: 1000, biomass_mw: 1000, other_mw: 0, wind_mw: 8000, solar_mw: 3000, net_import_mw: 1000 });
+  assert.equal(old.firm_mw, 8000);
+  assert.equal(old.notfirm_mw, 12000);
+  assert.equal(old.firm_pct, 40.0);
+  assert.equal(old.notfirm_pct, 60.0);
 });
 
 test('capacityTrapStatic: live output as a share of DUKES nameplate (sound denominator)', () => {
