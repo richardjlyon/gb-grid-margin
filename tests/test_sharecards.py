@@ -74,3 +74,18 @@ def test_load_cards_builds_the_catalogue(tmp_path):
     assert "dukes" in (by["capacity-trap"]["caveat"] or "").lower()
     # all live cards carry a timestamp stamp; settled carry an as-of
     assert "UTC" in by["firm-now"]["stamp"]
+
+
+def test_warning_card_alarm_when_in_force():
+    c = sharecards.warning_card({"in_force": True, "type": "EMN",
+        "type_label": "Electricity Margin Notice",
+        "window": {"from": "19:00", "to": "22:00", "date": "26/06/2026"}})
+    assert c["slug"] == "warning" and c["theme"] == "alarm" and c["kind"] == "warning"
+    assert "Electricity Margin Notice" in c["label"]
+    assert "19:00" in c["label"]
+
+
+def test_warning_card_calm_when_clear():
+    c = sharecards.warning_card({"in_force": False})
+    assert c["theme"] == "ink"
+    assert "no" in c["figure"].lower() or "clear" in c["figure"].lower()

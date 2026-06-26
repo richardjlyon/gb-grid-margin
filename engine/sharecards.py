@@ -165,3 +165,17 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
 
     asof = datetime.fromisoformat(snap.replace("Z", "+00:00")).strftime("%d %B %Y")
     return cards, asof
+
+
+def warning_card(state: dict) -> dict:
+    if state.get("in_force"):
+        win = state.get("window")
+        wtxt = (f" covering {win['from']}–{win['to']}, {win['date']}" if win else "")
+        return {"slug": "warning", "kind": "warning", "theme": "alarm", "template": "stat",
+                "figure": "Margin notice",
+                "label": f"A {state['type_label']} is in force in Britain{wtxt}.",
+                "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
+    return {"slug": "warning", "kind": "warning", "theme": "ink", "template": "stat",
+            "figure": "All clear",
+            "label": "No grid margin warning is in force in Britain right now.",
+            "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
