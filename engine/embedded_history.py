@@ -109,3 +109,144 @@ def solar_crosscheck(embedded_mwh: float, pvlive_mwh: float, tol: float = 0.10) 
     rel = abs(embedded_mwh - pvlive_mwh) / pvlive_mwh
     return {"ok": rel <= tol, "rel_diff": rel,
             "embedded_mwh": embedded_mwh, "pvlive_mwh": pvlive_mwh}
+
+
+# --- NESO Historic Demand Data fetch (CKAN datastore) -----------------------
+
+NESO = "https://api.neso.energy/api/3/action"
+HD_PACKAGE = "historic-demand-data"
+# NESO populates ~21 days in arrears and revises retrospectively; stay well back so the
+# daily append only commits settled embedded values.
+NESO_LAG_DAYS = 25
+_PAGE = 32000  # CKAN datastore page size; a year is ~17,520 rows.
+
+
+def _get_json(url: str):
+    req = urllib.request.Request(url, headers={"User-Agent": "grid-gauge/1.0"})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.load(r)
+
+
+def resource_ids() -> dict[int, str]:
+    """Map {year: resource_id} for the Historic Demand Data package.
+
+    Each yearly resource is named with its year (e.g. 'Historic Demand Data 2016'); parse
+    the four-digit year out of the resource name/description. Raises if none are found
+    (a portal restructure must be noticed, not silently skipped).
+    """
+    pkg = _get_json(f"{NESO}/package_show?id={HD_PACKAGE}")
+    out: dict[int, str] = {}
+    for res in pkg["result"]["resources"]:
+        text = f"{res.get('name', '')} {res.get('description', '')}"
+        for token in text.replace("-", " ").split():
+            if token.isdigit() and len(token) == 4 and 2000 <= int(token) <= 2100:
+                out[int(token)] = res["id"]
+                break
+    if not out:
+        raise ValueError("no yearly resources found for historic-demand-data — portal changed?")
+    return out
+
+
+def fetch_year_records(rid: str) -> list[dict]:
+    """All datastore records for one yearly resource, paged."""
+    records: list[dict] = []
+    offset = 0
+    while True:
+        q = urllib.parse.urlencode({"resource_id": rid, "limit": _PAGE, "offset": offset})
+        result = _get_json(f"{NESO}/datastore_search?{q}")["result"]
+        batch = result["records"]
+        records.extend(batch)
+        offset += len(batch)
+        if not batch or offset >= result.get("total", 0):
+            break
+    return records
+
+
+PVLIVE = "https://api.solar.sheffield.ac.uk/pvlive/api/v4"
+
+
+def fetch_pvlive(date_from: date, date_to: date) -> PvLiveSeries:
+    """PV_Live GB national (GSP 0) half-hourly outturn for a date range (inclusive)."""
+    q = urllib.parse.urlencode({
+        "start": f"{date_from.isoformat()}T00:00:00",
+        "end": f"{date_to.isoformat()}T23:59:59",
+        "extra_fields": "",
+    })
+    return PvLiveSeries.model_validate(_get_json(f"{PVLIVE}/gsp/0?{q}"))
+
+
+def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR) -> int:
+    """Backfill/append the embedded store over [start, end] inclusive, fetched per year."""
+    rids = resource_ids()
+    written = 0
+    for year in range(start.year, end.year + 1):
+        rid = rids.get(year)
+        if rid is None:
+            print(f"  no resource for {year}, skipping")
+            continue
+        rows = [r for r in parse_records(fetch_year_records(rid))
+                if start.isoformat() <= r["settlement_date"] <= end.isoformat()]
+        written += append_rows(rows, base_dir)
+    return written
+
+
+def latest_settled_day() -> date:
+    return datetime.now(timezone.utc).date() - timedelta(days=NESO_LAG_DAYS)
+
+
+# --- CLI --------------------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> None:
+    import sys
+    from engine import history
+
+    args = argv if argv is not None else sys.argv[1:]
+    cmd = args[0] if args else "validate"
+
+    if cmd == "backfill":
+        start = date.fromisoformat(args[1]) if len(args) > 1 else EMBEDDED_EDGE
+        end = date.fromisoformat(args[2]) if len(args) > 2 else latest_settled_day()
+        print(f"backfill embedded {start}..{end} …")
+        print(f"  {build_range(start, end)} rows written")
+    elif cmd == "append":
+        end = latest_settled_day()
+        start = end - timedelta(days=NESO_LAG_DAYS + 7)  # overlap absorbs late settlement
+        print(f"append embedded {start}..{end}: {build_range(start, end)} rows written")
+    elif cmd == "validate":
+        rows = read_store()
+        if not rows:
+            print("embedded store empty")
+            return
+        start = date.fromisoformat(rows[0]["settlement_date"])
+        end = date.fromisoformat(rows[-1]["settlement_date"])
+        rep = history.validate_range(rows, start, end,
+                                     known_gaps=history.load_known_gaps())
+        print(f"embedded store {start}..{end}: ok={rep['ok']} "
+              f"expected={rep['expected_rows']} actual={rep['actual_rows']} "
+              f"unexplained={len(rep['unexplained'])} dupes={len(rep['duplicates'])}")
+        for inc in rep["unexplained"]:
+            print(f"  UNEXPLAINED {inc['date']}: {inc['actual']}/{inc['expected']}")
+        if not rep["ok"]:
+            raise SystemExit(1)
+    elif cmd == "crosscheck":
+        # PV_Live ±10% solar cross-check on a sample of summer-midday days.
+        rows = read_store()
+        sample = args[1:] or ["2017-06-21", "2020-06-21", "2024-06-21"]
+        bad = 0
+        for day in sample:
+            d = date.fromisoformat(day)
+            pv_rows = fetch_pvlive(d, d).rows()
+            pvlive_mwh = sum(mw for _, mw in pv_rows) * 0.5
+            rep = solar_crosscheck(daily_solar_mwh(rows, day), pvlive_mwh)
+            flag = "ok" if rep["ok"] else "FAIL"
+            print(f"  {day}: embedded={rep['embedded_mwh']:.0f} MWh "
+                  f"pvlive={rep['pvlive_mwh']:.0f} MWh rel={rep['rel_diff']:.1%} {flag}")
+            bad += not rep["ok"]
+        if bad:
+            raise SystemExit(1)
+    else:
+        raise SystemExit(f"unknown command {cmd!r}; use backfill | append | validate | crosscheck")
+
+
+if __name__ == "__main__":
+    main()
