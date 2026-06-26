@@ -21,7 +21,7 @@ const nesoBody = () => ({
     EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400,
   }] },
 });
-const itsdoBody = (mw = 17500) => ({ data: [{ initialTransmissionSystemDemandOutturn: mw }] });
+const demandBody = (mw = 17500) => ({ data: [{ initialDemandOutturn: mw }] });
 
 // A well-formed latest.json with an OLDER snapshot than the live one (so H1 won't trip).
 const latestJson = (over = {}) => ({
@@ -40,11 +40,11 @@ const latestJson = (over = {}) => ({
 });
 
 // Build an httpGet that routes by URL substring; a value of Error (instance) is thrown.
-function makeHttpGet({ fuel, neso, itsdo, latest }) {
+function makeHttpGet({ fuel, neso, demand, latest }) {
   return async (url) => {
     const pick = url.includes('FUELINST') ? fuel
       : url.includes('datastore_search') ? neso
-        : url.includes('demand/outturn') ? itsdo
+        : url.includes('demand/outturn') ? demand
           : url.includes('latest.json') ? latest : undefined;
     if (pick instanceof Error) throw pick;
     if (pick === undefined) throw new Error(`unexpected url ${url}`);
@@ -55,7 +55,7 @@ function makeHttpGet({ fuel, neso, itsdo, latest }) {
 const NO_FAULTS = { break: null, slow: null, partial: null, staleNeso: false, futureNeso: false, clockOffsetMs: 0 };
 
 test('happy path renders LIVE with verdict numbers', async () => {
-  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), itsdo: itsdoBody(), latest: latestJson() });
+  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), demand: demandBody(), latest: latestJson() });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'live');
   assert.ok(Number.isFinite(s.verdict.renewables_pct));
@@ -65,7 +65,7 @@ test('happy path renders LIVE with verdict numbers', async () => {
 test('H1: live snapshot older than last build falls back, not LIVE', async () => {
   const httpGet = makeHttpGet({
     fuel: fuelBody('2026-06-25T12:30:00Z'), // live snapshot an hour behind the build
-    neso: nesoBody(), itsdo: itsdoBody(),
+    neso: nesoBody(), demand: demandBody(),
     latest: latestJson({ provenance: { ...latestJson().provenance, snapshot: '2026-06-25T13:00:00Z' } }),
   });
   const s = await resolveState(NO_FAULTS, () => Date.parse('2026-06-25T12:35:00Z'), { httpGet });
@@ -76,7 +76,7 @@ test('H1: live snapshot older than last build falls back, not LIVE', async () =>
 test('H2: live fails + corrupt fallback (missing pct) → UNAVAILABLE, no numbers', async () => {
   const bad = latestJson();
   delete bad.verdict.renewables_pct;
-  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), itsdo: itsdoBody(), latest: bad });
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: bad });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'unavailable');
   assert.equal(s.verdict, null);
@@ -85,28 +85,73 @@ test('H2: live fails + corrupt fallback (missing pct) → UNAVAILABLE, no number
 test('H2: live fails + fallback capacity zero → UNAVAILABLE (no Infinity%)', async () => {
   const bad = latestJson();
   bad.provenance.wind_capacity_mw = 0;
-  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), itsdo: itsdoBody(), latest: bad });
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: bad });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'unavailable');
 });
 
-// M1: an empty ITSDO body must NOT discard a good live verdict.
-test('M1: empty ITSDO body stays LIVE with a degraded note', async () => {
-  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), itsdo: { data: [] }, latest: latestJson() });
+// M1: an empty demand-outturn body must NOT discard a good live verdict.
+test('M1: empty demand body stays LIVE with a degraded note', async () => {
+  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), demand: { data: [] }, latest: latestJson() });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'live');
   assert.match(s.reconcileNote, /unavailable/);
 });
 
-test('M1: a genuine ITSDO reconcile breach falls back', async () => {
-  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), itsdo: itsdoBody(40000), latest: latestJson() });
+test('M1: a genuine INDO reconcile breach falls back', async () => {
+  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), demand: demandBody(40000), latest: latestJson() });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'fallback');
 });
 
+// Regression (reconcile-guard-export-bug): on an export night the reconcile must use INDO
+// (national demand), which is export-neutral, NOT ITSDO (= national demand + exports +
+// station load + PS pumping). The real 2026-06-25 23:30Z shape: GB exporting ~4.55 GW.
+test('heavy export stays LIVE — reconcile against INDO, not ITSDO', async () => {
+  const fuel = Object.entries({
+    CCGT: 12000, WIND: 10000, NUCLEAR: 5000, BIOMASS: 2000, OTHER: 1000,
+    INTFR: -3000, INTNED: -1553,            // net interconnector flow = -4553 (export)
+  }).map(([fuelType, generation]) => ({ startTime: SNAP, fuelType, generation }));
+  const neso = { result: { records: [{
+    DATE_GMT: '2026-06-25T00:00:00', TIME_GMT: '13:30',
+    EMBEDDED_SOLAR_FORECAST: 0, EMBEDDED_WIND_FORECAST: 1320,
+    EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400,
+  }] } };
+  // computed national demand = 26767; INDO 25447 + embedded 1320 = 26767 → reconciles.
+  const httpGet = makeHttpGet({ fuel, neso, demand: demandBody(25447), latest: latestJson() });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'live');
+  // An ITSDO-magnitude reference (national demand + the 4.55 GW export + station load + PS)
+  // would have breached the 12% guard — the bug this regression locks out.
+  const itsdoLike = makeHttpGet({ fuel, neso, demand: demandBody(33000), latest: latestJson() });
+  assert.equal((await resolveState(NO_FAULTS, clock, { httpGet: itsdoLike })).mode, 'fallback');
+});
+
+// Stale-solar guard: a fallback snapshot too old to represent "now" must NOT show its frozen
+// numbers (e.g. a midday 12 GW-solar reading rendered at 11pm). It goes number-free even though
+// the build is younger than the 12 h UNAVAILABLE cutoff.
+test('fallback snapshot older than the "now" window goes number-free', async () => {
+  const eightHAgo = new Date(NOW - 8 * 60 * 60 * 1000).toISOString();
+  const stale = latestJson({ provenance: {
+    ...latestJson().provenance, build_time_utc: eightHAgo, snapshot: eightHAgo,
+  } });
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: stale });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.verdict, null);          // no frozen midday numbers shown at night
+  assert.equal(s.capacity, null);
+});
+
+// A fresh fallback (snapshot ~35 min old, build < 12 h) still shows its numbers.
+test('fresh fallback still shows numbers', async () => {
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: latestJson() });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'fallback');
+  assert.ok(Number.isFinite(s.verdict.renewables_pct));
+});
+
 // M2: an unbounded fallback fetch must not hang — a throwing httpGet → UNAVAILABLE.
 test('M2: fallback fetch failure → UNAVAILABLE (does not hang)', async () => {
-  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), itsdo: itsdoBody(), latest: new Error('timeout') });
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: new Error('timeout') });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'unavailable');
 });
@@ -116,7 +161,7 @@ test('M3: fallback capacity share uses round-half-even (12.25 → 12.2)', async 
   const bad = latestJson();
   bad.verdict.wind_mw = 2450;            // 2450 / 20000 * 100 = 12.25 → half-even → 12.2
   bad.provenance.wind_capacity_mw = 20000;
-  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), itsdo: itsdoBody(), latest: bad });
+  const httpGet = makeHttpGet({ fuel: new Error('feed down'), neso: nesoBody(), demand: demandBody(), latest: bad });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'fallback');
   assert.equal(s.capacity.wind_capacity_share_pct, 12.2);

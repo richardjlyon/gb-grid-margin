@@ -58,13 +58,20 @@ class PvLiveResponse(BaseModel):
 
 
 class DemandOutturnRow(BaseModel):
-    """One Elexon demand-outturn row; itsdo is the reconciliation reference."""
+    """One Elexon demand-outturn row; indo (national demand) is the reconciliation reference.
+
+    INDO is used rather than ITSDO because the supply-side reconstruction computes
+    *national* demand: ITSDO additionally counts interconnector exports, station load and
+    pump-storage pumping as demand, so it diverges from the reconstruction by the export
+    volume on an export night (see engine/NOTES.md §3). The value is nullable: Elexon
+    occasionally publishes a present-but-null demand for a period.
+    """
 
     model_config = ConfigDict(populate_by_name=True)
 
     start_time: str = Field(alias="startTime")
     settlement_period: int = Field(alias="settlementPeriod")
-    itsdo: int = Field(alias="initialTransmissionSystemDemandOutturn")
+    indo: int | None = Field(alias="initialDemandOutturn")
 
 
 class FuelHhRow(BaseModel):

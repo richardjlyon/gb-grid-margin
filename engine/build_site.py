@@ -150,7 +150,7 @@ def _atomic_write(target: Path, text: str) -> None:
 
 
 def _payload(verdict: dict, snapshot: str, embedded: dict, pvlive: dict,
-             itsdo: int) -> dict:
+             indo: int) -> dict:
     age_min = abs(
         (datetime.fromisoformat(embedded["time"]) - datetime.fromisoformat(snapshot))
         .total_seconds()) / 60
@@ -162,7 +162,7 @@ def _payload(verdict: dict, snapshot: str, embedded: dict, pvlive: dict,
             "snapshot": snapshot,
             "embedded_time": embedded["time"],
             "embedded_age_min": round(age_min, 1),
-            "itsdo": itsdo,
+            "indo": indo,
             "pvlive_solar_mw": pvlive["solar_mw"],
             "reconcile_residual_pct": verdict.get("reconcile_residual_pct"),
             # LIVE NESO GB-DC capacities — the capacity-trap denominators (NOT nameplate).
@@ -171,7 +171,7 @@ def _payload(verdict: dict, snapshot: str, embedded: dict, pvlive: dict,
             "source_urls": {
                 "fuelinst": f"{BASE}/datasets/FUELINST/stream",
                 "neso_embedded": f"{NESO}/datastore_search?resource_id={NESO_EMBEDDED_RID}",
-                "itsdo": f"{BASE}/demand/outturn",
+                "indo": f"{BASE}/demand/outturn",
                 "pvlive": f"{PVLIVE}/gsp/0",
             },
         },
@@ -189,7 +189,7 @@ def build(target: Path = LATEST_JSON) -> int:
         snapshot, mix = grid_engine.latest_snapshot(records)
         embedded = grid_engine.fetch_embedded_neso()
         pvlive = grid_engine.fetch_pvlive_solar()
-        itsdo = grid_engine.fetch_itsdo()
+        indo = grid_engine.fetch_indo()
 
         verdict = compute_verdict(mix, embedded)
         verdict["snapshot"] = snapshot
@@ -198,12 +198,12 @@ def build(target: Path = LATEST_JSON) -> int:
             raise RuntimeError("incomplete FUELINST snapshot — refusing to publish")
         if not embedded_in_window(embedded["time"], snapshot):
             raise RuntimeError("embedded estimate outside the freshness window")
-        grid_engine.sanity_check(verdict, pvlive["solar_mw"], itsdo, embedded)
+        grid_engine.sanity_check(verdict, pvlive["solar_mw"], indo, embedded)
     except Exception as e:  # any failure must leave the good fallback untouched
         print(f"build failed ({type(e).__name__}): {e}", file=sys.stderr)
         return 1
 
-    _atomic_write(target, json.dumps(_payload(verdict, snapshot, embedded, pvlive, itsdo),
+    _atomic_write(target, json.dumps(_payload(verdict, snapshot, embedded, pvlive, indo),
                                      indent=2) + "\n")
     print(f"wrote {target}")
     return 0

@@ -1,6 +1,6 @@
 // site/live.js — the browser orchestrator for the live layer.
 //
-// Fetches the three CORS-open feeds (FUELINST + NESO embedded required, ITSDO optional),
+// Fetches the three CORS-open feeds (FUELINST + NESO embedded required, demand outturn optional),
 // recomputes the verdict via verdict.js (NEVER its own math), and falls back to the
 // build-written latest.json when the live path can't be trusted. It never blends live and
 // fallback on one screen, and never shows a number it cannot stand behind. The decision
@@ -22,7 +22,8 @@ const SKEW_TOL_MIN = 3;            // data this far in the future => device cloc
 const LIVE_LAG_UNCERTAIN_MIN = 20; // a just-fetched live snapshot older than this => age uncertain
 const STALE_MIN = 60;              // banner past this age (Richard: > 60 min)
 const LIVE_TOO_OLD_MIN = 40;       // a "live" reading older than this (trusted clock) => failed fetch
-const UNAVAILABLE_AGE_MS = 12 * 60 * 60 * 1000; // fallback older than 12 h => UNAVAILABLE
+const FALLBACK_NUMBERS_MAX_MIN = 120; // fallback snapshot older than this => show NO numbers (too old to be "now")
+const UNAVAILABLE_AGE_MS = 12 * 60 * 60 * 1000; // fallback build older than 12 h => UNAVAILABLE
 const FUELINST_WINDOW_MIN = 180;   // wide, future-buffered: capture the true latest despite clock skew
 const POLL_MS = 5 * 60 * 1000;
 
@@ -53,7 +54,7 @@ function feedUrl(feed, faults, nowMs) {
     return `${ELEXON}/datasets/FUELINST/stream?publishDateTimeFrom=${from}&publishDateTimeTo=${to}`;
   }
   if (feed === 'neso') return `${NESO}/datastore_search?resource_id=${NESO_RID}&limit=100`;
-  if (feed === 'itsdo') {
+  if (feed === 'demand') {
     const day = isoMinZ(new Date(nowMs)).slice(0, 10);
     return `${ELEXON}/demand/outturn?settlementDateFrom=${day}&settlementDateTo=${day}`;
   }
@@ -94,15 +95,15 @@ function pickEmbedded(records, anchorMs) {
 // Try the live path. Throws { reason, feeds } if it cannot produce a trustworthy verdict.
 async function tryLive(faults, clockNow, httpGet) {
   const nowMs = clockNow();
-  const [fuel, neso, itsdo] = await Promise.allSettled([
+  const [fuel, neso, demand] = await Promise.allSettled([
     fetchFeed('fuelinst', faults, nowMs, clockNow, httpGet),
     fetchFeed('neso', faults, nowMs, clockNow, httpGet),
-    fetchFeed('itsdo', faults, nowMs, clockNow, httpGet),
+    fetchFeed('demand', faults, nowMs, clockNow, httpGet),
   ]);
   const feeds = {
     fuelinst: fuel.status === 'fulfilled' ? { status: 'ok', latencyMs: fuel.value.latencyMs } : { status: 'failed' },
     neso: neso.status === 'fulfilled' ? { status: 'ok', latencyMs: neso.value.latencyMs } : { status: 'failed' },
-    itsdo: itsdo.status === 'fulfilled' ? { status: 'ok', latencyMs: itsdo.value.latencyMs } : { status: 'failed' },
+    demand: demand.status === 'fulfilled' ? { status: 'ok', latencyMs: demand.value.latencyMs } : { status: 'failed' },
   };
   if (fuel.status !== 'fulfilled') throw { reason: 'FUELINST unavailable', feeds };
   if (neso.status !== 'fulfilled') throw { reason: 'NESO embedded unavailable', feeds };
@@ -121,15 +122,19 @@ async function tryLive(faults, clockNow, httpGet) {
   if (!validateSnapshot(mix, verdict.national_demand_mw)) throw { reason: 'incomplete FUELINST snapshot', feeds };
   if (!embeddedInWindow(embedded.time, snapshot)) throw { reason: 'embedded estimate out of window', feeds };
 
-  // ITSDO reconcile tripwire — only a finite, positive reference can breach; otherwise degrade.
+  // INDO (national demand) reconcile tripwire — only a finite, positive reference can breach;
+  // otherwise degrade. INDO, not ITSDO: ITSDO adds interconnector exports + station load + PS
+  // pumping as demand, so it diverged from this national-demand reconstruction by the export
+  // volume on an export night and false-alarmed. PARITY-LOCKED with grid_engine.sanity_check.
   let reconcileNote = '';
-  const rows = itsdo.status === 'fulfilled' ? itsdo.value.body?.data : null;
-  const last = Array.isArray(rows) && rows.length ? rows[rows.length - 1] : null;
-  const itsdoMw = last ? last.initialTransmissionSystemDemandOutturn : null;
-  const expected = Number.isFinite(itsdoMw) ? itsdoMw + embedded.solar_mw + embedded.wind_mw : null;
+  const rows = demand.status === 'fulfilled' ? demand.value.body?.data : null;
+  const lastWithIndo = Array.isArray(rows)
+    ? [...rows].reverse().find((r) => Number.isFinite(r?.initialDemandOutturn)) : null;
+  const indoMw = lastWithIndo ? lastWithIndo.initialDemandOutturn : null;
+  const expected = Number.isFinite(indoMw) ? indoMw + embedded.solar_mw + embedded.wind_mw : null;
   if (expected != null && expected > 0) {
     if (Math.abs(verdict.national_demand_mw - expected) / expected > RECONCILE_TOL) {
-      throw { reason: 'ITSDO reconciliation breached', feeds };
+      throw { reason: 'INDO reconciliation breached', feeds };
     }
   } else {
     reconcileNote = 'reconciliation check unavailable';
@@ -219,6 +224,20 @@ export function buildFallback(data, clientNowMs, liveErr) {
     && Number.isFinite(v.wind_mw) && Number.isFinite(v.solar_mw)
     && p.wind_capacity_mw > 0 && p.solar_capacity_mw > 0;
   if (!numbersOk) return unavailable('fallback payload incomplete');
+
+  // A fallback snapshot too old to plausibly be "now" must not show its frozen numbers — a
+  // midday 12 GW-solar reading rendered at 11pm is a wrong headline, not a stale one. Past this
+  // window we go number-free (still below the 12 h build-age UNAVAILABLE cutoff above), measured
+  // on the SNAPSHOT (the grid reading's own time), not the build time.
+  const snapMs = Date.parse(p.snapshot);
+  const snapAgeMin = Number.isFinite(snapMs) ? (clientNowMs - snapMs) / 60000 : Infinity;
+  if (snapAgeMin > FALLBACK_NUMBERS_MAX_MIN) {
+    return {
+      mode: 'unavailable', verdict: null, capacity: null, feeds: liveErr?.feeds || {},
+      lastUpdated: `Last good reading was ${fmtAge(snapAgeMin)} — too old to show as current.`,
+      reason: `${liveErr?.reason || liveErr?.message || 'live failed'}; fallback snapshot too old to represent now`,
+    };
+  }
 
   const age = relAge(builtMs, clientNowMs, Infinity); // an old fallback is expected; only a future build is uncertain
   const snapHH = String(p.snapshot).slice(11, 16);

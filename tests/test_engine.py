@@ -142,21 +142,50 @@ def test_shares_sum_to_one_hundred():
     assert total == pytest.approx(100, abs=0.3)
 
 
+# Heavy-export night (real shape: 2026-06-25 23:30Z, GB exporting ~4.55 GW).
+MIX_EXPORT = {
+    "CCGT": 12000, "WIND": 10000, "NUCLEAR": 5000, "BIOMASS": 2000, "OTHER": 1000,
+    "INTFR": -3000, "INTNED": -1553,          # net interconnector flow = -4553 (export)
+}
+EMB_EXPORT = {"solar_mw": 0, "wind_mw": 1320, "time": "2026-06-25T23:30Z"}
+
+
+def test_reconcile_against_indo_survives_heavy_export():
+    """Regression for the export false-alarm (reconcile-guard-export-bug).
+
+    On an export night the supply reconstruction computes *national* demand (the INDO
+    basis). Reconciling against INDO is export-neutral. The retired ITSDO reference
+    counted the export volume (+ station load + PS pumping) as demand, diverging ~20%
+    and tripping the guard on good data.
+    """
+    v = compute_verdict(MIX_EXPORT, EMB_EXPORT)
+    assert v["national_demand_mw"] == 26767
+    # INDO (national demand) reconciles cleanly.
+    sanity_check(v, pvlive_solar=0, indo=25447, embedded=EMB_EXPORT)
+    assert v["reconcile_residual_pct"] == 0.0
+    # A transmission-demand (ITSDO) magnitude reference — national demand + the 4.55 GW
+    # export + station load + PS pumping — would still trip the 12% guard. That mismatch
+    # was the bug; INDO removes it.
+    with pytest.raises(AssertionError, match="reconciliation"):
+        sanity_check(compute_verdict(MIX_EXPORT, EMB_EXPORT),
+                     pvlive_solar=0, indo=33000, embedded=EMB_EXPORT)
+
+
 def test_sanity_check_passes_for_consistent_inputs():
     v = _verdict()
-    # PV_Live close to NESO solar; ITSDO + embedded close to the denominator.
-    itsdo = 28300 - EMBEDDED["solar_mw"] - EMBEDDED["wind_mw"]  # = 17_300
-    sanity_check(v, pvlive_solar=10200, itsdo=itsdo, embedded=EMBEDDED)
+    # PV_Live close to NESO solar; INDO + embedded close to the denominator.
+    indo = 28300 - EMBEDDED["solar_mw"] - EMBEDDED["wind_mw"]  # = 17_300
+    sanity_check(v, pvlive_solar=10200, indo=indo, embedded=EMBEDDED)
 
 
 def test_sanity_check_trips_on_solar_crosscheck_divergence():
     v = _verdict()
-    itsdo = 17300
+    indo = 17300
     with pytest.raises(AssertionError, match="cross-check"):
-        sanity_check(v, pvlive_solar=5000, itsdo=itsdo, embedded=EMBEDDED)
+        sanity_check(v, pvlive_solar=5000, indo=indo, embedded=EMBEDDED)
 
 
 def test_sanity_check_trips_on_demand_reconciliation_divergence():
     v = _verdict()
     with pytest.raises(AssertionError, match="reconciliation"):
-        sanity_check(v, pvlive_solar=10000, itsdo=5000, embedded=EMBEDDED)
+        sanity_check(v, pvlive_solar=10000, indo=5000, embedded=EMBEDDED)

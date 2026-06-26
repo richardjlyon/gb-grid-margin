@@ -74,16 +74,24 @@ to 100% by construction. Numerators: wind = transmission `WIND` + embedded wind;
 embedded solar; gas = `CCGT` + `OCGT`; imports = net `INT*`; nuclear; biomass; other = the
 remaining positive transmission fuels (`NPSHYD`, `OTHER`, `COAL`, `OIL`).
 
-**Reconciliation guard.** The build compares this denominator against an independent figure —
-Elexon's Initial Transmission System Demand Outturn (ITSDO) plus the same embedded estimate —
-and fails if they disagree by more than 12%. The tolerance is deliberately loose: the supply
-reconstruction runs ~1.5–2 GW above ITSDO (transmission losses, plus FUELINST's 5-minute
-snapshot against ITSDO's 30-minute settlement average), and that offset is roughly
-demand-independent, so as a fraction it grows when demand is low. The guard's job is to catch a
-gross feed failure (a zeroed, doubled or wrong-unit series), not to certify accuracy — the
-accuracy of the one estimate that moves the headline (solar) is defended separately by the
-PV_Live cross-check in #1. The actual residual is recorded each run (`reconcile_residual_pct`)
-rather than hidden.
+**Reconciliation guard — against INDO, not ITSDO.** The build compares this denominator against
+an independent figure — Elexon's Initial (National) Demand Outturn, **INDO**, plus the same
+embedded estimate — and fails if they disagree by more than 12%. INDO is the right reference
+because the supply reconstruction above computes *national* demand. **ITSDO (transmission system
+demand) is the wrong reference and was the source of a false alarm:** by Elexon's definition
+`ITSDO = INDO + interconnector exports + station load + pump-storage pumping`, so on an export
+night ITSDO runs above national demand by the export volume, and the guard tripped on perfectly
+good data. Verified live 2026-06-25 23:30Z (GB exporting 4,553 MW): supply reconstruction 27,638 MW
+vs ITSDO+embedded 34,605 (20.1% — false trip) but vs INDO+embedded 28,156 (1.8% — clean);
+`ITSDO − INDO = 6,449` matched export + station + PS exactly. Pinned by
+`tests/test_engine.py::test_reconcile_against_indo_survives_heavy_export` and a node case in
+`site/live.test.mjs`. The tolerance is deliberately loose: the supply reconstruction runs ~0.5–1 GW
+above INDO (transmission losses, plus FUELINST's 5-minute snapshot against the 30-minute settlement
+average), and that offset is roughly demand-independent, so as a fraction it grows when demand is
+low. The guard's job is to catch a gross feed failure (a zeroed, doubled or wrong-unit series), not
+to certify accuracy — the accuracy of the one estimate that moves the headline (solar) is defended
+separately by the PV_Live cross-check in #1. The actual residual is recorded each run
+(`reconcile_residual_pct`) rather than hidden.
 
 ## 4. Interconnectors
 
@@ -103,7 +111,7 @@ that bite a naive port and are now locked by tests: Python `round(x, 1)` is **ro
 
 The browser **cannot** run the PV_Live cross-check (PV_Live sends no CORS header), so that guard
 stays build-only; the browser instead mirrors the snapshot-completeness and embedded-freshness
-guards and runs the ITSDO reconcile as a live tripwire (a breach forces fallback).
+guards and runs the INDO reconcile as a live tripwire (a breach forces fallback).
 
 **Clock honesty.** Elexon does not expose its `Date` header via CORS, so there is no readable
 server clock in the browser. The live layer therefore anchors everything on the FUELINST
@@ -114,6 +122,17 @@ with the snapshot (data apparently from the future, or implausibly old for a jus
 reading) the label degrades to "age uncertain", and the absolute UTC snapshot time is always
 shown. Fallback (`site/data/latest.json`) is honest about being a last-good reading; a build
 older than 12 h renders UNAVAILABLE with no numbers rather than a stale headline.
+
+**Fallback staleness ladder (the frozen-solar guard).** The fallback's *numbers* are gated on the
+**snapshot** age, not the build age, because a stale headline that *looks* current is worse than
+none: a midday 12 GW-solar reading rendered at 11 pm is a wrong number, not an old one. The ladder:
+under `STALE_MIN` (60 min) the numbers show clean; from 60 min to `FALLBACK_NUMBERS_MAX_MIN`
+(**120 min**, tunable) they still show but carry the "may be out of date" banner; **beyond
+`FALLBACK_NUMBERS_MAX_MIN` the fallback goes number-free** ("Last good reading was N ago — too old
+to show as current"), well before the 12 h build-age UNAVAILABLE cutoff. Pinned by
+`site/live.test.mjs` ("fallback snapshot older than the 'now' window goes number-free"). The 120 min
+value is a presentation knob, set so a solar-bearing headline can't drift across a large fraction of
+a day; raise it only if a less twitchy fallback is wanted at the cost of showing older figures.
 
 ### Deferred low-severity findings (Stage 3 adversarial audit, 2026-06-25)
 

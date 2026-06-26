@@ -16,7 +16,7 @@ MIX = {"CCGT": 6000, "WIND": 5000, "NUCLEAR": 3000, "BIOMASS": 2000,
 EMBEDDED = {"solar_mw": 8000, "wind_mw": 1000, "solar_capacity_mw": 22000,
             "wind_capacity_mw": 6400, "time": "2026-06-25T13:30Z"}
 PVLIVE = {"solar_mw": 8200, "time": SNAP}   # within 10% of embedded solar
-ITSDO = 18000                                # itsdo + embedded(9000) == demand(27000)
+INDO = 18000                                 # indo + embedded(9000) == demand(27000)
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def patched(monkeypatch):
     monkeypatch.setattr(grid_engine, "fetch_fuelinst", lambda: records)
     monkeypatch.setattr(grid_engine, "fetch_embedded_neso", lambda: dict(EMBEDDED))
     monkeypatch.setattr(grid_engine, "fetch_pvlive_solar", lambda: dict(PVLIVE))
-    monkeypatch.setattr(grid_engine, "fetch_itsdo", lambda: ITSDO)
+    monkeypatch.setattr(grid_engine, "fetch_indo", lambda: INDO)
 
 
 def test_build_writes_payload_with_full_provenance(patched, tmp_path):
@@ -39,7 +39,7 @@ def test_build_writes_payload_with_full_provenance(patched, tmp_path):
     assert isinstance(p["embedded_age_min"], (int, float))
     assert p["solar_capacity_mw"] == 22000                 # live trap denominators present
     assert p["wind_capacity_mw"] == 6400
-    assert p["itsdo"] == ITSDO
+    assert p["indo"] == INDO
 
 
 def test_build_verdict_equals_engine(patched, tmp_path):
@@ -65,7 +65,7 @@ def test_failed_build_leaves_fallback_byte_identical(patched, monkeypatch, tmp_p
 
 def test_failed_build_leaves_no_temp_file(patched, monkeypatch, tmp_path):
     target = tmp_path / "latest.json"
-    monkeypatch.setattr(grid_engine, "fetch_itsdo",
+    monkeypatch.setattr(grid_engine, "fetch_indo",
                         lambda: (_ for _ in ()).throw(RuntimeError("feed down")))
     assert build_site.build(target) == 1
     assert list(tmp_path.glob(".latest-*.tmp")) == []

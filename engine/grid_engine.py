@@ -8,13 +8,13 @@ No modelled figures. Every number traces to Elexon or NESO:
 - transmission generation + interconnector flows: Elexon FUELINST (5-min).
 - embedded solar + embedded wind: NESO embedded forecast (the figure NESO nets
   off national demand; CORS-open, so the live browser layer can fetch it too).
-- demand reconciliation: Elexon demand outturn (ITSDO).
+- demand reconciliation: Elexon demand outturn (INDO — national demand).
 
 Two build-time guards defend the published figures (see sanity_check):
 - cross-check: NESO embedded solar must agree with Sheffield Solar PV_Live (the
   independent GB outturn series) within tolerance. PV_Live is server-side only —
   it sends no CORS header, so it cannot be the live figure, only the auditor.
-- reconciliation: the supply-side denominator must agree with Elexon ITSDO +
+- reconciliation: the supply-side denominator must agree with Elexon INDO +
   embedded within tolerance.
 
 Denominator = national demand, defined as:
@@ -54,14 +54,17 @@ WIND = {"WIND"}
 
 # Build-time guard tolerances.
 SOLAR_CROSSCHECK_TOL = 0.10   # NESO vs PV_Live solar — tight; tests the embedded feed
-# Reconciliation is loose by design. The supply reconstruction runs ~1.5-2 GW above
-# ITSDO (transmission losses + FUELINST's 5-min snapshot vs ITSDO's 30-min settlement
+# Reconciliation is loose by design. The supply reconstruction runs ~0.5-1 GW above
+# INDO (transmission losses + FUELINST's 5-min snapshot vs INDO's 30-min settlement
 # average); that offset is roughly demand-independent, so as a fraction it grows when
-# demand is low (a winter night). This guard exists to catch a gross feed failure
-# (zeroed/doubled/wrong-unit), not to certify accuracy — the headline-moving solar
-# figure is policed separately by the tight PV_Live cross-check. The residual is
-# reported (reconcile_residual_pct) rather than hidden.
-RECONCILE_TOL = 0.12          # denominator vs ITSDO + embedded
+# demand is low (a winter night). INDO (national demand) is the right reference, NOT
+# ITSDO: ITSDO additionally counts interconnector exports, station load and PS pumping
+# as demand, so it diverged from this national-demand reconstruction by the export
+# volume on an export night and false-alarmed (engine/NOTES.md §3). This guard exists
+# to catch a gross feed failure (zeroed/doubled/wrong-unit), not to certify accuracy —
+# the headline-moving solar figure is policed separately by the tight PV_Live
+# cross-check. The residual is reported (reconcile_residual_pct) rather than hidden.
+RECONCILE_TOL = 0.12          # denominator vs INDO + embedded
 
 # Snapshot/embedded preconditions — mirrored byte-for-byte in site/verdict.js so the
 # browser refuses a structurally-valid-but-incomplete feed exactly as the build does.
@@ -159,15 +162,22 @@ def fetch_pvlive_solar() -> dict:
 
 # --- Elexon demand (reconciliation only) ------------------------------------
 
-def fetch_itsdo() -> int:
-    """Return the latest Initial Transmission System Demand Outturn (MW)."""
+def fetch_indo() -> int:
+    """Return the latest Initial (National) Demand Outturn, INDO (MW).
+
+    Picks the most recent row carrying a non-null INDO — Elexon occasionally publishes
+    a present-but-null demand for the very latest period, which must not abort the build.
+    """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     url = (f"{BASE}/demand/outturn"
            f"?settlementDateFrom={today}&settlementDateTo={today}")
     payload = _get_json(url)
     assert isinstance(payload, dict), "demand/outturn did not return an object"
     rows = [DemandOutturnRow.model_validate(r) for r in payload["data"]]
-    return rows[-1].itsdo
+    for row in reversed(rows):
+        if row.indo is not None:
+            return row.indo
+    raise RuntimeError("demand/outturn returned no non-null INDO value")
 
 
 # --- Verdict ----------------------------------------------------------------
@@ -232,7 +242,7 @@ def compute_verdict(mix: dict[str, int], embedded: dict) -> dict:
     }
 
 
-def sanity_check(v: dict, pvlive_solar: float, itsdo: int, embedded: dict) -> None:
+def sanity_check(v: dict, pvlive_solar: float, indo: int, embedded: dict) -> None:
     """Build-time guards: fail loudly if a published figure is implausible."""
     assert v["national_demand_mw"] > 0, "non-positive national demand"
     assert 0 <= v["wind_pct"] <= 100, f"wind_pct out of range: {v['wind_pct']}"
@@ -245,13 +255,13 @@ def sanity_check(v: dict, pvlive_solar: float, itsdo: int, embedded: dict) -> No
             f"solar cross-check failed: NESO {v['solar_mw']} vs "
             f"PV_Live {pvlive_solar:.0f} ({diff:.1%} > {SOLAR_CROSSCHECK_TOL:.0%})")
 
-    # Reconciliation: supply-side denominator vs Elexon ITSDO + embedded.
-    expected = itsdo + embedded["solar_mw"] + embedded["wind_mw"]
+    # Reconciliation: supply-side denominator vs Elexon INDO (national demand) + embedded.
+    expected = indo + embedded["solar_mw"] + embedded["wind_mw"]
     diff = abs(v["national_demand_mw"] - expected) / expected
     v["reconcile_residual_pct"] = round(diff * 100, 1)
     assert diff <= RECONCILE_TOL, (
         f"demand reconciliation failed: computed {v['national_demand_mw']} vs "
-        f"ITSDO+embedded {expected} ({diff:.1%} > {RECONCILE_TOL:.0%})")
+        f"INDO+embedded {expected} ({diff:.1%} > {RECONCILE_TOL:.0%})")
 
 
 def main() -> None:
@@ -259,11 +269,11 @@ def main() -> None:
     snapshot, mix = latest_snapshot(records)
     embedded = fetch_embedded_neso()
     pvlive = fetch_pvlive_solar()
-    itsdo = fetch_itsdo()
+    indo = fetch_indo()
 
     verdict = compute_verdict(mix, embedded)
     verdict["snapshot"] = snapshot
-    sanity_check(verdict, pvlive["solar_mw"], itsdo, embedded)
+    sanity_check(verdict, pvlive["solar_mw"], indo, embedded)
 
     print(f"Snapshot: {snapshot}  (embedded {embedded['time']})")
     print(f"  Renewables (wind+solar): {verdict['renewables_pct']}%  "
@@ -276,7 +286,7 @@ def main() -> None:
     print(f"    of which imports     : {verdict['import_pct']}%  ({verdict['net_import_mw']} MW)")
     print(f"  National demand        : {verdict['national_demand_mw']} MW")
     print(f"  [cross-check] PV_Live solar {pvlive['solar_mw']:.0f} MW @ {pvlive['time']}")
-    print(f"  [reconcile]   ITSDO {itsdo} MW + embedded  "
+    print(f"  [reconcile]   INDO {indo} MW + embedded  "
           f"(residual {verdict['reconcile_residual_pct']}%)")
     print(json.dumps(verdict, indent=2))
 

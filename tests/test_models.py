@@ -83,7 +83,7 @@ def test_pvlive_response_rejects_missing_generation_column():
         PvLiveResponse.model_validate(bad).solar_mw()
 
 
-def test_demand_outturn_row_parses_itsdo():
+def test_demand_outturn_row_parses_indo():
     row = DemandOutturnRow.model_validate(
         {
             "publishTime": "2026-06-25T13:30:00Z",
@@ -94,14 +94,24 @@ def test_demand_outturn_row_parses_itsdo():
             "initialTransmissionSystemDemandOutturn": 23201,
         }
     )
-    assert row.itsdo == 23201
+    assert row.indo == 21538
 
 
-def test_demand_outturn_row_rejects_missing_itsdo():
+def test_demand_outturn_row_rejects_missing_indo():
     with pytest.raises(ValidationError):
         DemandOutturnRow.model_validate(
             {"startTime": "2026-06-25T13:00:00Z", "settlementPeriod": 29}
         )
+
+
+def test_demand_outturn_row_keeps_present_but_null_indo():
+    # Elexon occasionally publishes a present-but-null demand for the latest period;
+    # that parses to None (fetch_indo then skips back to the last non-null row).
+    row = DemandOutturnRow.model_validate(
+        {"startTime": "2026-06-25T13:00:00Z", "settlementPeriod": 29,
+         "initialDemandOutturn": None}
+    )
+    assert row.indo is None
 
 
 FUELHH_ROW = {
