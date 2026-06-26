@@ -39,6 +39,7 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from engine import embedded_history, reliability
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import (
@@ -400,10 +401,24 @@ def build(out_dir: Path = SITE_DATA) -> int:
         print(f"derived build failed (GuardError): {e}", file=sys.stderr)
         return 1
 
+    # Reliability stripe series (Stage B): national reliable share per half-hour, from the
+    # FUELHH store joined to the embedded store. Skipped (not fatal) if embedded isn't built.
+    embedded_rows = embedded_history.read_store()
+    reliability_files: list[tuple[str, dict]] = []
+    if embedded_rows:
+        full = reliability.build_series(rows, embedded_rows)
+        reliability_files = [
+            ("reliability_all", reliability.build_payload(reliability.pack(full), generated)),
+            ("reliability_year",
+             reliability.build_payload(reliability.pack(reliability.rolling_year(full)), generated)),
+        ]
+    else:
+        print("embedded store empty — skipping reliability_*.json (run embedded_history backfill)")
+
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("stripe", stripe), ("counters", counters_out),
                           ("records", records_out), ("ytd_shares", ytd),
-                          ("nameplate", nameplate)]:
+                          ("nameplate", nameplate), *reliability_files]:
         _atomic_write(out_dir / f"{name}.json", json.dumps(payload, indent=2) + "\n")
         print(f"wrote {out_dir / f'{name}.json'}")
     return 0

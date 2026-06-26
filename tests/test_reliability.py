@@ -97,3 +97,34 @@ def test_rolling_year_keeps_last_365_days():
               {"t": "2024-12-01T00:00:00Z", "r": 0.6}]
     kept = rolling_year(series)
     assert [x["t"] for x in kept] == ["2024-06-01T00:00:00Z", "2024-12-01T00:00:00Z"]
+
+
+from engine.reliability import build_payload
+
+
+def test_build_payload_carries_provenance():
+    packed = pack([{"t": "2024-06-01T00:00:00Z", "r": 0.7}])
+    p = build_payload(packed, generated_utc="2026-06-26T00:00:00+00:00")
+    assert p["values"] == [0.7]
+    assert p["step_minutes"] == 30
+    assert p["generated_utc"] == "2026-06-26T00:00:00+00:00"
+    for key in ("basis", "source", "metric", "caveats"):
+        assert p[key]
+    assert any("estimate" in c.lower() for c in p["caveats"])  # not-metered disclosure
+
+
+def test_derived_build_emits_reliability_when_embedded_present(tmp_path, monkeypatch):
+    # Uses the committed real stores via engine.history/embedded_history read_store.
+    # If embedded store is present, build() must emit both reliability files with values.
+    import json
+    from engine import derived, embedded_history
+    if not embedded_history.read_store():
+        import pytest
+        pytest.skip("embedded store not built in this checkout")
+    rc = derived.build(out_dir=tmp_path)
+    assert rc == 0
+    for name in ("reliability_year", "reliability_all"):
+        payload = json.loads((tmp_path / f"{name}.json").read_text())
+        assert payload["step_minutes"] == 30
+        assert payload["values"]              # non-empty
+        assert payload["source"]

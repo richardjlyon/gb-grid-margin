@@ -93,3 +93,31 @@ def rolling_year(series: list[dict], months: int = 12) -> list[dict]:
         return []
     cutoff = _parse(series[-1]["t"]) - timedelta(days=round(months / 12 * 365))
     return [s for s in series if _parse(s["t"]) >= cutoff]
+
+
+_BASIS = (
+    "National reliable (firm) share of demand per half-hour, computed by the same "
+    "parity-locked formula as the live gauge (engine.grid_engine.compute_verdict): firm = "
+    "gas+nuclear+biomass+other dispatchable; demand = the supply reconstruction. Embedded "
+    "solar/wind are included so this matches the gauge's national-demand basis."
+)
+_SOURCE = "Elexon FUELHH (settled) + NESO Historic Demand Data (embedded) · PV_Live cross-check"
+_CAVEATS = [
+    "Embedded solar/wind are NESO's modelled outturn estimates, not metered — the firm "
+    "fuels are settled Elexon FUELHH. A mixed metered+estimated layer, disclosed.",
+    "The live gauge reads NESO's embedded forecast; this settled series reads NESO's "
+    "embedded outturn estimate (same owner, sibling product) and lags ~21 days, so it "
+    "ends before today — the live 'now' caret is not part of the settled series.",
+]
+
+
+def build_payload(packed: dict, generated_utc: str) -> dict:
+    """Wrap a packed series with provenance metadata for the dashboard."""
+    return {
+        "basis": _BASIS,
+        "source": _SOURCE,
+        "metric": "National reliable (firm) share of demand, per half-hour",
+        "caveats": _CAVEATS,
+        "generated_utc": generated_utc,
+        **packed,
+    }
