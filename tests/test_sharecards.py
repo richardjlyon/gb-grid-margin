@@ -89,3 +89,38 @@ def test_warning_card_calm_when_clear():
     c = sharecards.warning_card({"in_force": False})
     assert c["theme"] == "ink"
     assert "no" in c["figure"].lower() or "clear" in c["figure"].lower()
+
+
+def test_compose_fills_tokens_and_marks_accent():
+    card = {"slug": "x", "theme": "ink", "template": "stat",
+            "figure": "75% firm", "label": "L", "stamp": "S", "caveat": None, "svg": None}
+    html = sharecards.compose(card)
+    assert "{{" not in html
+    assert "75% firm" in html and 'class="ink"' in html
+
+
+def test_compose_instrument_injects_svg():
+    card = {"slug": "g", "theme": "ink", "template": "instrument",
+            "figure": "75% firm", "label": "L", "stamp": "S", "caveat": None,
+            "svg": "<svg>GAUGE</svg>"}
+    html = sharecards.compose(card)
+    assert "<svg>GAUGE</svg>" in html and "{{" not in html
+
+
+def test_content_hashes(tmp_path):
+    (tmp_path / "a.png").write_bytes(b"hello")
+    out = sharecards.content_hashes(tmp_path)
+    assert out["a"] == __import__("hashlib").sha256(b"hello").hexdigest()[:10]
+
+
+def test_write_manifest_and_stubs(tmp_path):
+    cards = [{"slug": "firm-now", "figure": "75% firm", "label": "L", "kind": "live",
+              "theme": "ink", "stamp": "S", "caveat": None}]
+    sharecards.write_manifest(cards, tmp_path, "26 June 2026", {"firm-now": "abc123"})
+    man = json.loads((tmp_path / "cards.json").read_text())
+    assert man["cards"][0]["png"] == "/share/firm-now.png?v=abc123"
+    sharecards.write_stubs(cards, tmp_path, "26 June 2026", {"firm-now": "abc123"})
+    stub = (tmp_path / "firm-now.html").read_text()
+    assert 'twitter:card" content="summary_large_image"' in stub
+    assert "/share/firm-now.png?v=abc123" in stub
+    assert 'og:image:width" content="1200"' in stub

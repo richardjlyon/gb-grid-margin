@@ -179,3 +179,74 @@ def warning_card(state: dict) -> dict:
             "figure": "All clear",
             "label": "No grid margin warning is in force in Britain right now.",
             "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
+
+
+STUB_TEMPLATE = """<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<title>{title} — Grid Gauge</title>
+<meta name="description" content="{description}">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Grid Gauge">
+<meta property="og:url" content="{stub_url}">
+<meta property="og:image" content="{image_url}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="{site_url}/">
+<meta http-equiv="refresh" content="0;url={target}">
+</head><body>
+<p>{figure} — {label} (as of {asof}) — <a href="{target}">Grid Gauge</a>.</p>
+<script>location.replace({target_js});</script>
+</body></html>
+"""
+
+
+def compose(card: dict) -> str:
+    name = "sharecard-instrument.html" if card["template"] == "instrument" else "sharecard-stat.html"
+    html = (TEMPLATES / name).read_text()
+    html = (html
+            .replace("{{THEME}}", card.get("theme", "ink"))
+            .replace("{{FIGURE}}", card["figure"])
+            .replace("{{LABEL}}", card["label"])
+            .replace("{{STAMP}}", card.get("stamp", ""))
+            .replace("{{CAVEAT}}", card.get("caveat") or "")
+            .replace("{{SVG}}", card.get("svg") or ""))
+    if "{{" in html:
+        raise ValueError(f"unfilled token in card {card['slug']}")
+    return html
+
+
+def content_hashes(share_dir: Path | str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for p in sorted(Path(share_dir).glob("*.png")):
+        out[p.stem] = hashlib.sha256(p.read_bytes()).hexdigest()[:10]
+    return out
+
+
+def write_manifest(cards: list[dict], out_dir: Path | str, asof: str,
+                   versions: dict[str, str]) -> None:
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    payload = {"asof": asof, "cards": [{
+        "slug": c["slug"], "figure": c["figure"], "label": c["label"],
+        "kind": c["kind"], "png": f"/share/{c['slug']}.png?v={versions.get(c['slug'], '')}",
+    } for c in cards]}
+    (out / "cards.json").write_text(json.dumps(payload, indent=2) + "\n")
+
+
+def write_stubs(cards: list[dict], out_dir: Path | str, asof: str,
+                versions: dict[str, str]) -> None:
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    target = f"{SITE_URL}/"
+    for c in cards:
+        html = STUB_TEMPLATE.format(
+            title=_html.escape(f"{c['figure']} — {c['label']}"),
+            description=_html.escape(f"As of {asof}. Every figure traces to Elexon, NESO & DUKES."),
+            stub_url=f"{SITE_URL}/s/{c['slug']}",
+            image_url=f"{SITE_URL}/share/{c['slug']}.png?v={versions.get(c['slug'], '')}",
+            site_url=SITE_URL, target=target, target_js=json.dumps(target),
+            figure=_html.escape(c["figure"]), label=_html.escape(c["label"]), asof=asof)
+        (out / f"{c['slug']}.html").write_text(html)

@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=1200">
+<style>
+@font-face{font-family:"Space Grotesk";src:url("fonts/space-grotesk-700.woff2") format("woff2");font-weight:700;}
+@font-face{font-family:"Space Grotesk";src:url("fonts/space-grotesk-500.woff2") format("woff2");font-weight:500;}
+@font-face{font-family:"Newsreader";src:url("fonts/newsreader-400.woff2") format("woff2");font-weight:400;}
+@font-face{font-family:"Spline Sans Mono";src:url("fonts/spline-sans-mono-500.woff2") format("woff2");font-weight:500;}
+*{margin:0;box-sizing:border-box;}
+body{width:1200px;height:630px;padding:64px 72px;display:flex;flex-direction:column;justify-content:space-between;
+  font-family:"Space Grotesk",sans-serif;position:relative;overflow:hidden;}
+body.ink{background:#15181c;color:#fff;}
+body.alarm{background:linear-gradient(160deg,#e0141f 0%,#a8101b 100%);color:#f4f1ea;}
+.top{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:22px;letter-spacing:.04em;text-transform:uppercase;}
+.brand{display:flex;align-items:center;gap:14px;}
+.tick{width:20px;height:20px;border-radius:3px;background:#d6121f;}
+body.alarm .tick{background:#fff;}
+.site{font:500 19px "Spline Sans Mono",monospace;text-transform:none;opacity:.72;}
+.rule{height:1px;margin:26px 0;background:rgba(255,255,255,.22);}
+body.alarm .rule{background:rgba(255,255,255,.34);}
+.mid{flex:1;display:flex;flex-direction:column;justify-content:center;}
+.figure{font-weight:700;font-size:150px;line-height:.92;letter-spacing:-.02em;font-feature-settings:"tnum";}
+.figure .accent{color:#d6121f;}
+body.alarm .figure .accent{color:#fff;}
+.label{font:400 40px/1.25 "Newsreader",serif;margin-top:24px;max-width:21em;color:#d7dbdf;}
+body.alarm .label{color:rgba(255,255,255,.95);}
+.foot{display:flex;justify-content:space-between;align-items:baseline;font:500 21px "Spline Sans Mono",monospace;}
+.foot .caveat{opacity:.66;max-width:30em;text-align:right;}
+</style></head>
+<body class="{{THEME}}">
+  <div class="top"><span class="brand"><span class="tick"></span>Grid Gauge</span><span class="site">gridgauge.co.uk</span></div>
+  <div class="rule"></div>
+  <div class="mid"><p class="figure">{{FIGURE}}</p><p class="label">{{LABEL}}</p></div>
+  <div class="foot"><span>{{STAMP}}</span><span class="caveat">{{CAVEAT}}</span></div>
+  <script>
+    function fitLabel(){var l=document.querySelector('.label');var m=document.querySelector('.mid');
+      var max=630-64-90;var s=40;l.style.fontSize=s+'px';
+      while(s>28 && m.getBoundingClientRect().bottom>max){s-=1;l.style.fontSize=s+'px';}}
+    window.__fitLabel=fitLabel;document.fonts.ready.then(fitLabel);
+  </script>
+</body></html>
