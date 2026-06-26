@@ -7,6 +7,7 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
+import { shareButtons } from './share.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW, fmtMW,
@@ -216,6 +217,11 @@ function renderVerdict(state) {
       </tbody>
     </table>
     ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${String(v.snapshot).slice(11, 16)}Z`, 'verdict')}`;
+
+  // share the live firm-power card
+  $('verdict-body').insertAdjacentHTML('beforeend', shareButtons(
+    { slug: 'firm-now', figure: `${Math.round(m.firmPct)}% firm`,
+      label: "of Britain's grid is firm power right now" }));
 
   $('verdict-body').querySelectorAll('.gauge-toggle button').forEach((b) =>
     b.addEventListener('click', () => { setGaugeView(b.dataset.view); renderVerdict(LAST_STATE); }));

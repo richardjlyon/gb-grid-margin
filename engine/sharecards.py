@@ -279,6 +279,17 @@ def render(cards: list[dict], out_dir: Path | str) -> None:
             browser.close()
 
 
+def stamp_index_og(index_path: Path | str, version: str) -> None:
+    """Stamp the homepage og:image (firm-now hero) with the content-hash token."""
+    index = Path(index_path)
+    base = f"{SITE_URL}/share/firm-now.png"
+    pattern = re.compile(rf'(<meta property="og:image" content="){re.escape(base)}(?:\?[^"]*)?(">)')
+    html, n = pattern.subn(rf'\g<1>{base}?v={version}\g<2>', index.read_text())
+    if n != 1:
+        raise ValueError(f"expected exactly one firm-now og:image in {index}, found {n}")
+    index.write_text(html)
+
+
 def build(data_dir: Path | str = REPO / "site" / "data",
           site_dir: Path | str = REPO / "site") -> int:
     """Build the full card set: render PNGs, write cards.json + /s/ stubs.
@@ -297,6 +308,8 @@ def build(data_dir: Path | str = REPO / "site" / "data",
     versions = content_hashes(share_dir)
     write_manifest(cards, share_dir, asof, versions)
     write_stubs(cards, stub_dir, asof, versions)
+    if "firm-now" in versions:
+        stamp_index_og(site / "index.html", versions["firm-now"])
     print(f"built {len(cards)} cards → {share_dir}")
     return 0
 
