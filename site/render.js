@@ -45,12 +45,12 @@ export function tallyGroups(n) {
 // --- the dependence gauge status -------------------------------------------
 
 // The firm-power gauge reads how much of demand firm, dispatchable generation is meeting
-// right now (gas + nuclear + biomass + other firm fuels). It arms red when firm power runs
-// low — the grid leaning hard on weather and imports, which fall away together in a calm.
-// A fuel-gauge metaphor: low needle = running on empty.
+// right now (gas + nuclear + biomass + other firm fuels). Two states: RELIABLE, or UNRELIABLE
+// (armed red) when firm power runs low — the grid leaning hard on weather and imports, which
+// fall away together in a calm. A fuel-gauge metaphor: low needle = running on empty.
 export function firmStatus(firmPct) {
-  const label = firmPct < 40 ? 'EXPOSED' : firmPct < 55 ? 'STRETCHED' : 'FIRM';
-  return { label, armed: label === 'EXPOSED' };
+  const label = firmPct < 50 ? 'UNRELIABLE' : 'RELIABLE';
+  return { label, armed: label === 'UNRELIABLE' };
 }
 
 // --- the capacity trap (static DUKES denominator) --------------------------
@@ -88,8 +88,84 @@ export function gasVsWindMultiple(gasMw, windMw) {
   return windMw > 0 ? Math.round((gasMw / windMw) * 10) / 10 : null;
 }
 
+// --- the source-mix arc (the gauge) ----------------------------------------
+// The gauge is a proportional arc: one slice per source, length ∝ output, green-toned for the
+// reliable (dispatchable, weather-independent) sources and red-toned for the unreliable
+// (weather & imports) sources. Two views of the same mix, picked by a toggle:
+//   'using'      — the arc is 100% of national demand (what Britain consumes). Imports are a
+//                  slice when importing; on export the weather slices shrink to what served
+//                  demand and the surplus becomes a magenta spill-over tail (exportMw).
+//   'generating' — the arc is 100% of domestic generation (firm + wind + solar). Interconnection
+//                  is not a slice; it is reported as the signed self-sufficiency readout.
+// The arc only ever draws POSITIVE slices; a negative net flow (export) is the tail, never a slice.
+const ARC_RELIABLE = [
+  ['gas', 'Gas', '#1b5e3f', (v) => v.gas_mw],
+  ['nuclear', 'Nuclear', '#2e7d52', (v) => v.nuclear_mw],
+  ['biofuel', 'Biofuel', '#4a9c73', (v) => v.biomass_mw],
+  ['hydro', 'Hydro & other', '#79c1a0', (v) => v.other_mw],
+];
+const COL_WIND = '#d6121f';     // the headline unreliable — brand red
+const COL_SOLAR = '#f08a3c';    // warm amber — nods to "sun", clearly distinct from wind
+const COL_IMPORTS = '#7d1420';  // deep maroon — darkened so it can't be confused with wind
+export const COL_EXPORT = '#c2188f';   // magenta — surplus sent abroad (deliberately not red/green)
+
+export function sourceArcModel(v, view) {
+  const num = (x) => (Number.isFinite(x) ? x : 0);
+  const reliable = ARC_RELIABLE.map(([key, label, color, get]) => ({
+    key, label, color, group: 'reliable', mw: Math.max(0, num(get(v))),
+  }));
+  const firm = reliable.reduce((s, r) => s + r.mw, 0);
+  const wind = Math.max(0, num(v.wind_mw));
+  const solar = Math.max(0, num(v.solar_mw));
+  const weather = wind + solar;
+  const netImp = num(v.net_import_mw);
+  const red = (key, label, color, mw) => ({ key, label, color, group: 'unreliable', mw });
+
+  let arcTotal; let firmServed; let slices; let exportMw = 0;
+
+  if (view === 'generating') {
+    arcTotal = firm + weather;                       // domestic generation
+    firmServed = firm;
+    slices = [...reliable,
+      red('wind', 'Wind', COL_WIND, wind),
+      red('solar', 'Solar', COL_SOLAR, solar)];
+  } else {                                           // 'using' — arc is national demand
+    arcTotal = num(v.national_demand_mw);
+    if (netImp >= 0) {                               // importing: imports is a real slice
+      firmServed = firm;
+      slices = [...reliable,
+        red('wind', 'Wind', COL_WIND, wind),
+        red('solar', 'Solar', COL_SOLAR, solar),
+        red('imports', 'Imports', COL_IMPORTS, netImp)];
+    } else {                                         // exporting: surplus is the tail, not a slice
+      const exportTotal = -netImp;
+      const exportFromWeather = Math.min(exportTotal, weather);   // exports come off the surplus
+      const exportFromFirm = exportTotal - exportFromWeather;     // …then off firm (over-export)
+      const weatherServed = weather - exportFromWeather;
+      firmServed = firm - exportFromFirm;
+      const fScale = firm > 0 ? firmServed / firm : 0;
+      const wScale = weather > 0 ? weatherServed / weather : 0;
+      slices = [
+        ...reliable.map((r) => ({ ...r, mw: r.mw * fScale })),
+        red('wind', 'Wind', COL_WIND, wind * wScale),
+        red('solar', 'Solar', COL_SOLAR, solar * wScale)];
+      exportMw = exportTotal;
+    }
+  }
+  const denom = arcTotal > 0 ? arcTotal : 1;
+  return {
+    view,
+    slices: slices.map((s) => ({ ...s, frac: s.mw / denom })),
+    arcTotal,
+    firmPct: Math.round((firmServed / denom) * 1000) / 10,
+    exportMw,
+    selfSufficiencyMw: netImp,
+  };
+}
+
 // --- display formatting -----------------------------------------------------
 
 export const fmtPct = (x) => (Number.isFinite(x) ? `${x.toFixed(1)}%` : '—');
+export const fmtPct0 = (x) => (Number.isFinite(x) ? `${Math.round(x)}%` : '—');
 export const fmtGW = (mw) => (Number.isFinite(mw) ? `${(mw / 1000).toFixed(1)} GW` : '—');
 export const fmtMW = (mw) => (Number.isFinite(mw) ? `${Math.round(mw).toLocaleString('en-GB')} MW` : '—');

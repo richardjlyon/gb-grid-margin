@@ -7,12 +7,20 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import {
-  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
+  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW, fmtMW,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
 const POLL_MS = 5 * 60 * 1000;
+
+// Gauge view (Using / Generating), persisted like the Subsidy Clock's nominal/real switch.
+const VIEW_KEY = 'gg-gauge-view';
+const getGaugeView = () => {
+  try { return localStorage.getItem(VIEW_KEY) === 'generating' ? 'generating' : 'using'; } catch { return 'using'; }
+};
+const setGaugeView = (val) => { try { localStorage.setItem(VIEW_KEY, val); } catch { /* private mode */ } };
+let LAST_STATE = null;   // last live state, so the toggle can re-render without a refetch
 
 async function getJSON(url) {
   const r = await fetch(url, { cache: 'no-store' });
@@ -37,7 +45,7 @@ function arcPath(cx, cy, R, a, b, max) {
 
 // A flat half-dial: quiet base arc, an optional red danger arc, hairline ticks, one needle.
 // `danger` is a [lo, hi] band shaded red on the dial face; `armed` flips the needle red.
-function buildGauge(value, max, { armed = false, danger = null, label = 'gauge' } = {}) {
+function buildGauge(value, max, { armed = false, danger = null, reliable = null, label = 'gauge' } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
   for (let v = 0; v <= max; v += max / 6) {
@@ -47,23 +55,75 @@ function buildGauge(value, max, { armed = false, danger = null, label = 'gauge' 
   }
   const [nx, ny] = arcPoint(cx, cy, R - 12, Math.min(value, max), max);
   const needleColor = armed ? '#d6121f' : '#15181c';
-  const dangerArc = danger
-    ? `<path d="${arcPath(cx, cy, R, danger[0], danger[1], max)}" fill="none" stroke="#d6121f" stroke-width="7" opacity="0.18"/>`
+  // Coloured zones (firm gauge): red danger below the threshold, green reliable above it.
+  // Drawn solid over the grey track; the trap gauge passes neither, so it stays grey.
+  const seg = (band, color) => band
+    ? `<path d="${arcPath(cx, cy, R, band[0], band[1], max)}" fill="none" stroke="${color}" stroke-width="7"/>`
     : '';
   return `
   <svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
     <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="#d7dbdf" stroke-width="7"/>
-    ${dangerArc}
+    ${seg(reliable, '#1f9d57')}
+    ${seg(danger, '#d6121f')}
     ${ticks.join('')}
     <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${needleColor}" stroke-width="3" stroke-linecap="round"/>
     <circle cx="${cx}" cy="${cy}" r="5" fill="${needleColor}"/>
   </svg>`;
 }
 
+// The source-mix arc: each slice ∝ output, reliable (green) from the left, unreliable (red) to the
+// right, then the magenta export tail beyond the demand mark. `model` is sourceArcModel(v, view).
+function buildSourceArc(model, { armed = false } = {}) {
+  const cx = 100, cy = 104, R = 86;
+  const using = model.view === 'using';
+  const ss = model.selfSufficiencyMw;                         // signed net flow (+import / −export)
+  // 'using': arc is demand; a surplus spills as a tail beyond it. 'generating': arc is generation;
+  // demand is marked on it, with the beyond-demand surplus (export) or the gap to demand (import)
+  // flagged on the OUTER edge so the green/red source slices underneath stay intact.
+  const demandMw = using ? model.arcTotal : model.arcTotal + ss;
+  const total = (using ? model.arcTotal + model.exportMw : model.arcTotal + Math.max(0, ss)) || 1;
+  const GAP = total * 0.004;
+  const band = (v0, v1, color) =>
+    `<path d="${arcPath(cx, cy, R, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="12"/>`;
+  const outer = (v0, v1, color) =>
+    `<path d="${arcPath(cx, cy, R + 10, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="3.5"/>`;
+  const tick = (val, color, len, w) => {
+    const [ox, oy] = arcPoint(cx, cy, R + len / 2, val, total);
+    const [ix, iy] = arcPoint(cx, cy, R - len / 2, val, total);
+    return `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="${color}" stroke-width="${w}"/>`;
+  };
+  let svg = `<path d="${arcPath(cx, cy, R, 0, total, total)}" fill="none" stroke="#eceef0" stroke-width="12"/>`;
+  let cum = 0;
+  for (const s of model.slices) {
+    if (s.mw <= 0) continue;
+    const lo = s.mw > GAP * 1.5 ? cum + GAP / 2 : cum;
+    const hi = s.mw > GAP * 1.5 ? cum + s.mw - GAP / 2 : cum + s.mw;
+    svg += band(lo, hi, s.color);
+    cum += s.mw;
+  }
+  if (using && model.exportMw > 0) {                          // surplus spills beyond the demand arc
+    svg += band(model.arcTotal + GAP / 2, total, COL_EXPORT);
+    svg += tick(model.arcTotal, '#15181c', 16, 2.2);         // "demand met" divider
+  } else if (!using && Math.abs(ss) >= 1) {                   // generating: mark demand + flag the trade
+    svg += (ss < 0)
+      ? outer(demandMw, model.arcTotal, COL_EXPORT)           // generation beyond demand → exported
+      : outer(model.arcTotal, demandMw, '#7d1420');           // generation short of demand → imports filled it
+    svg += tick(demandMw, '#15181c', 16, 2.2);               // demand marker
+  }
+  // Needle points at the firm boundary (where green meets red) — the headline firm share.
+  const firmMw = model.slices.filter((s) => s.group === 'reliable').reduce((a, s) => a + s.mw, 0);
+  const [nx, ny] = arcPoint(cx, cy, R - 14, firmMw, total);
+  const ncol = armed ? '#d6121f' : '#15181c';
+  svg += `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${ncol}" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="5" fill="${ncol}"/>`;
+  const basis = model.view === 'using' ? 'share of demand' : 'share of generation';
+  return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="Source mix — ${basis}, firm ${model.firmPct}%">${svg}</svg>`;
+}
+
 // ============================================================ live entries
 let NAMEPLATE = null; // DUKES anchor (sound capacity-trap denominator)
 
 function renderVerdict(state) {
+  LAST_STATE = state;   // so the Using/Generating toggle can re-render without a refetch
   const badge = state.mode === 'live' ? 'live'
     : `<span class="modebadge ${state.mode}">${state.mode}</span>`;
   $('verdict-mode').innerHTML = badge;
@@ -76,61 +136,88 @@ function renderVerdict(state) {
     return;
   }
   const v = state.verdict;
-  const f = firmShares(v);                 // robust to a pre-firm fallback latest.json
-  const status = firmStatus(f.firm_pct);
-  const d = v.national_demand_mw;
-  const share = (mw, pct) => (Number.isFinite(pct) ? pct : (d ? Math.round((mw / d) * 1000) / 10 : NaN));
+  const view = getGaugeView();
+  const m = sourceArcModel(v, view);
+  const status = firmStatus(m.firmPct);
+  const using = view === 'using';
+  // One integer pair so the two stamps always sum to 100 (no 80% + 21% rounding artefact).
+  const firmInt = Number.isFinite(m.firmPct) ? Math.round(m.firmPct) : null;
+  const firmStamp = firmInt == null ? '—' : `${firmInt}%`;
+  const weatherStamp = firmInt == null ? '—' : `${100 - firmInt}%`;
 
-  // Receipt grouped by the reliability cut: firm (dispatchable, weather-independent) over
-  // weather & imports (the correlated-failure bucket). Each group carries a subtotal; the
-  // weather & imports subtotal is the red one, tying back to the gauge.
-  const firmRows = [
-    { fuel: 'Gas (CCGT + OCGT)', mw: v.gas_mw, pct: share(v.gas_mw, v.gas_pct) },
-    { fuel: 'Nuclear', mw: v.nuclear_mw, pct: share(v.nuclear_mw, v.nuclear_pct) },
-    { fuel: 'Biomass', mw: v.biomass_mw, pct: share(v.biomass_mw, v.biomass_pct) },
-    { fuel: 'Hydro & other firm', mw: v.other_mw, pct: share(v.other_mw, v.other_pct) },
-  ];
-  const varRows = [
-    { fuel: 'Wind', mw: v.wind_mw, pct: share(v.wind_mw, v.wind_pct) },
-    { fuel: 'Solar', mw: v.solar_mw, pct: share(v.solar_mw, v.solar_pct) },
-    { fuel: 'Imports (net)', mw: v.net_import_mw, pct: share(v.net_import_mw, v.import_pct) },
-  ];
+  // Receipt rows derive from the SAME model the arc draws, so the table and the gauge never disagree.
+  const rel = m.slices.filter((s) => s.group === 'reliable');
+  const unr = m.slices.filter((s) => s.group === 'unreliable');
+  const sumMw = (a) => a.reduce((s, x) => s + x.mw, 0);
+  const pctOf = (mw) => (m.arcTotal > 0 ? Math.round((mw / m.arcTotal) * 1000) / 10 : NaN);
+  const toRow = (s) => ({ fuel: s.label, mw: s.mw, pct: pctOf(s.mw), color: s.color });
+  const firmRows = rel.map(toRow);
+  const varRows = unr.map(toRow);
   const maxPct = Math.max(...[...firmRows, ...varRows].map((r) => r.pct).filter(Number.isFinite), 1);
-  const row = (r, red) => Number.isFinite(r.pct) ? `
+  // Each row's bar is its slice colour in the arc, so the receipt doubles as the gauge legend.
+  const row = (r) => Number.isFinite(r.pct) ? `
     <tr>
       <td class="fuel">${esc(r.fuel)}</td>
       <td class="n">${fmtMW(r.mw)}</td>
       <td class="n">${fmtPct(r.pct)}</td>
-      <td class="bar-cell"><div class="bar ${red ? 'red' : ''}" style="width:${(Math.max(0, r.pct) / maxPct * 100).toFixed(0)}%"></div></td>
+      <td class="bar-cell"><div class="bar" style="width:${(Math.max(0, r.pct) / maxPct * 100).toFixed(0)}%;background:${r.color}"></div></td>
     </tr>` : '';
   const groupHead = (label, mw, pct, red) => `
     <tr class="group ${red ? 'fail' : ''}"><td class="fuel">${label}</td>
       <td class="n">${fmtMW(mw)}</td><td class="n">${fmtPct(pct)}</td><td class="bar-cell"></td></tr>`;
 
+  const netImp = m.selfSufficiencyMw;
+  const weatherLabel = using ? 'Weather &amp; imports' : 'Wind &amp; solar';
+  const totalLabel = using ? 'National demand' : 'Total generation';
+  const ssline = using
+    ? (m.exportMw > 0 ? `<p class="ssline export">Exporting ${fmtGW(m.exportMw)} surplus — generated beyond demand</p>` : '')
+    : `<p class="ssline">${netImp >= 0 ? `Importing ${fmtGW(netImp)} — short of self-sufficiency` : `Exporting ${fmtGW(-netImp)} — beyond self-sufficiency`}</p>`;
+  // The interconnection row has no proportional bar (it isn't part of the 100%), so its bar cell
+  // carries a fixed colour swatch as the legend key: magenta for exported surplus, import-red
+  // (matching the Imports slice, render.js COL_IMPORTS) for net imports.
+  const extra = using
+    ? (m.exportMw > 0 ? { label: 'Exported (surplus)', mw: m.exportMw, color: COL_EXPORT } : null)
+    : (netImp < 0 ? { label: 'Net exports', mw: -netImp, color: COL_EXPORT }
+      : { label: 'Net imports', mw: netImp, color: '#7d1420' });
+  const extraRow = extra
+    ? `<tr class="export-row"><td class="fuel">${extra.label}</td><td class="n">${fmtMW(extra.mw)}</td><td class="n">—</td><td class="bar-cell"><div class="bar" style="width:16px;background:${extra.color}"></div></td></tr>`
+    : '';
+  const toggle = `
+    <div class="gauge-toggle" role="group" aria-label="Gauge view">
+      <button type="button" data-view="using" aria-pressed="${using}"${using ? ' class="on"' : ''}>Using</button>
+      <button type="button" data-view="generating" aria-pressed="${!using}"${!using ? ' class="on"' : ''}>Generating</button>
+    </div>`;
+
   $('verdict-body').innerHTML = `
+    ${toggle}
     <div class="gauge-block">
-      ${buildGauge(f.firm_pct, 100, { armed: status.armed, danger: [0, 40], label: 'Firm power share of demand' })}
-      <div class="gauge-zonelabels"><span>Exposed</span><span>Stretched</span><span>Firm</span></div>
+      ${buildSourceArc(m, { armed: status.armed })}
+      <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
     </div>
     <div class="stamp-pair">
-      <div class="stamp"><span class="stamp-val">${fmtPct(f.firm_pct)}</span>
-        <span class="stamp-label">Firm power</span></div>
-      <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${fmtPct(f.notfirm_pct)}</span>
-        <span class="stamp-label">Weather &amp; imports</span></div>
+      <div class="stamp"><span class="stamp-val">${firmStamp}</span>
+        <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
+      <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${weatherStamp}</span>
+        <span class="stamp-label">${weatherLabel}</span></div>
     </div>
     <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
+    ${ssline}
     <table class="receipt">
-      <caption>The receipt — what's meeting demand right now</caption>
+      <caption>The receipt — ${using ? "what's meeting demand right now" : 'what Britain is generating right now'}</caption>
       <thead><tr><th>Source</th><th>Output</th><th>Share</th><th class="bar-cell"></th></tr></thead>
       <tbody>
-        ${groupHead('Firm power', f.firm_mw, f.firm_pct, false)}
-        ${firmRows.map((r) => row(r, false)).join('')}
-        ${groupHead('Weather &amp; imports', f.notfirm_mw, f.notfirm_pct, true)}
-        ${varRows.map((r) => row(r, true)).join('')}
-        <tr class="total"><td class="fuel">National demand</td><td class="n">${fmtMW(v.national_demand_mw)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
+        ${groupHead('Gas/nuclear/biofuel/hydro', sumMw(rel), pctOf(sumMw(rel)), false)}
+        ${firmRows.map((r) => row(r)).join('')}
+        ${groupHead(weatherLabel, sumMw(unr), pctOf(sumMw(unr)), true)}
+        ${varRows.map((r) => row(r)).join('')}
+        <tr class="total"><td class="fuel">${totalLabel}</td><td class="n">${fmtMW(m.arcTotal)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
+        ${extraRow}
       </tbody>
     </table>
     ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${String(v.snapshot).slice(11, 16)}Z`, 'verdict')}`;
+
+  $('verdict-body').querySelectorAll('.gauge-toggle button').forEach((b) =>
+    b.addEventListener('click', () => { setGaugeView(b.dataset.view); renderVerdict(LAST_STATE); }));
 
   renderTrap(v);
   renderDuel(v);

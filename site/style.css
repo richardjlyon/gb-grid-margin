@@ -130,17 +130,28 @@ main { padding-bottom: 40px; }
 }
 .caveat strong { font-style: normal; font-weight: 600; }
 
-/* ---------- the half-dial gauge (the signature) ---------- */
+/* ---------- the Using / Generating toggle (mirrors the Subsidy Clock switch) ---------- */
+.gauge-toggle {
+  display: flex; width: max-content; margin: 0 auto 10px; border: 1px solid var(--ink);
+  border-radius: 999px; overflow: hidden; background: var(--paper);
+}
+.gauge-toggle button {
+  font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 6px 16px; border: 0; background: transparent;
+  color: var(--ink); cursor: pointer;
+}
+.gauge-toggle button.on { background: var(--ink); color: var(--paper); }
 .gauge-block { text-align: center; margin: 6px 0 2px; }
 .gauge { width: min(440px, 92%); height: auto; display: block; margin: 0 auto; }
 .gauge-zonelabels {
-  display: flex; justify-content: center; gap: 26px; margin: 2px 0 0;
+  display: flex; justify-content: space-between; margin: 2px auto 0;
+  width: min(440px, 92%); padding: 0 5%; box-sizing: border-box;
   font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--slate);
 }
 .stamp-pair {
-  display: flex; justify-content: center; gap: clamp(20px, 7vw, 70px);
-  margin: 10px 0 0; flex-wrap: wrap;
+  display: flex; justify-content: space-between; gap: clamp(20px, 7vw, 70px);
+  width: min(440px, 92%); margin: 10px auto 0; flex-wrap: wrap;
 }
 .stamp { text-align: center; }
 .stamp-val {
@@ -157,6 +168,12 @@ main { padding-bottom: 40px; }
   text-transform: uppercase; text-align: center; margin: 14px 0 0; color: var(--ink);
 }
 .status-line.armed { color: var(--red); }
+.ssline {
+  font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.04em;
+  text-align: center; margin: 4px 0 0; color: var(--slate);
+}
+.ssline.export { color: #c2188f; }   /* magenta — the exported surplus */
+.receipt .export-row td { color: var(--slate); font-style: italic; border-top: 1px dashed #cfd4d8; }
 
 /* ---------- the receipt table ---------- */
 .receipt { width: 100%; border-collapse: collapse; margin: 20px 0 0; font-family: var(--mono); }

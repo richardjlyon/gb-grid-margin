@@ -3,8 +3,53 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
-  capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW,
+  capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtPct0, fmtGW, sourceArcModel,
 } from './render.js';
+
+const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
+
+test('sourceArcModel — generating view: domestic generation, imports off-arc', () => {
+  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 10000, solar_mw: 0, net_import_mw: -4000, national_demand_mw: 26000 };
+  const m = sourceArcModel(v, 'generating');
+  assert.equal(m.arcTotal, 30000);            // firm 20000 + wind 10000
+  assert.equal(m.firmPct, 66.7);
+  assert.equal(m.exportMw, 0);
+  assert.equal(m.selfSufficiencyMw, -4000);
+  assert.equal(m.slices.find((s) => s.key === 'imports'), undefined);
+  assert.ok(approx(m.slices.find((s) => s.key === 'wind').frac, 1 / 3));
+  assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
+});
+
+test('sourceArcModel — using view, importing: imports is a slice, fracs tile demand', () => {
+  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 8000, solar_mw: 2000, net_import_mw: 6000, national_demand_mw: 36000 };
+  const m = sourceArcModel(v, 'using');
+  assert.equal(m.arcTotal, 36000);
+  assert.equal(m.firmPct, 55.6);
+  assert.equal(m.exportMw, 0);
+  assert.ok(approx(m.slices.find((s) => s.key === 'imports').frac, 6000 / 36000));
+  assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
+});
+
+test('sourceArcModel — using view, exporting: weather slice shrinks, surplus is the tail', () => {
+  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 10000, solar_mw: 0, net_import_mw: -4500, national_demand_mw: 25500 };
+  const m = sourceArcModel(v, 'using');
+  assert.equal(m.arcTotal, 25500);
+  assert.equal(m.firmPct, 78.4);
+  assert.equal(m.exportMw, 4500);
+  assert.equal(m.slices.find((s) => s.key === 'imports'), undefined);
+  assert.ok(approx(m.slices.find((s) => s.key === 'wind').mw, 5500));   // 10000 − 4500 exported
+  assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));       // served slices tile demand
+});
+
+test('sourceArcModel — using view, over-export: no negative slices (clamp), firm shrinks', () => {
+  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 2000, solar_mw: 0, net_import_mw: -5000, national_demand_mw: 17000 };
+  const m = sourceArcModel(v, 'using');
+  assert.equal(m.exportMw, 5000);
+  assert.equal(m.firmPct, 100);
+  assert.ok(approx(m.slices.find((s) => s.key === 'wind').mw, 0));
+  assert.ok(m.slices.every((s) => s.mw >= -1e-9));
+  assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
+});
 
 test('gaugeNeedleAngle maps 0..max onto a -90..+90 half-dial', () => {
   assert.equal(gaugeNeedleAngle(0, 60), -90);
@@ -36,13 +81,13 @@ test('tallyGroups breaks a count into gate-of-five groups', () => {
   assert.deepEqual(tallyGroups(12), [5, 5, 2]);
 });
 
-test('firmStatus reads the firm-power share; arms red when firm power runs low', () => {
-  assert.deepEqual(firmStatus(70), { label: 'FIRM', armed: false });
-  assert.deepEqual(firmStatus(48), { label: 'STRETCHED', armed: false });
-  assert.deepEqual(firmStatus(35), { label: 'EXPOSED', armed: true });
-  // boundaries: 55 is still FIRM, exactly 40 is STRETCHED (armed below 40).
-  assert.deepEqual(firmStatus(55), { label: 'FIRM', armed: false });
-  assert.deepEqual(firmStatus(40), { label: 'STRETCHED', armed: false });
+test('firmStatus reads the firm-power share; UNRELIABLE (red) when firm power runs low', () => {
+  assert.deepEqual(firmStatus(70), { label: 'RELIABLE', armed: false });
+  assert.deepEqual(firmStatus(55), { label: 'RELIABLE', armed: false });
+  assert.deepEqual(firmStatus(35), { label: 'UNRELIABLE', armed: true });
+  // boundary: exactly 50 is RELIABLE; below 50 (less than half the grid firm) arms red.
+  assert.deepEqual(firmStatus(50), { label: 'RELIABLE', armed: false });
+  assert.deepEqual(firmStatus(49.9), { label: 'UNRELIABLE', armed: true });
 });
 
 test('firmShares prefers the engine fields, derives from MW for a pre-firm fallback', () => {
@@ -77,4 +122,10 @@ test('fmtPct / fmtGW format for display, with em-dash for non-finite', () => {
   assert.equal(fmtPct(NaN), '—');
   assert.equal(fmtGW(9408), '9.4 GW');
   assert.equal(fmtGW(940), '0.9 GW');
+});
+
+test('fmtPct0 rounds to a whole percent (the gauge stamps), em-dash for non-finite', () => {
+  assert.equal(fmtPct0(76.5), '77%');   // round-half-up at .5
+  assert.equal(fmtPct0(23.4), '23%');
+  assert.equal(fmtPct0(NaN), '—');
 });
