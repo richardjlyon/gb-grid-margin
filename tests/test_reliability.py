@@ -70,3 +70,30 @@ def test_build_series_drops_unjoined_and_none_share():
     eb = [_eb(1, 100, 0)]  # period 2 has no embedded row -> dropped
     s = build_series(fh, eb)
     assert [x["t"] for x in s] == ["2024-06-01T00:00:00Z"]
+
+
+from engine.reliability import pack, rolling_year
+
+
+def test_pack_regular_grid_with_null_gap():
+    # three slots 30 min apart, middle one missing -> null in the packed grid
+    series = [{"t": "2024-06-01T00:00:00Z", "r": 0.7},
+              {"t": "2024-06-01T01:00:00Z", "r": 0.6}]
+    p = pack(series)
+    assert p["start_utc"] == "2024-06-01T00:00:00Z"
+    assert p["step_minutes"] == 30
+    assert p["values"] == [0.7, None, 0.6]
+    assert p["gap_count"] == 1
+    assert p["range"] == {"from": "2024-06-01T00:00:00Z", "to": "2024-06-01T01:00:00Z"}
+
+
+def test_pack_empty():
+    assert pack([])["values"] == []
+
+
+def test_rolling_year_keeps_last_365_days():
+    series = [{"t": "2023-01-01T00:00:00Z", "r": 0.5},
+              {"t": "2024-06-01T00:00:00Z", "r": 0.7},
+              {"t": "2024-12-01T00:00:00Z", "r": 0.6}]
+    kept = rolling_year(series)
+    assert [x["t"] for x in kept] == ["2024-06-01T00:00:00Z", "2024-12-01T00:00:00Z"]

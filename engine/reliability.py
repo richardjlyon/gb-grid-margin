@@ -57,3 +57,39 @@ def build_series(fuelhh_rows: list[dict], embedded_rows: list[dict]) -> list[dic
         out.append({"t": fh["period_start_utc"], "r": r})
     out.sort(key=lambda x: x["t"])
     return out
+
+
+def _parse(t: str) -> datetime:
+    return datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def pack(series: list[dict]) -> dict:
+    """Pack a sorted reliable-share series onto a regular 30-min UTC grid.
+
+    `values[i]` is the share at start_utc + i*30min, None where the half-hour is absent.
+    """
+    if not series:
+        return {"start_utc": None, "step_minutes": 30, "values": [],
+                "range": {"from": None, "to": None}, "gap_count": 0}
+    start = _parse(series[0]["t"])
+    end = _parse(series[-1]["t"])
+    n = int((end - start).total_seconds() // 1800) + 1
+    values: list[float | None] = [None] * n
+    for s in series:
+        i = int((_parse(s["t"]) - start).total_seconds() // 1800)
+        values[i] = s["r"]
+    return {
+        "start_utc": series[0]["t"],
+        "step_minutes": 30,
+        "values": values,
+        "range": {"from": series[0]["t"], "to": series[-1]["t"]},
+        "gap_count": sum(1 for v in values if v is None),
+    }
+
+
+def rolling_year(series: list[dict], months: int = 12) -> list[dict]:
+    """The sub-series within `months` (≈ 365 days) of the latest half-hour."""
+    if not series:
+        return []
+    cutoff = _parse(series[-1]["t"]) - timedelta(days=round(months / 12 * 365))
+    return [s for s in series if _parse(s["t"]) >= cutoff]
