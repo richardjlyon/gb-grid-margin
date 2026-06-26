@@ -25,6 +25,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from engine import widestore
 from engine.models import DemandHhRow, FuelHhRow
 
 UK = ZoneInfo("Europe/London")
@@ -124,30 +125,7 @@ def year_path(settlement_date: str, base_dir: Path = HISTORY_DIR) -> Path:
     return Path(base_dir) / f"fuelhh_{settlement_date[:4]}.csv"
 
 
-def _key(row: dict) -> tuple[str, int]:
-    return (row["settlement_date"], int(row["settlement_period"]))
-
-
-def _to_csv(row: dict) -> dict:
-    return {c: ("" if row.get(c) is None else row[c]) for c in COLUMNS}
-
-
-def _from_csv(raw: dict) -> dict:
-    out: dict = {}
-    for c in COLUMNS:
-        v = raw.get(c, "")
-        if c in _TEXT_COLUMNS:
-            out[c] = v
-        else:
-            out[c] = None if v == "" else int(v)
-    return out
-
-
-def _read_file(path: Path) -> list[dict]:
-    if not path.exists():
-        return []
-    with path.open(newline="") as f:
-        return [_from_csv(r) for r in csv.DictReader(f)]
+_key = widestore.key  # retained: find_duplicates() uses it
 
 
 def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
@@ -158,44 +136,13 @@ def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
     settlement revision and raises — history is never silently overwritten. Returns the
     number of rows actually written.
     """
-    base = Path(base_dir)
-    written = 0
-    by_year: dict[Path, list[dict]] = {}
-    for row in rows:
-        by_year.setdefault(year_path(row["settlement_date"], base), []).append(row)
-
-    for path, year_rows in by_year.items():
-        existing = {_key(r): r for r in _read_file(path)}
-        new_rows = []
-        for row in year_rows:
-            k = _key(row)
-            if k in existing:
-                if _from_csv(_to_csv(row)) != existing[k]:
-                    raise ValueError(
-                        f"settlement revision at {k}: stored {existing[k]} "
-                        f"!= incoming — refusing to overwrite append-only history")
-                continue
-            new_rows.append(row)
-        if not new_rows:
-            continue
-        base.mkdir(parents=True, exist_ok=True)
-        is_new = not path.exists()
-        with path.open("a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=COLUMNS)
-            if is_new:
-                w.writeheader()
-            for row in new_rows:
-                w.writerow(_to_csv(row))
-        written += len(new_rows)
-    return written
+    return widestore.append_rows(
+        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir))
 
 
 def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
     """Read the whole store across year files, sorted by (settlement_date, period)."""
-    rows: list[dict] = []
-    for path in sorted(Path(base_dir).glob("fuelhh_*.csv")):
-        rows.extend(_read_file(path))
-    return sorted(rows, key=_key)
+    return widestore.read_store(base_dir, "fuelhh_*.csv", COLUMNS, _TEXT_COLUMNS)
 
 
 # --- Validation gate --------------------------------------------------------
