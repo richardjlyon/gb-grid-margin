@@ -369,3 +369,50 @@ formula, tolerance and the honesty bargain, and carries a "last reviewed" date.
 `tests/test_sharecards_guards.py` inject bad data (a CF above 1, shares not summing to 100, a broken
 counter, an insane nameplate, a missing source file, a corrupt snapshot, a null record) and assert
 the build fails with a clear message and writes nothing.
+
+## 11. Historical embedded solar/wind store *(Reliability Stripe, Stage A, 2026-06-26)*
+
+The reliability stripe needs a *national-demand* reliable-vs-unreliable share over time — which means
+the settled history must carry the embedded (distribution-connected) solar and wind that the live
+gauge already includes but the transmission-only FUELHH store (§6) does not. `engine/embedded_history.py`
+backfills it from **NESO's published Historic Demand Data** into `data/history/embedded_YYYY.csv`,
+one row per settlement half-hour, joining 1:1 to the FUELHH store on `(settlement_date,
+settlement_period)`. The store mechanics are the shared `engine/widestore.py` (extracted from §6's
+pipeline so both stores share one tested append-only/idempotent implementation).
+
+- **Source + columns.** NESO Historic Demand Data (CKAN), one resource per year; columns
+  `EMBEDDED_WIND_GENERATION`, `EMBEDDED_SOLAR_GENERATION`, `EMBEDDED_WIND_CAPACITY`,
+  `EMBEDDED_SOLAR_CAPACITY`, half-hourly. NESO Open Data Licence.
+- **Not metered — disclosed.** Embedded generation is not transmission-metered; these are NESO's
+  **modelled outturn estimates**, not settled meter readings like FUELHH. This is a genuine basis
+  difference and must be labelled wherever the figure surfaces (the same honesty principle as the
+  §8 lower-bound and cross-year caveats). It is NESO's model, not ours — so it still traces to a
+  named published source, consistent with the no-modelled-figures-of-our-own rule.
+- **Forecast vs outturn seam.** The *live* gauge reads NESO's embedded *forecast*
+  (`EMBEDDED_*_FORECAST`, `grid_engine.py`); this store reads NESO's embedded *outturn estimate*
+  (`EMBEDDED_*_GENERATION`). Same methodology owner, sibling products — the historical series is the
+  corrected/settled estimate, the live tick is the forward forecast. A small step at the join is
+  expected and disclosed, not a bug.
+- **GB scope confirmed (the named risk).** The spec flagged that the embedded columns might be
+  England-&-Wales-only (~15–18% low) rather than GB. Reconciled against PV_Live GB national solar on
+  summer-solstice middays: 2018-06-21 embedded 73,696 MWh vs PV_Live 70,404 MWh (4.7%), 2024-06-21
+  83,830 vs 84,108 (0.3%) — both well inside ±10%, far from an E&W shortfall. The columns are GB-wide.
+  PV_Live (`solar_crosscheck`) is the standing independent solar guard, the historical twin of the
+  live ±10% NESO-vs-PV_Live check.
+- **Date-format quirk (handled at the boundary).** NESO's `SETTLEMENT_DATE` format is *not* consistent
+  across years: ISO `YYYY-MM-DD` (2016–18, 2024–26), `DD-MMM-YYYY` (2019–22, e.g. `01-JAN-2019`),
+  and `DD-Mon-YY` (2023, e.g. `01-Jan-23`). `EmbeddedHistRow` normalises all of these to ISO at the
+  feed boundary, so every downstream consumer (the join key, `period_start_utc`, `year_path`) sees
+  ISO only; an unrecognised format raises loudly. The embedded *column names* are stable across years.
+- **Lag + ragged edge.** NESO publishes embedded ~21 days in arrears and fills recent days raggedly,
+  so the most recent days are partial (e.g. 2026-05-29 had 45/48 periods, 05-30 had 25/48). These are
+  transient (they fill in), not permanent non-publications, so they are **not** recorded in a
+  known-gaps manifest the way §6's 77 Elexon holes are; instead the committed backfill is trimmed to
+  the last fully-complete day. **Committed edge: 2016-01-01 → 2026-05-28, 182,446 rows, validate
+  ok (0 unexplained, 0 dupes).** The daily-`append` cadence (a later stage) will extend the edge as
+  NESO completes each day; handling an embedded settlement *revision* on that path is deferred there
+  (the one-time backfill does not hit revisions, and the store's `append_rows` stays strict).
+- **Validation gate.** `validate` reuses §6's DST-aware period-count + duplicate checks
+  (`history.validate_range`). `crosscheck` runs the PV_Live ±10% solar guard on a sample. Pure
+  transforms are unit-tested in `tests/test_embedded_history.py`; the network fetch layer is thin and
+  untested, mirroring §6.
