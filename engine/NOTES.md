@@ -318,3 +318,9 @@ after the FUELHH store appends. Wiring this to CI/cron lands with Stage 10. Unti
 Chromium, writes `site/share/cards.json` and `site/s/*.html`, and reports the card count. The
 generated artefacts (`site/share/*.png`, `site/s/*.html`) are committed so the static host serves
 them directly without a build step.
+
+**WARNING — the warning card MUST NOT be served publicly without the Stage 10 cadence wired.**
+It asserts a binary in-force/clear state at a single point in time; without automatic rebuilds, a
+withdrawn notice would keep showing "in force" — a stale false alarm, the exact failure the
+project's honesty bargain forbids. All other cards degrade gracefully when stale (a timestamp
+shows the age); the warning card cannot — it either lies or tells the truth.

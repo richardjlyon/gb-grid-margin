@@ -51,7 +51,12 @@ def parse_active_warnings(rows):
 
 
 def fetch_active_warnings():
-    """Active-only feed (CORS-open, same family as FUELINST). Returns [] on any error."""
+    """Active-only feed (CORS-open, same family as FUELINST). Returns [] on any error.
+
+    Swallowing errors to [] is a deliberate safe default: a build-time SYSWARN outage
+    yields an "All clear" card, which is a false negative (silent, not alarming) — the
+    safer direction than a stale false alarm.  The 15 s timeout is intentionally more
+    generous than warnings.js's 6 s (build tolerance vs browser responsiveness)."""
     try:
         req = urllib.request.Request(WARNINGS_URL, headers={"accept": "application/json"})
         with urllib.request.urlopen(req, timeout=15) as resp:

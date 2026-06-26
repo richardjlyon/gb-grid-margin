@@ -169,12 +169,17 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
 
 
 def warning_card(state: dict) -> dict:
+    # NOTE: this card is a static build-time snapshot.  It MUST NOT be served
+    # publicly without the Stage 10 refresh cadence wired — a withdrawn notice
+    # would otherwise keep reading "in force" (a stale false alarm, contrary to
+    # the project's honesty bargain).
     if state.get("in_force"):
         win = state.get("window")
         wtxt = (f" covering {win['from']}–{win['to']}, {win['date']}" if win else "")
+        art = "An" if state["type_label"][:1].upper() in "AEIOU" else "A"
         return {"slug": "warning", "kind": "warning", "theme": "alarm", "template": "stat",
                 "figure": "Margin notice",
-                "label": f"A {state['type_label']} is in force in Britain{wtxt}.",
+                "label": f"{art} {state['type_label']} is in force in Britain{wtxt}.",
                 "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
     return {"slug": "warning", "kind": "warning", "theme": "ink", "template": "stat",
             "figure": "All clear",

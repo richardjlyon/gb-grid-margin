@@ -136,6 +136,21 @@ def _png_size(path):
     return w, h
 
 
+def test_warning_card_article_by_notice_type():
+    """Article must agree with the type_label's initial vowel sound (I2 gate)."""
+    emn = sharecards.warning_card({"in_force": True, "type": "EMN",
+        "type_label": "Electricity Margin Notice", "window": None})
+    assert emn["label"].startswith("An Electricity Margin Notice")
+
+    cmn = sharecards.warning_card({"in_force": True, "type": "CMN",
+        "type_label": "Capacity Market Notice", "window": None})
+    assert cmn["label"].startswith("A Capacity Market Notice")
+
+    nism = sharecards.warning_card({"in_force": True, "type": "NISM",
+        "type_label": "Notice of Insufficient System Margin", "window": None})
+    assert nism["label"].startswith("A Notice of Insufficient System Margin")
+
+
 def test_render_writes_1200x630_pngs(tmp_path):
     cards = [
         {"slug": "stat", "theme": "ink", "template": "stat", "figure": "75% firm",

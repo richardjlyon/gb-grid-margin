@@ -41,7 +41,7 @@
       "figure": "0.9%",
       "label": "of capacity \u2014 the wind fleet's worst day on record, 2016-01-19.",
       "kind": "settled",
-      "png": "/share/lowest-day.png?v=4fd1b307b5"
+      "png": "/share/lowest-day.png?v=5a660e69c4"
     },
     {
       "slug": "longest-calm",
@@ -53,9 +53,9 @@
     {
       "slug": "warning",
       "figure": "Margin notice",
-      "label": "A Electricity Margin Notice is in force in Britain covering 19:00\u201322:00, 26/06/2026.",
+      "label": "An Electricity Margin Notice is in force in Britain covering 19:00\u201322:00, 26/06/2026.",
       "kind": "warning",
-      "png": "/share/warning.png?v=2e89a83f5b"
+      "png": "/share/warning.png?v=33fa95c2b1"
     }
   ]
 }
