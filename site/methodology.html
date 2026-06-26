@@ -32,7 +32,7 @@
     <a href="#denominator">Denominator</a> · <a href="#nameplate">Nameplate</a> ·
     <a href="#verdict">Verdict pair</a> · <a href="#capacity-trap">Capacity trap</a> ·
     <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#stripe">Wind stripe &amp; counter</a> ·
-    <a href="#store">The history store</a></p>
+    <a href="#store">The history store</a> · <a href="#cards">Share cards</a></p>
 
   <h2 id="denominator">The denominator — national demand</h2>
   <p>Every live share divides by <strong>national demand</strong>, reconstructed from the supply side so the shares sum to 100% by construction:</p>
@@ -72,6 +72,13 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
 
   <h2 id="store">The history store</h2>
   <p>Settled half-hourly FUELHH and demand from Elexon back to the clean-data edge of 2016-01-01 (nothing earlier exists on the modern API). 77 days are genuine Elexon non-publications, recorded in a frozen manifest; we never fabricate the missing half-hours. The live clock is anchored to Elexon's server-stamped snapshot, not the device clock. Full notes and the open source are in the <a href="https://github.com/richardjlyon/grid-gauge">repository</a>.</p>
+
+  <h2 id="cards">Share cards</h2>
+  <p class="meta">Source: same <code>site/data/*.json</code> files the dashboard reads · pinned by <code>tests/test_sharecards_gate.py</code></p>
+  <p>Each share card is built from the same JSON data files the dashboard reads — <code>latest.json</code>, <code>nameplate.json</code>, <code>counters.json</code>, <code>records.json</code> and <code>stripe.json</code>. A card figure and its corresponding dashboard figure use the same JSON field and the same format string; <code>tests/test_sharecards_gate.py</code> asserts every card figure independently and fails the build if anything drifts.</p>
+  <p><strong>Live cards</strong> carry the Elexon snapshot timestamp so a shared card can be read in context. The gas-vs-wind card is adaptive: it states whichever source actually leads at build time. <strong>Settled cards</strong> inherit the same lower-bound and cross-year caveats shown on the dashboard. <strong>The warning card</strong> classifies any active Elexon SYSWARN notice against the three-tier scarcity ladder — NISM (Notice of Insufficient System Margin), EMN (Electricity Margin Notice), CMN (Capacity Market Notice) — and shows "All clear" when none is in force.</p>
+  <p><strong>Cache bust.</strong> Each card PNG is SHA-256-hashed; the first ten digits appear as a <code>?v=</code> token on every image URL. Social platforms cache OG images aggressively; a changed figure changes its hash and forces a re-scrape.</p>
+  <p class="caveat"><strong>No modelled figures.</strong> Every card value traces to a settled or live Elexon / NESO / DUKES figure already published on the dashboard. No figure is introduced that does not already exist in <code>site/data/*.json</code>.</p>
 </main>
 
 <footer class="footer">

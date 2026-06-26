@@ -267,3 +267,54 @@ known-gap days, blanks, leap years) would expose.
   to the earliest, most-understated years. Whether Stage 6 surfaces per-year or rolling-window
   records instead — to avoid presenting a 2016-clustered figure as the headline — is an open
   presentation decision, not yet made.
+
+## 9. Share cards *(Stage 8, 2026-06-26)*
+
+`engine/sharecards.py` generates a set of 1200 × 630 OG PNG cards plus per-card unfurl stubs
+(`site/s/<slug>.html`) from the same `site/data/*.json` the dashboard reads — `latest.json`,
+`nameplate.json`, `counters.json`, `records.json` and `stripe.json`. Because the cards read the
+published data files rather than recomputing from source, a card figure and the dashboard figure for
+the same datum use structurally identical values: the same JSON field, the same format string.
+**`tests/test_sharecards_gate.py`** asserts this by reloading each source JSON and checking every
+card's formatted figure against a value derived independently from it — any drift is a test failure,
+not a silent discrepancy.
+
+**Cards in the set.** Three *live* cards (rebuilt each time site data refreshes): the firm-power
+gauge (`firm-now`), the capacity-trap share (`capacity-trap`), and the gas-vs-wind comparison
+(`gas-vs-wind`). Four *settled* cards (rebuilt whenever the history store appends): the wind stripe
+thumbnail (`wind-stripe`), the days-below-10% counter (`days-below-10`), the all-time worst-day
+record (`lowest-day`), and the longest calm-spell record (`longest-calm`). One *warning* card
+(`warning`): see below.
+
+**Live cards — evergreen and timestamped.** Each live card carries the `snapshot` timestamp from
+`latest.json` (e.g. "as of 23 Jun 15:35 UTC"), so a shared card can be read in context. The
+`gas-vs-wind` headline is adaptive: it states whichever source actually leads at build time, never
+a false claim in the other direction.
+
+**Warning card — the Stage 7 scarcity ladder.** `engine/warnings.py` fetches the active-only
+Elexon SYSWARN feed at build time and classifies any notice against the three-tier ladder: NISM
+(Notice of Insufficient System Margin, highest severity), EMN (Electricity Margin Notice), CMN
+(Capacity Market Notice). The card renders either "Margin notice — a [type] is in force" (alarm
+theme) or "All clear — no grid margin warning is in force" (ink theme). `engine/warnings.py` is a
+build-time mirror of `site/warnings.js`; both implement the same ladder. A formal parity lock
+(like the verdict gate) is deliberate later hardening — deferred because the warning card's text
+comes from the live feed, not a numeric formula.
+
+**Content-hash cache bust.** Each PNG is SHA-256-hashed; the first 10 hex digits become a `?v=`
+query token on every image URL in `cards.json`, the unfurl stubs, and the homepage `og:image`.
+Social scrapers (Twitter/X, LinkedIn, iMessage, Slack) cache OG images aggressively. A rebuild
+that changes a card's figures also changes its hash, so the new `?v=` token forces a re-scrape.
+The homepage hero (`og:image` pointing at `firm-now.png`) is stamped in place by `stamp_index_og()`.
+
+**No modelled figures.** Every card value traces to a settled or live Elexon / NESO / DUKES figure
+already published on the dashboard. The same lower-bound and cross-year caveats shown on the
+dashboard are carried on each affected card (`caveat` field, rendered as a footer note). No figure
+is introduced or transformed beyond what already exists in `site/data/*.json`.
+
+**Deploy cadence (Stage 10 dependency).** Live cards must be rebuilt every time
+`site/data/latest.json` refreshes (≈5 min) to stay current; settled cards need a daily rebuild
+after the FUELHH store appends. Wiring this to CI/cron lands with Stage 10. Until then,
+`uv run python -m engine.sharecards build` is run manually: it renders PNGs via Playwright
+Chromium, writes `site/share/cards.json` and `site/s/*.html`, and reports the card count. The
+generated artefacts (`site/share/*.png`, `site/s/*.html`) are committed so the static host serves
+them directly without a build step.
