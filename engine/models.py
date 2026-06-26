@@ -57,6 +57,44 @@ class PvLiveResponse(BaseModel):
         return str(self._first()["datetime_gmt"])
 
 
+class EmbeddedHistRow(BaseModel):
+    """One NESO Historic Demand Data row: settled embedded solar + wind *outturn estimate*.
+
+    Distinct from the live forecast model `EmbeddedRow` (which reads *_FORECAST): this is
+    NESO's retrospective best-estimate of distribution-connected generation, published ~21
+    days in arrears and revised. Blank cells (a series absent that period) coerce to None,
+    kept distinct from a genuine 0.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    settlement_date: str = Field(alias="SETTLEMENT_DATE")
+    settlement_period: int = Field(alias="SETTLEMENT_PERIOD")
+    embedded_wind_mw: float | None = Field(alias="EMBEDDED_WIND_GENERATION")
+    embedded_solar_mw: float | None = Field(alias="EMBEDDED_SOLAR_GENERATION")
+    embedded_wind_capacity_mw: float | None = Field(alias="EMBEDDED_WIND_CAPACITY")
+    embedded_solar_capacity_mw: float | None = Field(alias="EMBEDDED_SOLAR_CAPACITY")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _blank_to_none(cls, data):
+        if isinstance(data, dict):
+            return {k: (None if v == "" else v) for k, v in data.items()}
+        return data
+
+
+class PvLiveSeries(BaseModel):
+    """Sheffield PV_Live national outturn over a range, columnar meta+data form."""
+
+    meta: list[str]
+    data: list[list]
+
+    def rows(self) -> list[tuple[str, float]]:
+        ti = self.meta.index("datetime_gmt")
+        gi = self.meta.index("generation_mw")
+        return [(str(r[ti]), float(r[gi])) for r in self.data]
+
+
 class DemandOutturnRow(BaseModel):
     """One Elexon demand-outturn row; indo (national demand) is the reconciliation reference.
 

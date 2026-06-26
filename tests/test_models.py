@@ -8,10 +8,12 @@ from pydantic import ValidationError
 from engine.models import (
     DemandHhRow,
     DemandOutturnRow,
+    EmbeddedHistRow,
     EmbeddedRow,
     FuelHhRow,
     FuelInstRecord,
     PvLiveResponse,
+    PvLiveSeries,
 )
 
 
@@ -176,3 +178,34 @@ def test_demand_hh_row_allows_null_value_but_requires_the_key():
                                       "initialTransmissionSystemDemandOutturn": None})
     assert row.itsdo is None
     assert row.indo == 20626
+
+
+class TestEmbeddedHistRow:
+    def test_parses_neso_record(self):
+        row = EmbeddedHistRow.model_validate({
+            "SETTLEMENT_DATE": "2016-06-01", "SETTLEMENT_PERIOD": 24,
+            "EMBEDDED_WIND_GENERATION": 1200, "EMBEDDED_SOLAR_GENERATION": 3400,
+            "EMBEDDED_WIND_CAPACITY": 5000, "EMBEDDED_SOLAR_CAPACITY": 9000,
+        })
+        assert row.settlement_date == "2016-06-01"
+        assert row.settlement_period == 24
+        assert row.embedded_wind_mw == 1200
+        assert row.embedded_solar_mw == 3400
+
+    def test_blank_string_becomes_none(self):
+        row = EmbeddedHistRow.model_validate({
+            "SETTLEMENT_DATE": "2016-06-01", "SETTLEMENT_PERIOD": 1,
+            "EMBEDDED_WIND_GENERATION": "", "EMBEDDED_SOLAR_GENERATION": "0",
+            "EMBEDDED_WIND_CAPACITY": "", "EMBEDDED_SOLAR_CAPACITY": "",
+        })
+        assert row.embedded_wind_mw is None
+        assert row.embedded_solar_mw == 0.0
+
+    def test_pvlive_series_rows(self):
+        s = PvLiveSeries.model_validate({
+            "meta": ["gsp_id", "datetime_gmt", "generation_mw"],
+            "data": [[0, "2016-06-01T11:00:00Z", 3500.0],
+                     [0, "2016-06-01T11:30:00Z", 3700.0]],
+        })
+        assert s.rows() == [("2016-06-01T11:00:00Z", 3500.0),
+                            ("2016-06-01T11:30:00Z", 3700.0)]
