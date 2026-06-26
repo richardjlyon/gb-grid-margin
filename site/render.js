@@ -82,12 +82,6 @@ export function firmShares(v) {
   };
 }
 
-// How many times the gas fleet out-produces the whole wind fleet, to one decimal.
-// Null when wind is zero (no defensible multiple), so the card omits the figure.
-export function gasVsWindMultiple(gasMw, windMw) {
-  return windMw > 0 ? Math.round((gasMw / windMw) * 10) / 10 : null;
-}
-
 // --- the source-mix arc (the gauge) ----------------------------------------
 // The gauge is a proportional arc: one slice per source, length ∝ output, green-toned for the
 // reliable (dispatchable, weather-independent) sources and red-toned for the unreliable

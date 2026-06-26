@@ -141,12 +141,12 @@ main { padding-bottom: 40px; }
 .headline {
   font-family: var(--display); font-weight: 700; line-height: 1.05;
   font-size: clamp(1.7rem, 4.2vw, 2.7rem); letter-spacing: -0.02em;
-  color: var(--red); margin: 0 0 8px; max-width: 18em;
+  color: var(--red); margin: 0 0 8px;
 }
 .headline.ink { color: var(--ink); }
 .def {
   font-family: var(--read); font-style: italic; color: var(--slate);
-  margin: 0 0 18px; max-width: 34em;
+  margin: 0 0 18px;
 }
 .src {
   font-family: var(--mono); font-size: 0.74rem; color: var(--slate);
@@ -162,6 +162,18 @@ main { padding-bottom: 40px; }
   max-width: 40em;
 }
 .caveat strong { font-style: normal; font-weight: 600; }
+
+/* ---------- verdict: gauge and receipt side by side ---------- */
+.verdict-cols {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: clamp(24px, 4vw, 56px); align-items: center; margin-top: 6px;
+}
+.verdict-receipt { min-width: 0; }   /* let the table shrink inside its grid track */
+/* Side-by-side only when each column is wide enough to hold the gauge's stamp pair
+   without it wrapping; below that, stack full-width so the gauge never breaks. */
+@media (max-width: 1024px) {
+  .verdict-cols { grid-template-columns: 1fr; gap: 4px; }
+}
 
 /* ---------- the Using / Generating toggle (mirrors the Subsidy Clock switch) ---------- */
 .gauge-toggle {
@@ -224,8 +236,8 @@ main { padding-bottom: 40px; }
 .receipt thead th:first-child { text-align: left; }
 .receipt td { border-bottom: 1px solid var(--rule-soft); }
 .receipt td.fuel { text-align: left; font-family: var(--read); font-style: normal; }
-.receipt td.n { text-align: right; }
-.receipt .bar-cell { width: 34%; }
+.receipt td.n, .receipt thead th:not(:first-child) { text-align: right; white-space: nowrap; }
+.receipt .bar-cell { width: 24%; }
 .bar { height: 9px; background: var(--ink); border-radius: 1px; }
 .bar.red { background: var(--red); }
 .receipt tr.total td {
@@ -243,13 +255,7 @@ main { padding-bottom: 40px; }
 .receipt td.fuel { padding-left: 16px; }
 .receipt tr.group td.fuel, .receipt tr.total td.fuel { padding-left: 8px; }
 
-/* ---------- duel bars (gas vs wind) ---------- */
-.duel { margin: 14px 0 0; }
-.duel-row { display: grid; grid-template-columns: 8.5em 1fr auto; align-items: center; gap: 12px; margin: 9px 0; }
-.duel-row .lab { font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate); }
-.duel-bar { height: 22px; border-radius: 1px; background: var(--ink); }
-.duel-bar.red { background: var(--red); }
-.duel-row .amt { font-family: var(--mono); font-size: 0.9rem; font-weight: 600; }
+/* ---------- punch line (capacity trap) ---------- */
 .duel-punch { font-family: var(--read); font-size: 1.05rem; margin: 12px 0 0; max-width: 34em; }
 .duel-punch strong { color: var(--red); }
 
@@ -331,8 +337,6 @@ main { padding-bottom: 40px; }
   body { font-size: 1rem; }
   .container { padding: 0 16px; }
   .receipt .bar-cell { display: none; }
-  .duel-row { grid-template-columns: 1fr auto; }
-  .duel-row .lab { grid-column: 1 / -1; margin-bottom: -4px; }
   .tally td.marks { display: none; }
   #stripe-canvas { height: 130px; }
 }

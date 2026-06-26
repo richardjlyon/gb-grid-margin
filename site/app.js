@@ -10,7 +10,7 @@ import { resolveWarnings } from './warnings.js';
 import { shareButtons } from './share.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
-  capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW, fmtMW,
+  capacityTrapStatic, fmtPct, fmtGW, fmtMW,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -145,7 +145,6 @@ function renderVerdict(state) {
     $('verdict-body').innerHTML =
       `<p class="warn">No current reading. ${esc(state.reason || state.lastUpdated || '')}</p>`;
     $('entry-trap').hidden = true;
-    $('entry-duel').hidden = true;
     return;
   }
   const v = state.verdict;
@@ -203,30 +202,36 @@ function renderVerdict(state) {
 
   $('verdict-body').innerHTML = `
     ${toggle}
-    <div class="gauge-block">
-      ${buildSourceArc(m, { armed: status.armed })}
-      <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
+    <div class="verdict-cols">
+      <div class="verdict-gauge">
+        <div class="gauge-block">
+          ${buildSourceArc(m, { armed: status.armed })}
+          <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
+        </div>
+        <div class="stamp-pair">
+          <div class="stamp"><span class="stamp-val">${firmStamp}</span>
+            <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
+          <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${weatherStamp}</span>
+            <span class="stamp-label">${weatherLabel}</span></div>
+        </div>
+        <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
+        ${ssline}
+      </div>
+      <div class="verdict-receipt">
+        <table class="receipt">
+          <caption>The receipt — ${using ? "what's meeting demand right now" : 'what Britain is generating right now'}</caption>
+          <thead><tr><th>Source</th><th>Output</th><th>Share</th><th class="bar-cell"></th></tr></thead>
+          <tbody>
+            ${groupHead('Gas/nuclear/biofuel/hydro', sumMw(rel), pctOf(sumMw(rel)), false)}
+            ${firmRows.map((r) => row(r)).join('')}
+            ${groupHead(weatherLabel, sumMw(unr), pctOf(sumMw(unr)), true)}
+            ${varRows.map((r) => row(r)).join('')}
+            <tr class="total"><td class="fuel">${totalLabel}</td><td class="n">${fmtMW(m.arcTotal)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
+            ${extraRow}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="stamp-pair">
-      <div class="stamp"><span class="stamp-val">${firmStamp}</span>
-        <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
-      <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${weatherStamp}</span>
-        <span class="stamp-label">${weatherLabel}</span></div>
-    </div>
-    <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
-    ${ssline}
-    <table class="receipt">
-      <caption>The receipt — ${using ? "what's meeting demand right now" : 'what Britain is generating right now'}</caption>
-      <thead><tr><th>Source</th><th>Output</th><th>Share</th><th class="bar-cell"></th></tr></thead>
-      <tbody>
-        ${groupHead('Gas/nuclear/biofuel/hydro', sumMw(rel), pctOf(sumMw(rel)), false)}
-        ${firmRows.map((r) => row(r)).join('')}
-        ${groupHead(weatherLabel, sumMw(unr), pctOf(sumMw(unr)), true)}
-        ${varRows.map((r) => row(r)).join('')}
-        <tr class="total"><td class="fuel">${totalLabel}</td><td class="n">${fmtMW(m.arcTotal)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
-        ${extraRow}
-      </tbody>
-    </table>
     ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${fmtUTC(v.snapshot) || `${String(v.snapshot).slice(11, 16)}Z`}`, 'verdict')}`;
 
   // share the live firm-power card
@@ -238,7 +243,6 @@ function renderVerdict(state) {
     b.addEventListener('click', () => { setGaugeView(b.dataset.view); renderVerdict(LAST_STATE); }));
 
   renderTrap(v);
-  renderDuel(v);
 }
 
 function renderTrap(v) {
@@ -254,29 +258,6 @@ function renderTrap(v) {
       Right now the whole fleet is delivering <strong>${fmtGW(delivering)}</strong> — just
       <strong>${fmtPct(t.share_pct)}</strong> of what's installed.</p>
     ${srcLine('Elexon FUELINST + NESO embedded output ÷ DUKES 6.2 nameplate (UK, end-2024)', 'capacity-trap')}`;
-}
-
-function renderDuel(v) {
-  // Shown only while the gas fleet genuinely out-produces all wind (never a false claim).
-  if (!(Number.isFinite(v.gas_mw) && Number.isFinite(v.wind_mw) && v.gas_mw > v.wind_mw)) {
-    $('entry-duel').hidden = true;
-    return;
-  }
-  $('entry-duel').hidden = false;
-  const scale = Math.max(v.gas_mw, v.wind_mw, 1);
-  const mult = gasVsWindMultiple(v.gas_mw, v.wind_mw);
-  $('duel-body').innerHTML = `
-    <div class="duel">
-      <div class="duel-row"><span class="lab">Every wind farm</span>
-        <div class="duel-bar red" style="width:${(v.wind_mw / scale * 100).toFixed(0)}%"></div>
-        <span class="amt">${fmtGW(v.wind_mw)}</span></div>
-      <div class="duel-row"><span class="lab">Gas fleet</span>
-        <div class="duel-bar" style="width:${(v.gas_mw / scale * 100).toFixed(0)}%"></div>
-        <span class="amt">${fmtGW(v.gas_mw)}</span></div>
-    </div>
-    <p class="duel-punch">Every wind farm in Britain is delivering ${fmtGW(v.wind_mw)}.
-      The gas fleet is delivering ${fmtGW(v.gas_mw)}${mult ? ` — <strong>${mult.toFixed(1)}× more</strong>` : ''}.</p>
-    ${srcLine('Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot', 'gas-vs-wind')}`;
 }
 
 // ============================================================ the wind stripe
@@ -464,7 +445,7 @@ async function refreshLive() {
     $('live-dot').textContent = state.mode === 'live' ? 'Live' : state.mode === 'fallback' ? 'Last good' : 'Offline';
   } catch (e) {
     $('verdict-body').innerHTML = `<p class="warn">Live layer error — no current reading. ${esc(e.message || e)}</p>`;
-    $('entry-trap').hidden = true; $('entry-duel').hidden = true;
+    $('entry-trap').hidden = true;
   }
 }
 

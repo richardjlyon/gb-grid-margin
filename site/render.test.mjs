@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
-  capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtPct0, fmtGW, sourceArcModel,
+  capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -109,12 +109,6 @@ test('capacityTrapStatic: live output as a share of DUKES nameplate (sound denom
   assert.equal(t.built_gw, 50.362);
   assert.equal(t.delivering_mw, 21500);
   assert.equal(t.share_pct, 42.7);
-});
-
-test('gasVsWindMultiple: how many times the gas fleet out-produces all wind', () => {
-  assert.equal(gasVsWindMultiple(8489, 1400), 6.1);   // 8489/1400 = 6.06 -> 6.1
-  assert.equal(gasVsWindMultiple(8000, 8000), 1.0);
-  assert.equal(gasVsWindMultiple(5000, 0), null);     // undefined when wind is zero
 });
 
 test('fmtPct / fmtGW format for display, with em-dash for non-finite', () => {
