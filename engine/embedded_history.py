@@ -14,7 +14,6 @@ Store layout (wide, one row per settlement half-hour):
 
 from __future__ import annotations
 
-import csv
 import json
 import urllib.parse
 import urllib.request
@@ -157,7 +156,7 @@ def fetch_year_records(rid: str) -> list[dict]:
         batch = result["records"]
         records.extend(batch)
         offset += len(batch)
-        if not batch or offset >= result.get("total", 0):
+        if not batch or offset >= result.get("total", float("inf")):
             break
     return records
 
@@ -219,8 +218,9 @@ def main(argv: list[str] | None = None) -> None:
             return
         start = date.fromisoformat(rows[0]["settlement_date"])
         end = date.fromisoformat(rows[-1]["settlement_date"])
-        rep = history.validate_range(rows, start, end,
-                                     known_gaps=history.load_known_gaps())
+        # Embedded store has no known-gaps manifest (unlike FUELHH §6); a genuine
+        # hole must surface, not be explained away by Elexon's non-publication days.
+        rep = history.validate_range(rows, start, end, known_gaps={})
         print(f"embedded store {start}..{end}: ok={rep['ok']} "
               f"expected={rep['expected_rows']} actual={rep['actual_rows']} "
               f"unexplained={len(rep['unexplained'])} dupes={len(rep['duplicates'])}")

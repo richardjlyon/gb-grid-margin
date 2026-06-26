@@ -122,6 +122,10 @@ class PvLiveSeries(BaseModel):
     data: list[list]
 
     def rows(self) -> list[tuple[str, float]]:
+        if "datetime_gmt" not in self.meta or "generation_mw" not in self.meta:
+            raise ValueError(
+                f"PvLiveSeries.rows: expected columns datetime_gmt+generation_mw, got {self.meta}"
+            )
         ti = self.meta.index("datetime_gmt")
         gi = self.meta.index("generation_mw")
         return [(str(r[ti]), float(r[gi])) for r in self.data]

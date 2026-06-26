@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import pytest
 
-from engine.embedded_history import COLUMNS, append_rows, parse_records, period_start_utc, read_store, to_row, year_path
+from engine.embedded_history import (
+    COLUMNS,
+    append_rows,
+    daily_solar_mwh,
+    parse_records,
+    period_start_utc,
+    read_store,
+    solar_crosscheck,
+    to_row,
+    year_path,
+)
 from engine.models import EmbeddedHistRow
 
 
@@ -34,6 +42,14 @@ class TestParseRecords:
     def test_sorted_and_validated(self):
         rows = parse_records([_rec(2, 10, 20), _rec(1, 5, 6)])
         assert [r["settlement_period"] for r in rows] == [1, 2]
+
+    def test_compound_key_sort_across_two_dates(self):
+        # Records supplied out of order across two different settlement dates.
+        raw = [_rec(2, 10, 20, day="2016-06-02"), _rec(1, 5, 6, day="2016-06-01")]
+        rows = parse_records(raw)
+        assert [(r["settlement_date"], r["settlement_period"]) for r in rows] == [
+            ("2016-06-01", 1), ("2016-06-02", 2)
+        ]
 
 
 class TestPeriodStartUtc:
@@ -78,9 +94,6 @@ class TestStore:
             append_rows(parse_records([_rec(1, 999, 200)]), tmp_path)
 
 
-from engine.embedded_history import daily_solar_mwh, solar_crosscheck
-
-
 class TestSolarCrosscheck:
     def test_daily_solar_mwh_sums_half_hours(self, tmp_path):
         append_rows(parse_records([_rec(20, 0, 1000), _rec(21, 0, 3000)]), tmp_path)
@@ -97,3 +110,14 @@ class TestSolarCrosscheck:
 
     def test_zero_pvlive_is_vacuously_ok(self):
         assert solar_crosscheck(0.0, 0.0)["ok"] is True
+
+    def test_exactly_at_tolerance_boundary_is_ok(self):
+        # rel_diff == tol exactly: the <= boundary must pass (not fail).
+        assert solar_crosscheck(1100.0, 1000.0, tol=0.10)["ok"] is True
+
+    def test_daily_solar_mwh_skips_none(self, tmp_path):
+        # One row with solar=None (blank), one with solar=2000 MW. Only the real row
+        # contributes: 2000 MW × 0.5 h = 1000 MWh.
+        rows = parse_records([_rec(1, 100, ""), _rec(2, 100, 2000)])
+        append_rows(rows, tmp_path)
+        assert daily_solar_mwh(read_store(tmp_path), "2016-06-01") == 1000.0
