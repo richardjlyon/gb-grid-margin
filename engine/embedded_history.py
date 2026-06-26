@@ -89,3 +89,23 @@ def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
 def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
     """Read and merge all embedded_*.csv files from base_dir, sorted by (date, period)."""
     return widestore.read_store(base_dir, "embedded_*.csv", COLUMNS, _TEXT_COLUMNS)
+
+
+def daily_solar_mwh(rows: list[dict], day: str) -> float:
+    """Embedded solar energy (MWh) on one settlement day = Σ(MW per period × 0.5 h)."""
+    return sum(r["embedded_solar_mw"] for r in rows
+               if r["settlement_date"] == day and r.get("embedded_solar_mw") is not None) * 0.5
+
+
+def solar_crosscheck(embedded_mwh: float, pvlive_mwh: float, tol: float = 0.10) -> dict:
+    """Compare a day's embedded solar against the independent PV_Live national figure.
+
+    The historical twin of the live ±10% NESO-vs-PV_Live guard. Vacuously ok when PV_Live
+    is zero (winter night / pre-solar era) — nothing to divide by.
+    """
+    if pvlive_mwh <= 0:
+        return {"ok": True, "rel_diff": 0.0,
+                "embedded_mwh": embedded_mwh, "pvlive_mwh": pvlive_mwh}
+    rel = abs(embedded_mwh - pvlive_mwh) / pvlive_mwh
+    return {"ok": rel <= tol, "rel_diff": rel,
+            "embedded_mwh": embedded_mwh, "pvlive_mwh": pvlive_mwh}

@@ -76,3 +76,24 @@ class TestStore:
         append_rows(parse_records([_rec(1, 100, 200)]), tmp_path)
         with pytest.raises(ValueError, match="revision"):
             append_rows(parse_records([_rec(1, 999, 200)]), tmp_path)
+
+
+from engine.embedded_history import daily_solar_mwh, solar_crosscheck
+
+
+class TestSolarCrosscheck:
+    def test_daily_solar_mwh_sums_half_hours(self, tmp_path):
+        append_rows(parse_records([_rec(20, 0, 1000), _rec(21, 0, 3000)]), tmp_path)
+        # (1000 + 3000) MW × 0.5 h = 2000 MWh
+        assert daily_solar_mwh(read_store(tmp_path), "2016-06-01") == 2000.0
+
+    def test_within_tolerance_ok(self):
+        r = solar_crosscheck(1040.0, 1000.0, tol=0.10)  # +4%
+        assert r["ok"] is True
+        assert round(r["rel_diff"], 3) == 0.04
+
+    def test_outside_tolerance_fails(self):
+        assert solar_crosscheck(1300.0, 1000.0, tol=0.10)["ok"] is False  # +30%
+
+    def test_zero_pvlive_is_vacuously_ok(self):
+        assert solar_crosscheck(0.0, 0.0)["ok"] is True
