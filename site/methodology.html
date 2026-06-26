@@ -31,8 +31,10 @@
   <p class="index">On this page:
     <a href="#denominator">Denominator</a> · <a href="#nameplate">Nameplate</a> ·
     <a href="#verdict">Verdict pair</a> · <a href="#capacity-trap">Capacity trap</a> ·
-    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#stripe">Wind stripe &amp; counter</a> ·
-    <a href="#store">The history store</a> · <a href="#cards">Share cards</a></p>
+    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#warnings">Operational warnings</a> ·
+    <a href="#stripe">Wind stripe &amp; counter</a> · <a href="#ytd">Year-to-date shares</a> ·
+    <a href="#store">The history store</a> · <a href="#guards">Guards &amp; the honesty bargain</a> ·
+    <a href="#cards">Share cards</a></p>
 
   <h2 id="denominator">The denominator — national demand</h2>
   <p>Every live share divides by <strong>national demand</strong>, reconstructed from the supply side so the shares sum to 100% by construction:</p>
@@ -64,14 +66,39 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
   <p class="meta">Source: Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot · live</p>
   <p><strong>Formula in words:</strong> the whole wind fleet's metered output against the whole gas fleet's, from one snapshot. The card is shown only while gas genuinely out-produces all wind. The per-station version ("one gas plant beats the lot") needs per-unit data (Elexon B1610) and is a deliberate fast-follow — asserted only when true.</p>
 
+  <h2 id="warnings">Operational warnings — the scarcity ladder</h2>
+  <p class="meta">Source: <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings">Elexon SYSWARN</a> (active-only feed) · live in the browser · cadence: polled, ~5 min</p>
+  <p>When the system operator is worried about margin, it says so on the record. We surface those notices and nothing else — counted and contextualised, never catastrophised. Three notice types form a <strong>scarcity ladder</strong>, shown here most to least severe:</p>
+  <p class="formula">NISM  — Notice of Insufficient System Margin   (most severe)
+EMN   — Electricity Margin Notice
+CMN   — Capacity Market Notice                 (least severe)</p>
+  <p>The live banner lights only while one of these is <em>in force</em>; otherwise it stays dormant. When more than one is active, the most severe wins (ties broken by the most recent issue time). The banner names the notice, its time window, the source (Elexon SYSWARN) and the issue time, so a reader can check it against <a href="https://www.neso.energy">NESO</a> directly. A notice is a statement that the buffer is thin — not that the lights are about to go out; the two are routinely confused and we are careful not to.</p>
+  <p class="caveat"><strong>What a margin notice is not.</strong> An EMN or CMN is the operator asking the market for more, with hours of warning — the system working as designed, not a blackout in progress. We report the notice and its severity; we do not dress it up.</p>
+
   <h2 id="stripe">The wind stripe &amp; the failure counter — a conservative lower bound</h2>
   <p class="meta">Source: Elexon FUELHH (settled) ÷ DUKES 6.2 nameplate (annual-step) · daily</p>
   <p><strong>Formula in words:</strong> each day's wind capacity factor is the mean transmission wind output that day ÷ total installed wind nameplate for that year. The counter tallies days below 10% and 5% of capacity.</p>
   <p><strong>Why it is a lower bound (disclosed, not hidden):</strong> FUELHH wind is transmission-metered only — it excludes embedded (distribution-connected) wind output — while the denominator is total installed wind. So the true load factor is higher than the figure shown; we publish the conservative number and say so.</p>
   <p class="caveat"><strong>The cross-year artifact.</strong> The understatement is largest in early years, when more wind was embedded and off the transmission meter; as offshore (all transmission-metered) grew, the apparent capacity factor rises. That upward drift is largely a denominator-mix artifact, not improving wind — and the all-time records cluster in the earliest, most-understated years. Read the stripe <em>within</em> a year, never as a cross-year trend.</p>
 
+  <h2 id="ytd">Year-to-date shares — a transmission-system mix, not the verdict</h2>
+  <p class="meta">Source: Elexon FUELHH (settled) · annual · transmission-system basis</p>
+  <p><strong>Formula in words:</strong> each year's settled generation by fuel, plus net interconnector flow, as a share of total transmission supply. Pumped-storage round-trip is excluded; the shares sum to 100% by construction.</p>
+  <p class="caveat"><strong>Read this on its own basis — it is not the live verdict.</strong> The settled store is transmission-metered FUELHH only and carries <em>no embedded solar or wind</em>. Embedded solar is netted off national demand and cannot appear in a settled-data share at all, so these year-to-date figures are a <strong>transmission-system mix</strong>, not the national-demand verdict the gauge shows. The two use different denominators and must never be compared directly. Net interconnectors are a <strong>signed</strong> net flow: in a net-export year (2022) the import share is negative — it is drawn as a signed bar, never a pie wedge.</p>
+
   <h2 id="store">The history store</h2>
   <p>Settled half-hourly FUELHH and demand from Elexon back to the clean-data edge of 2016-01-01 (nothing earlier exists on the modern API). 77 days are genuine Elexon non-publications, recorded in a frozen manifest; we never fabricate the missing half-hours. The live clock is anchored to Elexon's server-stamped snapshot, not the device clock. Full notes and the open source are in the <a href="https://github.com/richardjlyon/grid-gauge">repository</a>.</p>
+
+  <h2 id="guards">Build-time guards &amp; the honesty bargain</h2>
+  <p>The bargain is simple: every figure traces to a settled or live source, and a number that cannot be made to add up is never published. That is enforced in code, not by good intentions — the build <strong>fails loudly</strong> rather than ship a wrong figure. The guards, by stage of the pipeline:</p>
+  <ul>
+    <li><strong>Solar cross-check (live).</strong> The NESO embedded-solar figure — the one estimate that moves the headline — is checked against the independent <a href="https://www.solar.sheffield.ac.uk">Sheffield Solar PV_Live</a> outturn and the build fails if they disagree by more than <strong>10%</strong>. (PV_Live sends no CORS header, so it can only ever be the server-side auditor, never the live figure.)</li>
+    <li><strong>Demand reconciliation (live).</strong> The supply-side denominator is reconciled against Elexon's national demand outturn, INDO, plus the same embedded estimate, and fails past a <strong>12%</strong> gap — a tripwire for a gross feed failure (a zeroed, doubled or wrong-unit series), not a precision claim. The actual residual is recorded each run, not hidden.</li>
+    <li><strong>Snapshot completeness (live).</strong> A partial FUELINST publish — missing a core fuel, or implausibly low demand — is refused rather than rendered as if whole.</li>
+    <li><strong>Derived figures (settled).</strong> Before any daily figure is written, the build checks that the year-to-date shares sum to ~100%, every wind capacity factor sits in range, the failure counters nest (days below 5% ≤ days below 10% ≤ days observed), the all-time records are internally ordered, and the nameplate denominators are positive, in-envelope and self-reconciling. Any breach aborts the build and writes nothing. One value that looks wrong but is correct — a negative net-import share in an export year — is allowed by construction.</li>
+    <li><strong>Share cards.</strong> Cards are screenshotted into shareable images, so a wrong figure becomes a wrong picture. Each card is built from the same JSON the dashboard reads and is checked against the same guards before rendering; a separate source-trace test recomputes every card figure from the site data and fails on any drift.</li>
+  </ul>
+  <p><strong>When the live feed is stale or down.</strong> The live layer is anchored to Elexon's server-stamped snapshot, not your device clock. If the live fetch fails it falls back to the last good reading (<code>latest.json</code>), clearly labelled as such; once that reading is too old to show as current, the dashboard goes number-free rather than display a stale headline that looks live — a midday solar reading shown at midnight is a wrong number, not an old one. A build older than twelve hours renders as unavailable, with no numbers at all.</p>
 
   <h2 id="cards">Share cards</h2>
   <p class="meta">Source: same <code>site/data/*.json</code> files the dashboard reads · pinned by <code>tests/test_sharecards_gate.py</code></p>
@@ -85,6 +112,7 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
   <div class="container">
     <p class="links"><a href="/">The gauge</a> · <a href="share.html">Share cards</a> · <a href="about.html">About</a> · <a href="https://github.com/richardjlyon/grid-gauge">Source &amp; data</a></p>
     <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+    <p class="trace">Methodology last reviewed against the shipped figures: 26 June 2026.</p>
   </div>
 </footer>
 </body>

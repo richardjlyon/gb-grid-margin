@@ -35,11 +35,21 @@ Embedded solar is absent by construction; the file says so.
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
+from engine.guards import (
+    GuardError,
+    check_cf_range,
+    check_counts_monotonic,
+    check_dates_sorted_unique,
+    check_nameplate_sane,
+    check_shares_sum_100,
+    require,
+)
 from engine.history import read_store
 from engine.models import NameplateSeries
 
@@ -255,6 +265,42 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def guard_outputs(stripe: dict, counters_out: dict, records_out: dict,
+                  ytd: dict, nameplate: dict) -> None:
+    """Stage 9 build-time gate: fail loudly before any derived figure is written.
+
+    Checks every public derived figure against engine.guards — the stripe's daily
+    CF range and date order, the failure counters' monotonicity, each year's
+    transmission shares summing to 100%, the all-time records' internal order, and
+    the nameplate denominators' sanity. Raises GuardError (caught by build) on any
+    breach. A negative net-import share is allowed by construction (see guards).
+    """
+    days = stripe["days"]
+    require(len(days) > 0, "stripe has no days — empty derived series")
+    check_dates_sorted_unique([d["date"] for d in days])
+    for d in days:
+        check_cf_range(d["date"], d["cf"])
+
+    for y, c in counters_out["years"].items():
+        check_counts_monotonic(int(y), c["days_observed"], c["below_10pct"],
+                               c["below_5pct"])
+
+    for y, yd in ytd["years"].items():
+        check_shares_sum_100(f"ytd {y}", yd["shares_pct"])
+
+    low = records_out["lowest_cf_day"]
+    high = records_out["highest_cf_day"]
+    if low and high:
+        check_cf_range(low["date"], low["cf"])
+        check_cf_range(high["date"], high["cf"])
+        require(low["cf"] <= high["cf"],
+                f"records: lowest cf {low['cf']} exceeds highest {high['cf']}")
+    require(records_out["longest_sub10pct_run"]["days"] >= 0,
+            "records: negative longest sub-10% run length")
+
+    check_nameplate_sane(nameplate)
+
+
 def build(out_dir: Path = SITE_DATA) -> int:
     """Recompute every derived series from the store and write site/data/*.json."""
     rows = read_store()
@@ -347,6 +393,12 @@ def build(out_dir: Path = SITE_DATA) -> int:
     # sound, dated denominator (the live NESO embedded-wind capacity is embedded-only —
     # it would read ~146% of capacity; see engine/NOTES.md §2 and §8).
     nameplate = json.loads(NAMEPLATE_ANCHOR_PATH.read_text())
+
+    try:
+        guard_outputs(stripe, counters_out, records_out, ytd, nameplate)
+    except GuardError as e:
+        print(f"derived build failed (GuardError): {e}", file=sys.stderr)
+        return 1
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("stripe", stripe), ("counters", counters_out),

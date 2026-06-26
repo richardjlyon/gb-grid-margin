@@ -13,6 +13,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from engine.guards import (
+    GuardError,
+    check_cf_range,
+    check_finite,
+    require,
+)
+
 REPO = Path(__file__).resolve().parent.parent
 TEMPLATES = Path(__file__).resolve().parent / "templates"
 SITE_URL = "https://gridgauge.co.uk"
@@ -81,6 +88,80 @@ def _stamp_live(snapshot: str) -> str:
     return f"as of {d.strftime('%d %b %H:%M')} UTC"
 
 
+def _rebuilt(generated_utc: str | None) -> str:
+    """' · rebuilt 25 Jun 2026' from a generated_utc ISO stamp, or '' if absent.
+
+    Threaded onto the settled-card stamps so a shared settled card carries the date
+    its underlying figure was last derived — not just a static 'since 2016'.
+    """
+    if not generated_utc:
+        return ""
+    try:
+        d = datetime.fromisoformat(generated_utc.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return f" · rebuilt {d.strftime('%d %b %Y')}"
+
+
+def _issued(issued_at: str | None) -> str:
+    """' · issued 24 Jun 15:30 UTC' from a SYSWARN publishTime, or '' if absent."""
+    if not issued_at:
+        return ""
+    try:
+        d = datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
+    except ValueError:
+        return ""
+    return f" · issued {d.strftime('%d %b %H:%M')} UTC"
+
+
+# Sanity envelope for the card's published wind+solar capacity denominator (GW).
+_CAPACITY_MIN_GW, _CAPACITY_MAX_GW = 1.0, 500.0
+
+
+def guard_card_inputs(latest: dict, nameplate: dict, counters: dict,
+                      records: dict, stripe: dict) -> None:
+    """Stage 9: fail loudly before a card figure is built from the source JSON.
+
+    The cards are screenshotted into shareable images, so a corrupt or out-of-range
+    figure must abort the build rather than become a wrong card. Validates the live
+    verdict figures, the capacity denominator, the counters' nesting, the record CF
+    and the stripe mean. Raises GuardError on any breach.
+    """
+    snap = latest.get("snapshot")
+    require(isinstance(snap, str) and snap, "verdict snapshot missing or not a string")
+    try:
+        datetime.fromisoformat(snap.replace("Z", "+00:00"))
+    except ValueError:
+        raise GuardError(f"verdict snapshot is not a valid ISO timestamp: {snap!r}")
+
+    firm = latest["firm_pct"]
+    check_finite("firm_pct", firm)
+    require(0.0 <= firm <= 100.0, f"firm_pct out of range: {firm}")
+    for k in ("wind_mw", "solar_mw", "gas_mw"):
+        check_finite(k, latest[k])
+        require(latest[k] >= 0, f"{k} is negative: {latest[k]}")
+
+    cap = nameplate["wind_plus_solar_gw"]
+    check_finite("wind_plus_solar_gw", cap)
+    require(_CAPACITY_MIN_GW <= cap <= _CAPACITY_MAX_GW,
+            f"nameplate wind_plus_solar_gw {cap} GW outside sane envelope "
+            f"[{_CAPACITY_MIN_GW}, {_CAPACITY_MAX_GW}]")
+
+    yc = counters["years"][str(counters["latest_year"])]
+    b10, b5 = yc["below_10pct"], yc["below_5pct"]
+    require(0 <= b5 <= b10, f"counters: below_5pct {b5} not within [0, below_10pct {b10}]")
+
+    low = records["lowest_cf_day"]
+    require(low is not None, "records: missing lowest_cf_day (empty store?)")
+    check_cf_range(low["date"], low["cf"])
+    require(records["longest_sub10pct_run"]["days"] >= 0,
+            "records: negative longest sub-10% run length")
+
+    check_finite("stripe mean_cf", stripe["mean_cf"])
+    require(0.0 <= stripe["mean_cf"] <= 1.0, f"stripe mean_cf out of range: {stripe['mean_cf']}")
+    require(len(stripe["days"]) > 0, "stripe has no days")
+
+
 def gas_vs_wind_headline(gas_mw: float, wind_mw: float) -> tuple[str, str]:
     """Adaptive, never a false claim: states whichever source actually leads."""
     if gas_mw >= wind_mw:
@@ -104,8 +185,13 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
     records = json.loads((data / "records.json").read_text())
     stripe = json.loads((data / "stripe.json").read_text())
 
+    guard_card_inputs(latest, nameplate, counters, records, stripe)
+
     snap = latest["snapshot"]
     live_stamp = _stamp_live(snap)
+    settled_rebuilt = _rebuilt(stripe.get("generated_utc"))
+    records_rebuilt = _rebuilt(records.get("generated_utc"))
+    counters_rebuilt = _rebuilt(counters.get("generated_utc"))
     cards: list[dict] = []
 
     # --- LIVE ---
@@ -138,7 +224,7 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
         "figure": f"{stripe['mean_cf'] * 100:.0f}% mean",
         "label": "Each column is one day's wind since 2016. The wind rarely blows above "
                  "a fraction of its capacity.",
-        "stamp": "Elexon FUELHH · since 2016", "caveat": LOWER_BOUND,
+        "stamp": f"Elexon FUELHH · since 2016{settled_rebuilt}", "caveat": LOWER_BOUND,
         "svg": stripe_svg(stripe["days"])})
 
     yr = counters["latest_year"]
@@ -148,21 +234,21 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
         "slug": "days-below-10", "kind": "settled", "theme": "ink", "template": "stat",
         "figure": f"{yc['below_10pct']} days",
         "label": f"in {yr}{part}, Britain's wind ran below a tenth of its installed capacity.",
-        "stamp": f"Elexon FUELHH · {yr}", "caveat": LOWER_BOUND, "svg": None})
+        "stamp": f"Elexon FUELHH · {yr}{counters_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
 
     low = records["lowest_cf_day"]
     cards.append({
         "slug": "lowest-day", "kind": "settled", "theme": "ink", "template": "stat",
         "figure": f"{low['cf'] * 100:.1f}%",
         "label": f"of capacity — the wind fleet's worst day on record, {low['date']}.",
-        "stamp": "Elexon FUELHH · all-time", "caveat": LOWER_BOUND, "svg": None})
+        "stamp": f"Elexon FUELHH · all-time{records_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
 
     run = records["longest_sub10pct_run"]
     cards.append({
         "slug": "longest-calm", "kind": "settled", "theme": "ink", "template": "stat",
         "figure": f"{run['days']} days",
         "label": f"the longest run wind stayed below 10% of capacity — {run['start']} to {run['end']}.",
-        "stamp": "Elexon FUELHH · all-time", "caveat": LOWER_BOUND, "svg": None})
+        "stamp": f"Elexon FUELHH · all-time{records_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
 
     asof = datetime.fromisoformat(snap.replace("Z", "+00:00")).strftime("%d %B %Y")
     return cards, asof
@@ -180,7 +266,8 @@ def warning_card(state: dict) -> dict:
         return {"slug": "warning", "kind": "warning", "theme": "alarm", "template": "stat",
                 "figure": "Margin notice",
                 "label": f"{art} {state['type_label']} is in force in Britain{wtxt}.",
-                "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
+                "stamp": f"Live · Elexon SYSWARN{_issued(state.get('issued_at'))}",
+                "caveat": None, "svg": None}
     return {"slug": "warning", "kind": "warning", "theme": "ink", "template": "stat",
             "figure": "All clear",
             "label": "No grid margin warning is in force in Britain right now.",
@@ -304,7 +391,11 @@ def build(data_dir: Path | str = REPO / "site" / "data",
     site = Path(site_dir)
     share_dir = site / "share"
     stub_dir = site / "s"
-    cards, asof = load_cards(data_dir)
+    try:
+        cards, asof = load_cards(data_dir)
+    except (GuardError, FileNotFoundError, KeyError, ValueError) as e:
+        print(f"card build failed ({type(e).__name__}): {e}", file=sys.stderr)
+        return 1
     cards.append(warning_card(wmod.parse_active_warnings(wmod.fetch_active_warnings())))
     try:
         render(cards, share_dir)

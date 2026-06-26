@@ -34,6 +34,17 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt
 const srcLine = (txt, anchor) =>
   `<p class="src">Source: ${esc(txt)} · <a href="methodology.html#${anchor}">→ method</a></p>`;
 
+// A full, honest UTC stamp from an ISO instant: "25 Jun 2026 23:35 UTC" (or "" if unparseable).
+// Used so every public figure carries a complete timestamp, not a bare HH:MM.
+const _MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtUTC(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCDate())} ${_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()} `
+    + `${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+
 // ============================================================ the half-dial gauge
 function arcPoint(cx, cy, R, value, max) {
   const rad = (gaugeNeedleAngle(value, max) * Math.PI) / 180;
@@ -216,7 +227,7 @@ function renderVerdict(state) {
         ${extraRow}
       </tbody>
     </table>
-    ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${String(v.snapshot).slice(11, 16)}Z`, 'verdict')}`;
+    ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${fmtUTC(v.snapshot) || `${String(v.snapshot).slice(11, 16)}Z`}`, 'verdict')}`;
 
   // share the live firm-power card
   $('verdict-body').insertAdjacentHTML('beforeend', shareButtons(
@@ -421,9 +432,11 @@ function renderWarningLight(w) {
   strip.dataset.status = w.status;
   if (w.status === 'in_force') {
     const win = w.window ? ` covering ${esc(w.window.from)}–${esc(w.window.to)}, ${esc(w.window.date)}` : '';
+    const issued = w.issuedAt && fmtUTC(w.issuedAt) ? ` · issued ${fmtUTC(w.issuedAt)}` : '';
     el.setAttribute('role', 'alert');
     el.innerHTML = `<span class="wl-lamp" aria-hidden="true"></span>
-      <span class="wl-text"><strong>${esc(w.typeLabel)} in force</strong>${win}.</span>`;
+      <span class="wl-text"><strong>${esc(w.typeLabel)} in force</strong>${win}.
+        <span class="wl-src">Elexon SYSWARN${issued}</span></span>`;
   } else {
     el.removeAttribute('role');
     const txt = w.status === 'unavailable' ? 'Grid warning status unavailable' : 'No active grid warnings';

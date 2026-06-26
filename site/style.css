@@ -108,6 +108,8 @@ a:hover { color: var(--red); }
 }
 .wl-text { line-height: 1.4; }
 .wl-text.wl-muted { color: var(--slate); }
+/* source + issued-at provenance on the lit banner: small, quiet, never competes with the notice */
+.wl-src { display: inline-block; font-size: 0.78em; opacity: 0.85; white-space: nowrap; }
 /* lit: the one red, a steady pulse, bold notice text */
 .warnstrip[data-status="in_force"] {
   background: var(--red); border-bottom-color: var(--red-deep);

@@ -324,3 +324,48 @@ It asserts a binary in-force/clear state at a single point in time; without auto
 withdrawn notice would keep showing "in force" — a stale false alarm, the exact failure the
 project's honesty bargain forbids. All other cards degrade gracefully when stale (a timestamp
 shows the age); the warning card cannot — it either lies or tells the truth.
+
+## 10. Provenance + sanity guards *(Stage 9, 2026-06-26)*
+
+`engine/guards.py` centralises the loud-failure contract: a published figure either passes
+silently or raises `GuardError` with a message that names the figure and the breach. The build
+steps call these *before writing any output*, so corrupt or implausible data **fails the build and
+writes nothing** rather than being published. The checks are small, named, message-bearing
+predicates (not bare `assert`s, so `python -O` cannot strip them).
+
+**Where they run.**
+- *Live verdict* (`engine.grid_engine.sanity_check`, pre-dating this module): demand > 0, share
+  ranges, the PV_Live solar cross-check (±10%) and the INDO reconcile (±12%). Unchanged.
+- *Derived figures* (`engine.derived.guard_outputs`, new): before `derived.build` writes
+  `site/data/*.json` it asserts the stripe's daily CF range and date order/uniqueness, the failure
+  counters' nesting (`below_5 ≤ below_10 ≤ observed`), each year's transmission shares summing to
+  100% (±0.5pp), the records' internal order, and the nameplate denominators' sanity
+  (`check_nameplate_sane`). A breach prints a `GuardError` and returns non-zero, leaving the
+  previous good files byte-identical.
+- *Share cards* (`engine.sharecards.guard_card_inputs`, new): the cards are screenshotted into
+  shareable images, so a wrong figure becomes a wrong picture. The verdict snapshot, firm/wind/
+  solar/gas figures, the capacity denominator, the counters, the record CF and the stripe mean are
+  range-checked before any card is built; `sharecards.build` catches a load/guard failure and
+  returns 1 with a clear message. The source-trace gate (`tests/test_sharecards_gate.py`) still
+  recomputes every card figure independently.
+
+**The one value that looks wrong but is correct.** A NEGATIVE net-import share on an export year
+(2022) is allowed by construction: `check_shares_sum_100` validates the *sum*, never the *sign* of
+an individual share (see §8). The Stage 9 adversarial review flagged a guard that might reject it;
+verification confirmed the guard correctly allows it.
+
+**Capacity-factor ceiling.** A daily wind CF is a conservative lower bound (transmission output ÷
+total installed), so it cannot exceed 1.0 — output never exceeds installed capacity. `check_cf_range`
+rejects anything outside `[0, 1]` (a tiny epsilon absorbs float rounding); above it means a
+wrong-unit or doubled feed, or a collapsed nameplate denominator.
+
+**Provenance audit.** Every public figure carries a visible source line and a timestamp. The live
+verdict line shows the full snapshot instant (not a bare HH:MM); the settled share cards thread the
+source JSON's `generated_utc` (a "rebuilt DD Mon YYYY" stamp); the warning banner and warning card
+carry their source (Elexon SYSWARN) and issue time. `site/methodology.html` documents every figure,
+formula, tolerance and the honesty bargain, and carries a "last reviewed" date.
+
+**Validation gate.** `tests/test_guards.py` pins each predicate; `tests/test_derived_guards.py` and
+`tests/test_sharecards_guards.py` inject bad data (a CF above 1, shares not summing to 100, a broken
+counter, an insane nameplate, a missing source file, a corrupt snapshot, a null record) and assert
+the build fails with a clear message and writes nothing.
