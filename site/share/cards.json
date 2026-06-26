@@ -1,0 +1,61 @@
+{
+  "asof": "25 June 2026",
+  "cards": [
+    {
+      "slug": "firm-now",
+      "figure": "75% firm",
+      "label": "of Britain's grid is firm power right now \u2014 gas, nuclear, biomass. The rest is weather & imports.",
+      "kind": "live",
+      "png": "/share/firm-now.png?v=0c6c3b2bb8"
+    },
+    {
+      "slug": "capacity-trap",
+      "figure": "23% of capacity",
+      "label": "Britain has built 50.4 GW of wind & solar. Right now the whole fleet is delivering 11.4 GW.",
+      "kind": "live",
+      "png": "/share/capacity-trap.png?v=279b16b5c3"
+    },
+    {
+      "slug": "gas-vs-wind",
+      "figure": "1.3\u00d7 more",
+      "label": "the gas fleet out-produces every wind farm in Britain right now \u2014 14.3 GW of gas against 11.4 GW of wind.",
+      "kind": "live",
+      "png": "/share/gas-vs-wind.png?v=187fe37314"
+    },
+    {
+      "slug": "wind-stripe",
+      "figure": "22% mean",
+      "label": "Each column is one day's wind since 2016. The wind rarely blows above a fraction of its capacity.",
+      "kind": "settled",
+      "png": "/share/wind-stripe.png?v=439a986720"
+    },
+    {
+      "slug": "days-below-10",
+      "figure": "13 days",
+      "label": "in 2026 (so far), Britain's wind ran below a tenth of its installed capacity.",
+      "kind": "settled",
+      "png": "/share/days-below-10.png?v=31fc9f01a2"
+    },
+    {
+      "slug": "lowest-day",
+      "figure": "0.9%",
+      "label": "of capacity \u2014 the wind fleet's worst day on record, 2016-01-19.",
+      "kind": "settled",
+      "png": "/share/lowest-day.png?v=4fd1b307b5"
+    },
+    {
+      "slug": "longest-calm",
+      "figure": "17 days",
+      "label": "the longest run wind stayed below 10% of capacity \u2014 2016-06-03 to 2016-06-19.",
+      "kind": "settled",
+      "png": "/share/longest-calm.png?v=c5f23fe444"
+    },
+    {
+      "slug": "warning",
+      "figure": "Margin notice",
+      "label": "A Electricity Margin Notice is in force in Britain covering 19:00\u201322:00, 26/06/2026.",
+      "kind": "warning",
+      "png": "/share/warning.png?v=2e89a83f5b"
+    }
+  ]
+}

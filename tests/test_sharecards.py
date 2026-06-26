@@ -124,3 +124,27 @@ def test_write_manifest_and_stubs(tmp_path):
     assert 'twitter:card" content="summary_large_image"' in stub
     assert "/share/firm-now.png?v=abc123" in stub
     assert 'og:image:width" content="1200"' in stub
+
+
+import struct
+
+
+def _png_size(path):
+    b = path.read_bytes()
+    assert b[:8] == b"\x89PNG\r\n\x1a\n"
+    w, h = struct.unpack(">II", b[16:24])
+    return w, h
+
+
+def test_render_writes_1200x630_pngs(tmp_path):
+    cards = [
+        {"slug": "stat", "theme": "ink", "template": "stat", "figure": "75% firm",
+         "label": "L", "stamp": "S", "caveat": None, "svg": None},
+        {"slug": "inst", "theme": "ink", "template": "instrument", "figure": "75% firm",
+         "label": "L", "stamp": "S", "caveat": None, "svg": sharecards.gauge_svg(75)},
+    ]
+    sharecards.render(cards, tmp_path)
+    for slug in ("stat", "inst"):
+        p = tmp_path / f"{slug}.png"
+        assert p.exists() and p.stat().st_size > 0
+        assert _png_size(p) == (1200, 630)

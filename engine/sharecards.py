@@ -9,6 +9,7 @@ import html as _html
 import json
 import math
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -250,3 +251,62 @@ def write_stubs(cards: list[dict], out_dir: Path | str, asof: str,
             site_url=SITE_URL, target=target, target_js=json.dumps(target),
             figure=_html.escape(c["figure"]), label=_html.escape(c["label"]), asof=asof)
         (out / f"{c['slug']}.html").write_text(html)
+
+
+def render(cards: list[dict], out_dir: Path | str) -> None:
+    """Screenshot one 1200x630 PNG per card. Chromium loads a composed copy of
+    the template from a temp dir (file:// so the vendored fonts resolve)."""
+    import shutil
+    import tempfile
+
+    from playwright.sync_api import sync_playwright
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        shutil.copytree(TEMPLATES / "fonts", tmp / "fonts")
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": CARD_W, "height": CARD_H})
+            for card in cards:
+                src = tmp / f"{card['slug']}.html"
+                src.write_text(compose(card))
+                page.goto(src.as_uri(), wait_until="networkidle")
+                page.evaluate("() => document.fonts.ready")
+                page.evaluate("() => window.__fitLabel && window.__fitLabel()")
+                page.screenshot(path=str(out / f"{card['slug']}.png"))
+            browser.close()
+
+
+def build(data_dir: Path | str = REPO / "site" / "data",
+          site_dir: Path | str = REPO / "site") -> int:
+    """Build the full card set: render PNGs, write cards.json + /s/ stubs.
+    A render failure leaves existing PNGs in place (warn, don't clobber)."""
+    from engine import warnings as wmod
+
+    site = Path(site_dir)
+    share_dir = site / "share"
+    stub_dir = site / "s"
+    cards, asof = load_cards(data_dir)
+    cards.append(warning_card(wmod.parse_active_warnings(wmod.fetch_active_warnings())))
+    try:
+        render(cards, share_dir)
+    except Exception as e:  # keep last-good PNGs
+        print(f"::warning:: card render failed ({type(e).__name__}): {e}", file=sys.stderr)
+    versions = content_hashes(share_dir)
+    write_manifest(cards, share_dir, asof, versions)
+    write_stubs(cards, stub_dir, asof, versions)
+    print(f"built {len(cards)} cards → {share_dir}")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) < 2 or argv[1] != "build":
+        print("usage: python -m engine.sharecards build", file=sys.stderr)
+        return 2
+    return build()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
