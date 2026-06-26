@@ -2,8 +2,19 @@
 
 from __future__ import annotations
 
-from engine.reliability import reliable_share
+import json
+
+import pytest
+
+from engine import derived, embedded_history
 from engine.grid_engine import compute_verdict
+from engine.reliability import (
+    build_payload,
+    build_series,
+    pack,
+    reliable_share,
+    rolling_year,
+)
 
 
 def _fuelhh(**cols):
@@ -43,7 +54,20 @@ def test_zero_demand_is_none():
     assert reliable_share(row, _emb()) is None
 
 
-from engine.reliability import build_series
+def test_net_export_half_hour_exceeds_one():
+    # GB exporting heavily: firm generation > national demand → reliable_share > 1.0.
+    # firm = CCGT + NUCLEAR + BIOMASS = 15000 + 5000 + 2000 = 22000
+    # notfirm = (WIND_trans + emb_wind) + solar + net_imports
+    #         = (3000 + 500) + 0 + (-10000) = -6500
+    # demand  = 22000 + (-6500) = 15500  → share = 22000/15500 ≈ 1.419
+    row = _fuelhh(CCGT=15000, NUCLEAR=5000, BIOMASS=2000, WIND=3000, INTFR=-10000)
+    emb = _emb(wind=500, solar=0)
+    r = reliable_share(row, emb)
+    # Independent cross-check via compute_verdict.
+    mix = {"CCGT": 15000, "NUCLEAR": 5000, "BIOMASS": 2000, "WIND": 3000, "INTFR": -10000}
+    v = compute_verdict(mix, {"solar_mw": 0, "wind_mw": 500, "time": "x"})
+    assert r == round(v["firm_mw"] / v["national_demand_mw"], 4)
+    assert r > 1.0
 
 
 def _fh(period, ccgt, wind, day="2024-06-01"):
@@ -72,7 +96,17 @@ def test_build_series_drops_unjoined_and_none_share():
     assert [x["t"] for x in s] == ["2024-06-01T00:00:00Z"]
 
 
-from engine.reliability import pack, rolling_year
+def test_build_series_drops_none_share():
+    # A half-hour whose demand reconstructs to 0 → reliable_share returns None → dropped.
+    zero_fh = {"settlement_date": "2024-06-01", "settlement_period": 1,
+                "period_start_utc": "2024-06-01T00:00:00Z"}  # no fuel columns → demand=0
+    zero_eb = {"settlement_date": "2024-06-01", "settlement_period": 1,
+                "period_start_utc": "x", "embedded_wind_mw": None, "embedded_solar_mw": None}
+    valid_fh = _fh(2, 9000, 1000)
+    valid_eb = _eb(2, 100, 0)
+    s = build_series([zero_fh, valid_fh], [zero_eb, valid_eb])
+    assert len(s) == 1
+    assert s[0]["t"] == "2024-06-01T00:30:00Z"
 
 
 def test_pack_regular_grid_with_null_gap():
@@ -99,9 +133,6 @@ def test_rolling_year_keeps_last_365_days():
     assert [x["t"] for x in kept] == ["2024-06-01T00:00:00Z", "2024-12-01T00:00:00Z"]
 
 
-from engine.reliability import build_payload
-
-
 def test_build_payload_carries_provenance():
     packed = pack([{"t": "2024-06-01T00:00:00Z", "r": 0.7}])
     p = build_payload(packed, generated_utc="2026-06-26T00:00:00+00:00")
@@ -113,13 +144,10 @@ def test_build_payload_carries_provenance():
     assert any("estimate" in c.lower() for c in p["caveats"])  # not-metered disclosure
 
 
-def test_derived_build_emits_reliability_when_embedded_present(tmp_path, monkeypatch):
+def test_derived_build_emits_reliability_when_embedded_present(tmp_path):
     # Uses the committed real stores via engine.history/embedded_history read_store.
     # If embedded store is present, build() must emit both reliability files with values.
-    import json
-    from engine import derived, embedded_history
     if not embedded_history.read_store():
-        import pytest
         pytest.skip("embedded store not built in this checkout")
     rc = derived.build(out_dir=tmp_path)
     assert rc == 0

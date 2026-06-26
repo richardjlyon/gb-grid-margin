@@ -19,10 +19,13 @@ _MIX_COLUMNS = FUELS + INTERCONNECTORS
 
 
 def reliable_share(fuelhh_row: dict, embedded_row: dict) -> float | None:
-    """Reliable (firm) share of national demand for one half-hour, in [0,1], or None.
+    """Reliable (firm) share of national demand for one half-hour, normally in [0,1], or None.
 
     Reuses `compute_verdict` (the gauge's parity-locked formula); `national_demand` there
     is the supply reconstruction firm+notfirm, so firm_mw/demand is the reliable share.
+    On net-export half-hours, firm generation exceeds GB demand (the surplus is exported),
+    so the share can legitimately exceed 1.0 — faithful to the live dial and not an error
+    (the same accepted property as the Stage 9 export-year allowance; see engine/NOTES.md §12).
     Blank (None) cells coerce to 0 so the `v > 0` checks never see None. Returns None when
     demand reconstructs to <= 0 (an all-blank/missing half-hour) — the series carries a gap.
     """
@@ -108,6 +111,9 @@ _CAVEATS = [
     "The live gauge reads NESO's embedded forecast; this settled series reads NESO's "
     "embedded outturn estimate (same owner, sibling product) and lags ~21 days, so it "
     "ends before today — the live 'now' caret is not part of the settled series.",
+    "The reliable share can read above 100% on net-export half-hours, because firm "
+    "generation exceeded GB demand and the surplus was exported. This is faithful to "
+    "the live gauge, not an error.",
 ]
 
 

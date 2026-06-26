@@ -17,8 +17,10 @@ SERIES = Path("site/data/reliability_all.json")
 _MIX = FUELS + INTERCONNECTORS
 
 pytestmark = pytest.mark.skipif(
-    not SERIES.exists() or not list(DATA.glob("embedded_*.csv")),
-    reason="reliability_all.json or embedded store not present in this checkout",
+    not SERIES.exists()
+    or not list(DATA.glob("embedded_*.csv"))
+    or not list(DATA.glob("fuelhh_*.csv")),
+    reason="reliability_all.json or embedded/fuelhh store not present in this checkout",
 )
 
 

@@ -416,3 +416,25 @@ pipeline so both stores share one tested append-only/idempotent implementation).
   (`history.validate_range`). `crosscheck` runs the PV_Live ±10% solar guard on a sample. Pure
   transforms are unit-tested in `tests/test_embedded_history.py`; the network fetch layer is thin and
   untested, mirroring §6.
+
+## 12. Reliability series — Stage B *(2026-06-26)*
+
+`engine/reliability.py` joins the FUELHH store (§6) to the embedded store (§11) on
+`(settlement_date, settlement_period)` and emits a half-hourly **national reliable (firm) share
+of demand** series via `engine.derived.build` → `site/data/reliability_year.json` (rolling 12
+months) and `reliability_all.json` (full history). The formula is `reliable_share` in
+`engine/reliability.py`, which reuses `compute_verdict` (the gauge's parity-locked formula), so
+the historical series is identical, by construction, to the live dial.
+
+**Reliable share can exceed 100% on net-export half-hours.** On half-hours when GB is a net
+exporter, `notfirm = wind + solar + net_imports < 0`, so `national_demand = firm + notfirm <
+firm`, and `firm / demand > 1.0`. This is faithful to the live dial and is the same accepted
+property as the Stage 9 `check_shares_sum_100` rule that allows a negative net-import share on
+an export year (§10). The real emitted `reliability_all.json` contains ≈1,186 such half-hours
+(max ≈1.235); `reliability_year.json` has ≈5 (max ≈1.024). Do NOT clamp these — the contract
+is documented in the `reliable_share` docstring and disclosed in the JSON `caveats` field.
+
+**All-time head-row timestamp quirk.** The 2016-01-01 SP48 row carries a `period_start_utc` of
+`2015-12-31T23:30Z` in the FUELHH store — a pre-existing Stage 4 boundary quirk (settlement
+period 48 of 2016-01-01 starts at 23:30 on the calendar-previous UTC day). It packs
+contiguously at the grid head and the rolling-year file is unaffected.
