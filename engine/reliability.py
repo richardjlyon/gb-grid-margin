@@ -37,3 +37,23 @@ def reliable_share(fuelhh_row: dict, embedded_row: dict) -> float | None:
     if not demand or demand <= 0:
         return None
     return round(v["firm_mw"] / demand, 4)
+
+
+def build_series(fuelhh_rows: list[dict], embedded_rows: list[dict]) -> list[dict]:
+    """Reliable-share series for every half-hour present in BOTH stores, sorted by time.
+
+    Omits half-hours missing from either store or whose share is None; those surface as
+    `null` gaps once packed onto the regular grid (Task 3).
+    """
+    emb_by_key = {(r["settlement_date"], r["settlement_period"]): r for r in embedded_rows}
+    out = []
+    for fh in fuelhh_rows:
+        emb = emb_by_key.get((fh["settlement_date"], fh["settlement_period"]))
+        if emb is None:
+            continue
+        r = reliable_share(fh, emb)
+        if r is None:
+            continue
+        out.append({"t": fh["period_start_utc"], "r": r})
+    out.sort(key=lambda x: x["t"])
+    return out

@@ -41,3 +41,32 @@ def test_none_columns_treated_as_zero():
 def test_zero_demand_is_none():
     row = _fuelhh()  # all fuel columns absent
     assert reliable_share(row, _emb()) is None
+
+
+from engine.reliability import build_series
+
+
+def _fh(period, ccgt, wind, day="2024-06-01"):
+    return {"settlement_date": day, "settlement_period": period,
+            "period_start_utc": f"{day}T{(period-1)//2:02d}:{'30' if period % 2 == 0 else '00'}:00Z",
+            "CCGT": ccgt, "WIND": wind}
+
+
+def _eb(period, wind, solar, day="2024-06-01"):
+    return {"settlement_date": day, "settlement_period": period,
+            "period_start_utc": "x", "embedded_wind_mw": wind, "embedded_solar_mw": solar}
+
+
+def test_build_series_joins_on_date_period_and_sorts():
+    fh = [_fh(2, 9000, 1000), _fh(1, 9000, 1000)]
+    eb = [_eb(1, 100, 0), _eb(2, 100, 500)]
+    s = build_series(fh, eb)
+    assert [x["t"] for x in s] == ["2024-06-01T00:00:00Z", "2024-06-01T00:30:00Z"]
+    assert all(0.0 <= x["r"] <= 1.0 for x in s)
+
+
+def test_build_series_drops_unjoined_and_none_share():
+    fh = [_fh(1, 9000, 1000), _fh(2, 9000, 1000)]
+    eb = [_eb(1, 100, 0)]  # period 2 has no embedded row -> dropped
+    s = build_series(fh, eb)
+    assert [x["t"] for x in s] == ["2024-06-01T00:00:00Z"]
