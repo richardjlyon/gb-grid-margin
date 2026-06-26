@@ -65,3 +65,103 @@ def stripe_svg(days: list[dict], width: int = 1040, height: int = 300) -> str:
         parts.append(f'<rect x="{c * cw:.2f}" y="0" width="{cw:.2f}" height="{height}" fill="{cf_to_ink(lo)}"/>')
     parts.append("</svg>")
     return "".join(parts)
+
+
+LOWER_BOUND = "Conservative lower bound — transmission-metered wind ÷ total installed (DUKES 6.2)."
+DUKES_BASIS = "Wind+solar output ÷ DUKES 6.2 installed capacity (UK, end-2024)."
+
+
+def _fmt_gw(mw: float) -> str:
+    return f"{mw / 1000:.1f} GW"
+
+
+def _stamp_live(snapshot: str) -> str:
+    d = datetime.fromisoformat(snapshot.replace("Z", "+00:00"))
+    return f"as of {d.strftime('%d %b %H:%M')} UTC"
+
+
+def gas_vs_wind_headline(gas_mw: float, wind_mw: float) -> tuple[str, str]:
+    """Adaptive, never a false claim: states whichever source actually leads."""
+    if gas_mw >= wind_mw:
+        mult = gas_mw / wind_mw if wind_mw else 0.0
+        fig = f"{mult:.1f}× more"
+        lab = (f"the gas fleet out-produces every wind farm in Britain right now — "
+               f"{_fmt_gw(gas_mw)} of gas against {_fmt_gw(wind_mw)} of wind.")
+    else:
+        mult = wind_mw / gas_mw if gas_mw else 0.0
+        fig = f"{mult:.1f}× more"
+        lab = (f"wind out-produces the whole gas fleet right now — "
+               f"{_fmt_gw(wind_mw)} of wind against {_fmt_gw(gas_mw)} of gas.")
+    return fig, lab
+
+
+def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
+    data = Path(data_dir)
+    latest = json.loads((data / "latest.json").read_text())["verdict"]
+    nameplate = json.loads((data / "nameplate.json").read_text())
+    counters = json.loads((data / "counters.json").read_text())
+    records = json.loads((data / "records.json").read_text())
+    stripe = json.loads((data / "stripe.json").read_text())
+
+    snap = latest["snapshot"]
+    live_stamp = _stamp_live(snap)
+    cards: list[dict] = []
+
+    # --- LIVE ---
+    firm = latest["firm_pct"]
+    cards.append({
+        "slug": "firm-now", "kind": "live", "theme": "ink", "template": "instrument",
+        "figure": f"{round(firm)}% firm",
+        "label": "of Britain's grid is firm power right now — gas, nuclear, biomass. "
+                 "The rest is weather & imports.",
+        "stamp": live_stamp, "caveat": None, "svg": gauge_svg(firm)})
+
+    built_gw = nameplate["wind_plus_solar_gw"]
+    delivering = latest["wind_mw"] + latest["solar_mw"]
+    share = delivering / (built_gw * 1000) * 100
+    cards.append({
+        "slug": "capacity-trap", "kind": "live", "theme": "ink", "template": "stat",
+        "figure": f"{share:.0f}% of capacity",
+        "label": f"Britain has built {built_gw:.1f} GW of wind & solar. Right now the "
+                 f"whole fleet is delivering {_fmt_gw(delivering)}.",
+        "stamp": live_stamp, "caveat": DUKES_BASIS, "svg": None})
+
+    fig, lab = gas_vs_wind_headline(latest["gas_mw"], latest["wind_mw"])
+    cards.append({
+        "slug": "gas-vs-wind", "kind": "live", "theme": "ink", "template": "stat",
+        "figure": fig, "label": lab, "stamp": live_stamp, "caveat": None, "svg": None})
+
+    # --- SETTLED ---
+    cards.append({
+        "slug": "wind-stripe", "kind": "settled", "theme": "ink", "template": "instrument",
+        "figure": f"{stripe['mean_cf'] * 100:.0f}% mean",
+        "label": "Each column is one day's wind since 2016. The wind rarely blows above "
+                 "a fraction of its capacity.",
+        "stamp": "Elexon FUELHH · since 2016", "caveat": LOWER_BOUND,
+        "svg": stripe_svg(stripe["days"])})
+
+    yr = counters["latest_year"]
+    yc = counters["years"][str(yr)]
+    part = " (so far)" if yr in counters.get("partial_years", []) else ""
+    cards.append({
+        "slug": "days-below-10", "kind": "settled", "theme": "ink", "template": "stat",
+        "figure": f"{yc['below_10pct']} days",
+        "label": f"in {yr}{part}, Britain's wind ran below a tenth of its installed capacity.",
+        "stamp": f"Elexon FUELHH · {yr}", "caveat": LOWER_BOUND, "svg": None})
+
+    low = records["lowest_cf_day"]
+    cards.append({
+        "slug": "lowest-day", "kind": "settled", "theme": "ink", "template": "stat",
+        "figure": f"{low['cf'] * 100:.1f}%",
+        "label": f"of capacity — the wind fleet's worst day on record, {low['date']}.",
+        "stamp": "Elexon FUELHH · all-time", "caveat": LOWER_BOUND, "svg": None})
+
+    run = records["longest_sub10pct_run"]
+    cards.append({
+        "slug": "longest-calm", "kind": "settled", "theme": "ink", "template": "stat",
+        "figure": f"{run['days']} days",
+        "label": f"the longest run wind stayed below 10% of capacity — {run['start']} to {run['end']}.",
+        "stamp": "Elexon FUELHH · all-time", "caveat": LOWER_BOUND, "svg": None})
+
+    asof = datetime.fromisoformat(snap.replace("Z", "+00:00")).strftime("%d %B %Y")
+    return cards, asof
