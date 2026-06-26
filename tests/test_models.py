@@ -201,6 +201,43 @@ class TestEmbeddedHistRow:
         assert row.embedded_wind_mw is None
         assert row.embedded_solar_mw == 0.0
 
+    def test_settlement_date_dd_mmm_yyyy_uppercase(self):
+        """01-JAN-2019 (NESO format for years 2019–2022) must normalise to ISO."""
+        row = EmbeddedHistRow.model_validate({
+            "SETTLEMENT_DATE": "01-JAN-2019", "SETTLEMENT_PERIOD": 1,
+            "EMBEDDED_WIND_GENERATION": 100, "EMBEDDED_SOLAR_GENERATION": 200,
+            "EMBEDDED_WIND_CAPACITY": 5000, "EMBEDDED_SOLAR_CAPACITY": 9000,
+        })
+        assert row.settlement_date == "2019-01-01"
+
+    def test_settlement_date_dd_mon_yy_title(self):
+        """01-Jan-23 (NESO format for year 2023, 2-digit year) must normalise to ISO."""
+        row = EmbeddedHistRow.model_validate({
+            "SETTLEMENT_DATE": "01-Jan-23", "SETTLEMENT_PERIOD": 1,
+            "EMBEDDED_WIND_GENERATION": 100, "EMBEDDED_SOLAR_GENERATION": 200,
+            "EMBEDDED_WIND_CAPACITY": 5000, "EMBEDDED_SOLAR_CAPACITY": 9000,
+        })
+        assert row.settlement_date == "2023-01-01"
+
+    def test_settlement_date_iso_regression(self):
+        """ISO YYYY-MM-DD (2016–2018, 2024–2026 NESO format) must pass through unchanged."""
+        row = EmbeddedHistRow.model_validate({
+            "SETTLEMENT_DATE": "2016-06-01", "SETTLEMENT_PERIOD": 1,
+            "EMBEDDED_WIND_GENERATION": 100, "EMBEDDED_SOLAR_GENERATION": 200,
+            "EMBEDDED_WIND_CAPACITY": 5000, "EMBEDDED_SOLAR_CAPACITY": 9000,
+        })
+        assert row.settlement_date == "2016-06-01"
+
+    def test_settlement_date_unrecognised_raises(self):
+        """An unrecognised SETTLEMENT_DATE format must raise loudly (feed-boundary contract)."""
+        from pydantic import ValidationError as PydanticValidationError
+        with pytest.raises((ValueError, PydanticValidationError)):
+            EmbeddedHistRow.model_validate({
+                "SETTLEMENT_DATE": "garbage", "SETTLEMENT_PERIOD": 1,
+                "EMBEDDED_WIND_GENERATION": 100, "EMBEDDED_SOLAR_GENERATION": 200,
+                "EMBEDDED_WIND_CAPACITY": 5000, "EMBEDDED_SOLAR_CAPACITY": 9000,
+            })
+
     def test_pvlive_series_rows(self):
         s = PvLiveSeries.model_validate({
             "meta": ["gsp_id", "datetime_gmt", "generation_mw"],

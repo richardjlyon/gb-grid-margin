@@ -7,9 +7,37 @@ upstream JSON names to Python attribute names; extra fields are ignored.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _normalise_settlement_date(val: str) -> str:
+    """Convert NESO SETTLEMENT_DATE to ISO YYYY-MM-DD.
+
+    NESO uses at least three formats across years:
+      - YYYY-MM-DD      (2016–2018, 2024–2026) — already ISO, pass through
+      - DD-MMM-YYYY     (2019–2022, uppercase month e.g. 01-JAN-2019)
+      - DD-Mon-YY       (2023, title month + 2-digit year e.g. 01-Jan-23)
+
+    strptime %b is case-insensitive, so JAN and Jan both parse.
+    2-digit years via %y: 00–68 → 2000s, 69–99 → 1900s (correct for this dataset).
+    An unrecognised format raises ValueError with the offending value.
+    """
+    if _ISO_DATE_RE.match(val):
+        return val
+    for fmt in ("%d-%b-%Y", "%d-%b-%y"):
+        try:
+            return datetime.strptime(val, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    raise ValueError(
+        f"SETTLEMENT_DATE {val!r}: unrecognised format "
+        "(expected YYYY-MM-DD, DD-MMM-YYYY, or DD-Mon-YY)"
+    )
 
 
 class FuelInstRecord(BaseModel):
@@ -79,7 +107,11 @@ class EmbeddedHistRow(BaseModel):
     @classmethod
     def _blank_to_none(cls, data):
         if isinstance(data, dict):
-            return {k: (None if v == "" else v) for k, v in data.items()}
+            result = {k: (None if v == "" else v) for k, v in data.items()}
+            sd = result.get("SETTLEMENT_DATE")
+            if sd is not None:
+                result["SETTLEMENT_DATE"] = _normalise_settlement_date(sd)
+            return result
         return data
 
 
