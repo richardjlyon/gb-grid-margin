@@ -6,7 +6,7 @@ from datetime import date
 
 import pytest
 
-from engine.embedded_history import COLUMNS, parse_records, period_start_utc, to_row
+from engine.embedded_history import COLUMNS, append_rows, parse_records, period_start_utc, read_store, to_row, year_path
 from engine.models import EmbeddedHistRow
 
 
@@ -52,3 +52,27 @@ class TestPeriodStartUtc:
         # 2016-10-30 autumn back (50 periods). Local midnight is BST (UTC+1) ->
         # 2016-10-29T23:00Z; period 6 starts 2.5h later in real time.
         assert period_start_utc("2016-10-30", 6) == "2016-10-30T01:30:00Z"
+
+
+class TestStore:
+    def test_year_path(self, tmp_path):
+        assert year_path("2016-06-01", tmp_path).name == "embedded_2016.csv"
+
+    def test_append_then_read_roundtrips_none(self, tmp_path):
+        rows = parse_records([_rec(1, "", "0"), _rec(2, 1200, 3400)])
+        assert append_rows(rows, tmp_path) == 2
+        back = read_store(tmp_path)
+        assert len(back) == 2
+        assert back[0]["embedded_wind_mw"] is None
+        assert back[0]["embedded_solar_mw"] == 0
+        assert back[1]["embedded_wind_mw"] == 1200
+
+    def test_idempotent_reappend_is_noop(self, tmp_path):
+        rows = parse_records([_rec(1, 100, 200)])
+        append_rows(rows, tmp_path)
+        assert append_rows(rows, tmp_path) == 0
+
+    def test_revision_raises(self, tmp_path):
+        append_rows(parse_records([_rec(1, 100, 200)]), tmp_path)
+        with pytest.raises(ValueError, match="revision"):
+            append_rows(parse_records([_rec(1, 999, 200)]), tmp_path)

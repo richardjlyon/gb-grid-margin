@@ -22,6 +22,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from engine import widestore
 from engine.models import EmbeddedHistRow, PvLiveSeries
 
 UK = ZoneInfo("Europe/London")
@@ -72,3 +73,19 @@ def parse_records(records: list[dict]) -> list[dict]:
     """Validate raw NESO records and return wide rows, sorted by (date, period)."""
     rows = [to_row(EmbeddedHistRow.model_validate(r)) for r in records]
     return sorted(rows, key=lambda r: (r["settlement_date"], r["settlement_period"]))
+
+
+def year_path(settlement_date: str, base_dir: Path = HISTORY_DIR) -> Path:
+    """Year-bucketed file path for a settlement date: embedded_YYYY.csv."""
+    return Path(base_dir) / f"embedded_{settlement_date[:4]}.csv"
+
+
+def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
+    """Append wide rows to their per-year buckets, idempotent. Raises on revision."""
+    return widestore.append_rows(
+        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir))
+
+
+def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
+    """Read and merge all embedded_*.csv files from base_dir, sorted by (date, period)."""
+    return widestore.read_store(base_dir, "embedded_*.csv", COLUMNS, _TEXT_COLUMNS)
