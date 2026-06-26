@@ -6,6 +6,7 @@
 // presentation; every number it shows comes from one of those, and every figure carries
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
+import { resolveWarnings } from './warnings.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   capacityTrapStatic, gasVsWindMultiple, fmtPct, fmtGW, fmtMW,
@@ -395,6 +396,43 @@ function renderTally(counters, records) {
     ${srcLine(`${counters.source} · conservative lower bound`, 'stripe')}`;
 }
 
+// ============================================================ the live warning light
+// Independent of the verdict layer: a warnings fetch failure never touches the verdict, and
+// vice versa. Lit only while a scarcity-class notice is in force; otherwise quietly dormant.
+// ?warn=force|clear|unavailable forces a state for previewing without waiting for a live notice.
+function warnOverride() {
+  const v = new URLSearchParams(window.location.search).get('warn');
+  if (v === 'force') return { status: 'in_force', type: 'EMN', typeLabel: 'Electricity Margin Notice',
+    issuedAt: new Date().toISOString(), window: { from: '19:00', to: '22:00', date: '26/06/2026' } };
+  if (v === 'clear') return { status: 'clear' };
+  if (v === 'unavailable') return { status: 'unavailable' };
+  return null;
+}
+
+function renderWarningLight(w) {
+  const strip = $('warnstrip');
+  const el = $('warning-light');
+  strip.dataset.status = w.status;
+  if (w.status === 'in_force') {
+    const win = w.window ? ` covering ${esc(w.window.from)}–${esc(w.window.to)}, ${esc(w.window.date)}` : '';
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `<span class="wl-lamp" aria-hidden="true"></span>
+      <span class="wl-text"><strong>${esc(w.typeLabel)} in force</strong>${win}.</span>`;
+  } else {
+    el.removeAttribute('role');
+    const txt = w.status === 'unavailable' ? 'Grid warning status unavailable' : 'No active grid warnings';
+    el.innerHTML = `<span class="wl-lamp" aria-hidden="true"></span><span class="wl-text wl-muted">${txt}</span>`;
+  }
+}
+
+async function refreshWarnings() {
+  try {
+    renderWarningLight(warnOverride() || await resolveWarnings({}));
+  } catch (e) {
+    renderWarningLight({ status: 'unavailable' });
+  }
+}
+
 // ============================================================ orchestration
 async function refreshLive() {
   try {
@@ -430,6 +468,8 @@ async function main() {
   }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
+  refreshWarnings();
+  setInterval(refreshWarnings, POLL_MS);
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(drawStripe, 150); });
 }

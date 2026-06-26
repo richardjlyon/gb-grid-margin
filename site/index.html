@@ -32,6 +32,13 @@
 </header>
 <div class="clockstrip"><div class="container" id="clockstrip">Reading the grid…</div></div>
 
+<!-- the live warning light: lit only while a scarcity-class NESO notice (EMN/CMN/NISM) is in force -->
+<div class="warnstrip" id="warnstrip" data-status="loading">
+  <div class="container warnstrip-inner" id="warning-light" aria-live="polite">
+    <span class="wl-text wl-muted">Checking grid warnings…</span>
+  </div>
+</div>
+
 <main class="container">
   <h1 class="visually-hidden">Grid Gauge — Britain's grid reliability, live</h1>
 

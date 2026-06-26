@@ -96,6 +96,37 @@ a:hover { color: var(--red); }
   padding: 9px 0; border-bottom: 1px solid var(--rule); background: var(--paper);
 }
 
+/* ---------- the live warning light ---------- */
+.warnstrip { border-bottom: 1px solid var(--rule); background: var(--paper); }
+.warnstrip-inner {
+  display: flex; align-items: baseline; gap: 10px;
+  font-family: var(--mono); font-size: 0.78rem; padding: 9px 0; color: var(--slate);
+}
+.wl-lamp {
+  flex: none; align-self: center; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--rule);  /* dormant: a dark, unlit bulb */
+}
+.wl-text { line-height: 1.4; }
+.wl-text.wl-muted { color: var(--slate); }
+/* lit: the one red, a steady pulse, bold notice text */
+.warnstrip[data-status="in_force"] {
+  background: var(--red); border-bottom-color: var(--red-deep);
+}
+.warnstrip[data-status="in_force"] .warnstrip-inner { color: #fff; }
+.warnstrip[data-status="in_force"] .wl-text strong { color: #fff; }
+.warnstrip[data-status="in_force"] .wl-lamp {
+  background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,0.9);
+  animation: warnpulse 1.4s ease-in-out infinite;
+}
+@keyframes warnpulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.85); opacity: 1; }
+  70%  { box-shadow: 0 0 0 7px rgba(255,255,255,0); opacity: 0.7; }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .warnstrip[data-status="in_force"] .wl-lamp { animation: none; box-shadow: none; }
+}
+
 /* ---------- the ledger: entries separated by a double rule ---------- */
 main { padding-bottom: 40px; }
 .entry { padding: 30px 0 26px; border-top: 3px double var(--rule); }
