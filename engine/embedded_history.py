@@ -49,3 +49,26 @@ def period_start_utc(settlement_date: str, period: int) -> str:
     midnight_utc = datetime(y, m, d, tzinfo=UK).astimezone(timezone.utc)
     start = midnight_utc + timedelta(minutes=30 * (period - 1))
     return start.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _round_or_none(v: float | None) -> int | None:
+    return None if v is None else round(v)
+
+
+def to_row(rec: EmbeddedHistRow) -> dict:
+    """One validated NESO record → one wide store row (integer MW; None preserved)."""
+    return {
+        "settlement_date": rec.settlement_date,
+        "settlement_period": rec.settlement_period,
+        "period_start_utc": period_start_utc(rec.settlement_date, rec.settlement_period),
+        "embedded_wind_mw": _round_or_none(rec.embedded_wind_mw),
+        "embedded_solar_mw": _round_or_none(rec.embedded_solar_mw),
+        "embedded_wind_capacity_mw": _round_or_none(rec.embedded_wind_capacity_mw),
+        "embedded_solar_capacity_mw": _round_or_none(rec.embedded_solar_capacity_mw),
+    }
+
+
+def parse_records(records: list[dict]) -> list[dict]:
+    """Validate raw NESO records and return wide rows, sorted by (date, period)."""
+    rows = [to_row(EmbeddedHistRow.model_validate(r)) for r in records]
+    return sorted(rows, key=lambda r: (r["settlement_date"], r["settlement_period"]))
