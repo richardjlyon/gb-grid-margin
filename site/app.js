@@ -272,6 +272,14 @@ const DIAL_PALETTE = {
   solar: { track: '#e8d9be', band: '#d4b684', core: '#b17c23', full: '#e0921a', fullRgb: [224, 146, 26] },
 };
 
+// Entry 02 source lines + the box-whisker key note, lifted to module scope so the shared
+// renderMetricBlock references them by name rather than closing over renderTrap.
+const WIND_GAUGE_SRC = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 wind nameplate';
+const SOLAR_GAUGE_SRC = 'Live: NESO embedded forecast / NESO embedded-solar capacity';
+// A single annotation — under solar only, to conserve space — explaining the hybrid box-whisker
+// key that sits above each carpet (it serves both sources and the dial bands, same scheme).
+const KEY_NOTE_HTML = `<p class="trap-note">Reading the key above each carpet: the thin line spans the middle 9 in 10 half-hours over the last year, the thick bar the <strong>usual half</strong> (the middle 50% of readings), and the tick the <strong>average</strong>; the &#8220;now&#8221; caret and the dial needle mark the latest half-hour.</p>`;
+
 // Lay out the legend's numeric percentile markers (positions in bar-%), dropping any lower-priority
 // label that would collide with a kept one — e.g. solar's all-hours median 0% sitting on top of its
 // 0% lower quartile. Median wins (pr 2) over the quartile ends (pr 1).
@@ -286,73 +294,24 @@ function numsRow(marks) {
   return `<span class="cl-nums" aria-hidden="true">${kept.map(span).join('')}</span>`;
 }
 
-// Entry 02: one block per source (wind, then solar). Each block is a full-width source label row,
-// then the live dial (1/3 column) beside its half-hourly carpet (2/3 column), then an aligned row
-// of the two source lines. A single colour legend sits above. No combined/aggregate gauge — solar
-// must not flatter the wind reading; each uses its own nameplate so dial and carpet share a basis.
-function renderTrap(v) {
-  $('entry-trap').hidden = false;
-  const dukesWind = NAMEPLATE ? NAMEPLATE.wind_gw : 32.082;
-  const dukesSolar = NAMEPLATE ? NAMEPLATE.solar_gw : 18.28;
-  const g = (CAPACITY && CAPACITY.gauge) || {};
-  const windCapMw = g.wind_nameplate_mw || Math.round(dukesWind * 1000);
-  const solarCapMw = g.solar_nameplate_mw || Math.round(dukesSolar * 1000);
-  const hasCarpets = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
-
-  // Per-source dial palettes — three shades each (track / 9-in-10 band / usual-half core), luma-
-  // matched to the original greys (218/185/130) so perceived brightness is unchanged. Blue = wind,
-  // yellowy-orange = solar.
-  const gaugeFor = (sourceMw, capMw, label, dist, palette) => buildGauge(capMw ? (sourceMw / capMw) * 100 : 0, 100, {
-    label, calibration: gaugeCalibration(capMw), dist, palette,
-  });
-  const srcP = (cls, txt) =>
-    `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#capacity-trap">→ method</a></p>`;
-
-  // Mean capacity factor over the rolling year (all half-hourly cells) — the "rarely tops a quarter"
-  // fact, stated in the label row beside the live dial.
-  const avgPct = (kind) => {
-    if (!hasCarpets) return null;
-    let s = 0, n = 0;
-    for (const d of CAPACITY[kind].days) for (const cf of d.cf) if (cf != null) { s += cf; n += 1; }
-    return n ? Math.round((s / n) * 100) : null;
-  };
-
-  // Output distribution over the rolling year (half-hourly cells) — painted onto the dial so "now"
-  // reads against where output sits. The CENTRAL marker is the MEAN (= the load factor / annual
-  // capacity factor), not the median: solar is dark over half the year, so its median is 0% — a fact
-  // about the Earth's rotation, not about the panels. The mean is the fair, standard "what it
-  // delivers" figure. The percentile band stays as the variability picture. Memoised on the payload.
-  const distFor = (kind) => {
-    if (!hasCarpets) return null;
-    const node = CAPACITY[kind];
-    if (node._dist) return node._dist;
-    const vals = [];
-    for (const d of node.days) for (const cf of d.cf) if (cf != null) vals.push(cf);
-    if (!vals.length) return null;
-    const mean = (vals.reduce((s, v) => s + v, 0) / vals.length) * 100;
-    vals.sort((a, b) => a - b);
-    const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))] * 100;
-    return (node._dist = { p10: q(0.1), p25: q(0.25), p50: q(0.5), p75: q(0.75), p90: q(0.9), mean });
-  };
-
-  // Each source gets its own colour legend, sharing its label's row in the stripe column (so it is
-  // the same width as the stripe below it) and carrying a live "now" caret at the instantaneous
-  // capacity-factor reading — the same value the dial needle points to.
-  const legendFor = (kind, cf, pal, dist) => {
-    const satFull = (CAPACITY && CAPACITY.sat && CAPACITY.sat[kind]) || 1;
-    const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
-    const pos = L(cf);
-    // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
-    // dial bands): p10–p90 whisker (pal.band), p25–p75 usual half (pal.core), and an AVERAGE tick
-    // (ink) — the mean / load factor, not the median (see distFor). Numbers label the 9-in-10 ends
-    // and the average.
-    let box = '';
-    if (dist) {
-      const x = (pPct) => L(pPct / 100);   // dist percentiles are 0..100
-      const [p10, p90] = [dist.p10, dist.p90].map(Math.round);
-      const [p25, p75] = [dist.p25, dist.p75].map(Math.round);
-      const avg = Math.round(dist.mean);
-      box = `
+// Each source gets its own colour legend, sharing its label's row in the stripe column (so it is
+// the same width as the stripe below it) and carrying a live "now" caret at the instantaneous
+// capacity-factor reading — the same value the dial needle points to. `satFull` is the carpet's
+// saturation anchor (CAPACITY.sat[kind] for Entry 02), passed in so the legend closes over nothing.
+function legendFor(kind, cf, pal, dist, satFull) {
+  const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
+  const pos = L(cf);
+  // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
+  // dial bands): p10–p90 whisker (pal.band), p25–p75 usual half (pal.core), and an AVERAGE tick
+  // (ink) — the mean / load factor, not the median (see distForDays). Numbers label the 9-in-10 ends
+  // and the average.
+  let box = '';
+  if (dist) {
+    const x = (pPct) => L(pPct / 100);   // dist percentiles are 0..100
+    const [p10, p90] = [dist.p10, dist.p90].map(Math.round);
+    const [p25, p75] = [dist.p25, dist.p75].map(Math.round);
+    const avg = Math.round(dist.mean);
+    box = `
         <span class="cl-box" aria-hidden="true" title="last year: average ${avg}%, usual half ${p25}–${p75}%, 9-in-10 ${p10}–${p90}% of capacity">
           <span class="cl-box-line" style="left:${x(dist.p10).toFixed(1)}%; width:${(x(dist.p90) - x(dist.p10)).toFixed(1)}%; background:${pal.band}"></span>
           <span class="cl-box-iqr" style="left:${x(dist.p25).toFixed(1)}%; width:${(x(dist.p75) - x(dist.p25)).toFixed(1)}%; background:${pal.core}"></span>
@@ -363,8 +322,8 @@ function renderTrap(v) {
           { pos: x(dist.mean), txt: `${avg}%`, cls: 'cl-num-avg', pr: 2 },  // average (mean / load factor)
           { pos: x(dist.p90), txt: `${p90}%`, color: pal.core, pr: 1 },
         ])}`;
-    }
-    return `
+  }
+  return `
     <div class="carpet-legend">
       <span class="cl-lab">No output</span>
       <span class="cl-bar-wrap">
@@ -374,68 +333,114 @@ function renderTrap(v) {
       </span>
       <span class="cl-lab">Full output</span>
     </div>`;
-  };
+}
 
-  const block = (kind, label, sourceMw, capMw, gaugeSrc, carpetSrc) => {
-    const pal = DIAL_PALETTE[kind];
-    const gauge = gaugeFor(sourceMw, capMw, `${label} output as a share of installed capacity`, distFor(kind), pal);
-    const avg = avgPct(kind);
-    const avgNote = avg == null ? '' : `<span class="trap-avg">averages ${avg}% of capacity over the year</span>`;
-    const cf = capMw ? (sourceMw / capMw) : 0;
-    // A single annotation — under solar only, to conserve space — explaining the hybrid box-whisker
-    // key that sits above each carpet (it serves both sources and the dial bands, same scheme).
-    const keyNote = (hasCarpets && kind === 'solar')
-      ? `<p class="trap-note">Reading the key above each carpet: the thin line spans the middle 9 in 10 half-hours over the last year, the thick bar the <strong>usual half</strong> (the middle 50% of readings), and the tick the <strong>average</strong>; the &#8220;now&#8221; caret and the dial needle mark the latest half-hour.</p>`
-      : '';
-    const strip = hasCarpets ? `
+// Output distribution over the rolling year (half-hourly cells) — painted onto the dial so "now"
+// reads against where output sits. The CENTRAL marker is the MEAN (= the load factor / annual
+// capacity factor), not the median: solar is dark over half the year, so its median is 0% — a fact
+// about the Earth's rotation, not about the panels. The mean is the fair, standard "what it
+// delivers" figure. The percentile band stays as the variability picture. Memoised on `node._dist`.
+function distForDays(node, days) {
+  if (node._dist) return node._dist;
+  const vals = [];
+  for (const d of days) for (const cf of d.cf) if (cf != null) vals.push(cf);
+  if (!vals.length) return null;
+  const mean = (vals.reduce((s, v) => s + v, 0) / vals.length) * 100;
+  vals.sort((a, b) => a - b);
+  const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))] * 100;
+  return (node._dist = { p10: q(0.1), p25: q(0.25), p50: q(0.5), p75: q(0.75), p90: q(0.9), mean });
+}
+
+// Mean capacity factor over the rolling year (all half-hourly cells) — the "rarely tops a quarter"
+// fact, stated in the label row beside the live dial.
+function avgFromDays(days) {
+  if (!days) return null;
+  let s = 0, n = 0;
+  for (const d of days) for (const cf of d.cf) if (cf != null) { s += cf; n += 1; }
+  return n ? Math.round((s / n) * 100) : null;
+}
+
+// The shared metric block: full-width source label row, the live dial (1/3 column) beside its
+// half-hourly carpet (2/3 column), then an aligned row of source lines. Closes over no Entry-02
+// globals — everything comes from `cfg` — so a later entry can reuse it with its own palette,
+// nameplate and series. Returns the HTML string; the CALLER paints the carpet canvas afterwards.
+function renderMetricBlock(cfg) {
+  const pal = cfg.palette;
+  const hasCarpet = !!(cfg.days && cfg.days.length);
+  const gauge = buildGauge((cfg.liveCf ?? 0) * 100, 100, {
+    label: `${cfg.label} output as a share of installed capacity`,
+    calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
+  });
+  const avgNote = cfg.avgNote ? `<span class="trap-avg">${cfg.avgNote}</span>` : '';
+  const srcP = (cls, txt) =>
+    `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#${cfg.methodAnchor}">→ method</a></p>`;
+  const strip = hasCarpet ? `
       <div class="carpet-cell">
         <div class="carpet-stage">
           <div class="carpet-yaxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
-          <canvas id="carpet-${kind}" class="carpet" role="img"
-            aria-label="${esc(label)} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity."></canvas>
+          <canvas id="carpet-${cfg.kind}" class="carpet" role="img"
+            aria-label="${esc(cfg.label)} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity."></canvas>
         </div>
-        <div class="carpet-xaxis" id="carpet-${kind}-x"></div>
+        <div class="carpet-xaxis" id="carpet-${cfg.kind}-x"></div>
       </div>
-      ${srcP('trap-src-gauge', gaugeSrc)}
-      ${srcP('trap-src-strip', carpetSrc)}`
-      : srcP('trap-src-gauge', gaugeSrc);
-    return `
-      <p class="trap-label">${esc(label)}${avgNote}</p>
-      ${hasCarpets ? legendFor(kind, cf, pal, distFor(kind)) : ''}
+      ${srcP('trap-src-gauge', cfg.gaugeSrc)}
+      ${srcP('trap-src-strip', cfg.carpetSrc)}`
+    : srcP('trap-src-gauge', cfg.gaugeSrc);
+  return `
+      <p class="trap-label">${esc(cfg.label)}${avgNote}</p>
+      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat) : ''}
       <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
       ${strip}
-      ${keyNote}`;
+      ${cfg.keyNote}`;
+}
+
+// Entry 02: one block per source (wind, then solar). A single colour legend sits above each. No
+// combined/aggregate gauge — solar must not flatter the wind reading; each uses its own nameplate
+// so dial and carpet share a basis. Built as two renderMetricBlock calls over per-source configs.
+function renderTrap(v) {
+  $('entry-trap').hidden = false;
+  const g = (CAPACITY && CAPACITY.gauge) || {};
+  const windCapMw = g.wind_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000);
+  const solarCapMw = g.solar_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.solar_gw : 18.28) * 1000);
+  const has = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
+  const cfgFor = (kind, label, sourceMw, capMw, gaugeSrc, carpetSrc) => {
+    const days = has ? CAPACITY[kind].days : null;
+    const dist = has ? distForDays(CAPACITY[kind], days) : null;
+    const avg = avgFromDays(days);
+    return {
+      kind, label, palette: DIAL_PALETTE[kind], nameplateMw: capMw,
+      sat: has ? CAPACITY.sat[kind] : 1, days, dist,
+      liveCf: capMw ? (sourceMw / capMw) : 0,
+      avgNote: avg == null ? '' : `averages ${avg}% of capacity over the year`,
+      keyNote: (has && kind === 'solar') ? KEY_NOTE_HTML : '',
+      gaugeSrc, carpetSrc, methodAnchor: 'capacity-trap',
+    };
   };
-
-  const windGaugeSrc = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 wind nameplate';
-  const solarGaugeSrc = 'Live: NESO embedded forecast / NESO embedded-solar capacity';
-  const cWind = (CAPACITY && CAPACITY.source_wind) || windGaugeSrc;
-  const cSolar = (CAPACITY && CAPACITY.source_solar) || solarGaugeSrc;
-
   $('trap-body').innerHTML = `
-    <div class="trap-grid${hasCarpets ? '' : ' gauge-only'}">
-      ${block('wind', 'Wind', v.wind_mw || 0, windCapMw, windGaugeSrc, cWind)}
-      ${block('solar', 'Solar', v.solar_mw || 0, solarCapMw, solarGaugeSrc, cSolar)}
+    <div class="trap-grid${has ? '' : ' gauge-only'}">
+      ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw, WIND_GAUGE_SRC, (CAPACITY && CAPACITY.source_wind) || WIND_GAUGE_SRC))}
+      ${renderMetricBlock(cfgFor('solar', 'Solar', v.solar_mw || 0, solarCapMw, SOLAR_GAUGE_SRC, (CAPACITY && CAPACITY.source_solar) || SOLAR_GAUGE_SRC))}
     </div>`;
-
-  if (hasCarpets) {
-    syncCarpetHeight();
-    drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
-    drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
+  if (has) {
+    syncBlockHeights();
+    drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
+    drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
   }
 }
 
 // Match each carpet to the VISIBLE DIAL height beside it (the semicircle arc, not the gauge's full
 // SVG box, which carries the calibration labels above/below). The arc spans radius R of the viewBox
 // width, so its rendered height is gaugeWidth × R/viewBoxWidth. Mirrored onto the grid as --carpet-h
-// before drawCarpet so the canvas measures the right height.
+// before drawCarpetCanvas so the canvas measures the right height. Iterates EVERY block grid (so a
+// later Entry-01 metric block also gets sized), keying each to the dial beside it within that grid.
 const DIAL_ARC_RATIO = 86 / 232;   // buildGauge R / viewBox width — keep in sync with buildGauge
-function syncCarpetHeight() {
-  const gauge = document.querySelector('.trap-gauge-cell .gauge');
-  const grid = document.querySelector('.trap-grid');
-  if (!gauge || !grid) return;
-  const h = Math.round(gauge.getBoundingClientRect().width * DIAL_ARC_RATIO);
-  if (h > 0) grid.style.setProperty('--carpet-h', `${h}px`);
+function syncBlockHeights() {
+  document.querySelectorAll('.trap-grid').forEach((grid) => {
+    const gauge = grid.querySelector('.trap-gauge-cell .gauge');
+    if (!gauge) return;
+    const h = Math.round(gauge.getBoundingClientRect().width * DIAL_ARC_RATIO);
+    if (h > 0) grid.style.setProperty('--carpet-h', `${h}px`);
+  });
 }
 
 // Month ticks for a carpet's date (X) axis: one label at each month boundary, positioned by its
@@ -537,7 +542,7 @@ function drawStripe() {
 // output, deepening to `full` (the source hue) at full capacity. The date axis is lowest-output-wins
 // downsampled so a sub-pixel calm spell (now palest) is never averaged out. DPR-aware; redrawn on
 // resize, with its month axis re-laid out to match.
-function drawCarpet(canvasId, days, satFull, full) {
+function drawCarpetCanvas(canvasId, days, satFull, full) {
   const canvas = $(canvasId);
   if (!canvas || !days || !days.length) return;
   const dpr = window.devicePixelRatio || 1;
@@ -851,9 +856,9 @@ async function main() {
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
     drawStripe(); drawReliabilityStripe(); drawReliabilityKey();
-    if (CAPACITY && CAPACITY.sat) syncCarpetHeight();
-    if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
-    if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
+    if (CAPACITY && CAPACITY.sat) syncBlockHeights();
+    if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
+    if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
   }, 150); });
 }
 
