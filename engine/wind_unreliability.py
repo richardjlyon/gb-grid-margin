@@ -89,3 +89,24 @@ def lull_episodes(daily_series: list[dict], threshold: float = BELOW_10PCT,
         prev = s["date"]
     flush()
     return out
+
+
+def _doy_labels() -> list[str]:
+    """The 366 'MM-DD' column keys, using a leap year (2020) so 29 Feb has a slot."""
+    d, end = date(2020, 1, 1), date(2020, 12, 31)
+    out = []
+    while d <= end:
+        out.append(d.strftime("%m-%d"))
+        d += _ONE_DAY
+    return out
+
+
+def carpet_matrix(daily_series: list[dict]) -> dict:
+    """Years × day-of-year CF grid. Columns keyed by month-day (29 Feb aligned); gaps -> None."""
+    labels = _doy_labels()
+    col = {lab: i for i, lab in enumerate(labels)}
+    years = sorted({int(s["date"][:4]) for s in daily_series})
+    rows = {str(y): [None] * len(labels) for y in years}
+    for s in daily_series:
+        rows[s["date"][:4]][col[s["date"][5:]]] = s["cf"]
+    return {"years": years, "doy": labels, "rows": rows}

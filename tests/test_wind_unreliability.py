@@ -56,3 +56,22 @@ def test_lull_episodes_breaks_run_on_a_calendar_gap():
     # 0.08 then a missing day then 0.08 -> two separate 1-day lulls, not one 2-day run.
     series = [{"date": "2020-03-01", "cf": 0.08}, {"date": "2020-03-03", "cf": 0.08}]
     assert [l["days"] for l in wu.lull_episodes(series)] == [1, 1]
+
+
+def test_carpet_matrix_places_days_by_month_day_with_nulls():
+    series = [
+        {"date": "2019-01-01", "cf": 0.30},
+        {"date": "2019-12-31", "cf": 0.10},
+        {"date": "2020-02-29", "cf": 0.05},  # leap day
+    ]
+    m = wu.carpet_matrix(series)
+    assert m["years"] == [2019, 2020]
+    assert len(m["doy"]) == 366 and m["doy"][0] == "01-01" and m["doy"][-1] == "12-31"
+    i0101 = m["doy"].index("01-01")
+    i1231 = m["doy"].index("12-31")
+    i0229 = m["doy"].index("02-29")
+    assert m["rows"]["2019"][i0101] == 0.30
+    assert m["rows"]["2019"][i1231] == 0.10
+    assert m["rows"]["2019"][i0229] is None     # 2019 had no 29 Feb
+    assert m["rows"]["2020"][i0229] == 0.05
+    assert m["rows"]["2020"][i0101] is None     # 2020-01-01 not in series
