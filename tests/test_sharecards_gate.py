@@ -19,7 +19,7 @@ def test_card_figures_trace_to_source():
     by = {c["slug"]: c for c in cards}
 
     v = _load("latest.json")["verdict"]
-    assert by["firm-now"]["figure"] == f"{round(100 - v['firm_pct'])}% unreliable"
+    assert by["firm-now"]["figure"] == f"{int(100 - v['firm_pct'] + 0.5)}% unreliable"
 
     np = _load("nameplate.json")
     share = (v["wind_mw"] + v["solar_mw"]) / (np["wind_plus_solar_gw"] * 1000) * 100

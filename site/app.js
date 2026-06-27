@@ -607,7 +607,7 @@ async function main() {
   refreshWarnings();
   setInterval(refreshWarnings, POLL_MS);
   let t;
-  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { drawStripe(); drawReliabilityStripe(); }, 150); });
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { drawStripe(); drawReliabilityStripe(); drawReliabilityKey(); }, 150); });
 }
 
 main();

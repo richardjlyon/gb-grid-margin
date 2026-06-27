@@ -442,7 +442,7 @@ contiguously at the grid head and the rolling-year file is unaffected.
 ## 13. Reliability stripe — Stage C *(2026-06-26)*
 
 Stage C adds the stripe to the live dashboard (Entry 01, under the gauge) and a Python share-card
-sibling (`engine/sharecards.py` `reliability-now` card).
+sibling (`engine/sharecards.py` `reliability-stripe` card).
 
 **Colour ramp.** Single red ink, inverted: pale (paper) = firm, full red = unreliable. Firm-share
 domain `[lo=0.40, hi=0.65]` (`RELIABILITY_RAMP` in `render.js`). The gauge's 50% arming threshold
@@ -451,9 +451,10 @@ contradictory readings. The scale saturates — i.e. reaches maximum red — at 
 below that maps to the same full red. Disclosed in the key note and in `methodology.html`.
 
 **JS↔Python colour parity lock.** `reliableShareToColor(s)` in `render.js` and
-`reliable_share_to_color(s)` in `engine/sharecards.py` are parity-locked: `tests/test_sharecards.py`
-`test_color_parity` runs the Python function against 200 sample values and asserts exact RGB match
-with the JS formula evaluated in Node.
+`reliable_share_to_color(s)` in `engine/sharecards.py` are parity-locked:
+`tests/test_reliability_card_parity.py` `test_python_ramp_matches_js_ramp` runs the Python function
+against a set of sample shares spanning 0–1.3, including the half-integer boundary cases, and
+asserts exact RGB match with the JS formula evaluated in Node.
 
 **Lazy all-time toggle.** `site/data/reliability_year.json` (~25 kB) is loaded at startup;
 `reliability_all.json` (~2.2 MB) is fetched only on first click of "Since 2016", then cached in

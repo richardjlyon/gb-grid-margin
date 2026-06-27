@@ -228,7 +228,7 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
 
     # --- LIVE ---
     firm = latest["firm_pct"]
-    unreliable = round(100 - firm)
+    unreliable = int(100 - firm + 0.5)  # half-up to match JS Math.round; see §89–90 comment above
     cards.append({
         "slug": "firm-now", "kind": "live", "theme": "ink", "template": "instrument",
         "figure": f"{unreliable}% unreliable",
