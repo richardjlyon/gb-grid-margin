@@ -37,23 +37,6 @@ export function unreliableNowPct(firmPct) {
   return Number.isFinite(firmPct) ? Math.max(0, Math.min(100, 100 - firmPct)) : null;
 }
 
-// --- the wind stripe colour ramp -------------------------------------------
-
-const _INK = [0x15, 0x18, 0x1c];      // calm day: the dark band
-const _SOFT = [0xea, 0xec, 0xee];     // windy day: dissolves toward the paper
-const _CF_FULL = 0.45;                // CF at/above which a day is the palest end
-
-const _hex2 = (n) => n.toString(16).padStart(2, '0');
-
-// Single-hue ink ramp: low CF (calm, the danger) -> dark ink; high CF -> soft paper.
-// Deliberately monochrome — "the wind rarely blows" is read off the dark texture, with
-// no y-axis. Red lives only on the foot-tick rail (failing days), never in the band.
-export function cfToInk(cf) {
-  const t = Math.min(1, Math.max(0, cf / _CF_FULL));
-  const ch = (i) => Math.round(_INK[i] + t * (_SOFT[i] - _INK[i]));
-  return `#${_hex2(ch(0))}${_hex2(ch(1))}${_hex2(ch(2))}`;
-}
-
 // --- the gate-of-five failure tally ----------------------------------------
 
 // Break a day count into gate-of-five groups for the self-writing tally.

@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
+  gaugeNeedleAngle, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor, droughtSpikes,
@@ -51,18 +51,6 @@ test('gaugeNeedleAngle maps 0..max onto a -90..+90 half-dial', () => {
 test('gaugeNeedleAngle clamps out-of-range input to the arc ends', () => {
   assert.equal(gaugeNeedleAngle(-10, 60), -90);
   assert.equal(gaugeNeedleAngle(999, 60), 90);
-});
-
-test('cfToInk: low CF is the dark ink end, high CF dissolves to the soft paper end', () => {
-  assert.equal(cfToInk(0).toLowerCase(), '#15181c');     // calm day = darkest
-  assert.equal(cfToInk(0.45).toLowerCase(), '#eaecee');  // windy day = palest
-  assert.equal(cfToInk(1).toLowerCase(), '#eaecee');     // clamped above 0.45
-});
-
-test('cfToInk is monotonic — a calmer day is never lighter than a windier one', () => {
-  const dark = parseInt(cfToInk(0.05).slice(1), 16);
-  const light = parseInt(cfToInk(0.30).slice(1), 16);
-  assert.ok(dark < light, 'lower CF must map to a darker (smaller) hex');
 });
 
 test('tallyGroups breaks a count into gate-of-five groups', () => {

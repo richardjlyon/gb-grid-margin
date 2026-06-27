@@ -8,7 +8,7 @@
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
 import {
-  gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
+  gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor,
@@ -562,74 +562,7 @@ function layoutCarpetAxis(kind, days) {
   el.innerHTML = html;
 }
 
-// ============================================================ the wind stripe
-let STRIPE = null;
 let CAPACITY = null;   // site/data/capacity_carpets.json (wind + solar half-hourly CF grids)
-function drawStripe() {
-  if (!STRIPE) return;
-  const canvas = $('stripe-canvas');
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssW, cssH);
-
-  const days = STRIPE.days;
-  const n = days.length;
-  const railH = 14;                       // foot-tick rail
-  const bandH = cssH - railH;
-  const colW = cssW / n;
-
-  // band: one ink-ramp column per day. Darkest-wins downsample so a sub-pixel calm day
-  // is never averaged out of existence.
-  const px = Math.max(1, Math.floor(colW));
-  for (let sx = 0; sx < cssW; sx++) {
-    const i0 = Math.floor((sx / cssW) * n);
-    const i1 = Math.max(i0 + 1, Math.floor(((sx + 1) / cssW) * n));
-    let minCf = Infinity;
-    for (let i = i0; i < i1 && i < n; i++) minCf = Math.min(minCf, days[i].cf);
-    if (!Number.isFinite(minCf)) continue;
-    ctx.fillStyle = cfToInk(minCf);
-    ctx.fillRect(sx, 0, 1, bandH);
-  }
-
-  // foot-tick rail: every sub-10% day a red tick; sub-5% a taller deep-red tick.
-  for (let i = 0; i < n; i++) {
-    const cf = days[i].cf;
-    if (cf >= 0.10) continue;
-    const x = i * colW;
-    const sub5 = cf < 0.05;
-    ctx.fillStyle = sub5 ? '#a8101b' : '#d6121f';
-    ctx.fillRect(x, bandH + (sub5 ? 0 : 4), Math.max(0.6, colW), sub5 ? railH : railH - 4);
-  }
-
-  // per-year mean step-line over the band (ink), 0–0.55 scale.
-  const means = STRIPE.per_year_mean_cf;
-  ctx.strokeStyle = '#15181c';
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  let started = false;
-  for (let i = 0; i < n; i++) {
-    const yr = days[i].date.slice(0, 4);
-    const m = means[yr];
-    if (m == null) continue;
-    const x = i * colW;
-    const y = bandH - Math.min(1, m / 0.55) * bandH;
-    if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
-  }
-  ctx.stroke();
-
-  // today marker: the latest settled day, tying the history hero to the live edge.
-  ctx.strokeStyle = '#d6121f';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(cssW - 0.75, 0);
-  ctx.lineTo(cssW - 0.75, bandH);
-  ctx.stroke();
-}
 
 // A carpet plot: x = date (oldest left → newest right), y = time of day (SP1=00:00 top → SP48
 // bottom). Each cell coloured by its half-hourly capacity factor (carpetCellColor): white = no
@@ -671,72 +604,6 @@ function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
     }
   }
   layoutCarpetAxis(canvasId.replace('carpet-', ''), days);
-}
-
-function renderStripe() {
-  if (!STRIPE) return;
-  const yrs = Object.keys(STRIPE.per_year_mean_cf);
-  const meanRow = yrs.map((y) => {
-    const partial = (STRIPE.partial_years || []).includes(Number(y));
-    return `${y.slice(2)} <b>${STRIPE.per_year_mean_cf[y].toFixed(3)}</b>${partial ? '*' : ''}`;
-  }).join(' · ');
-  const axisYears = yrs.filter((_, i) => i % 2 === 0).map((y) => `<span>’${y.slice(2)}</span>`).join('');
-
-  $('stripe-body').innerHTML = `
-    <div class="stripe-wrap">
-      <div class="stripe-meanrow"><span>Per-year mean capacity factor:</span> ${meanRow}
-        ${(STRIPE.partial_years || []).length ? '<span>(* part-year)</span>' : ''}</div>
-      <canvas id="stripe-canvas" role="img"
-        aria-label="Daily wind capacity factor, ${esc(STRIPE.range.from)} to ${esc(STRIPE.range.to)}: dark columns are low-wind days. Mean ${STRIPE.mean_cf}."></canvas>
-      <div class="stripe-axis">${axisYears}<span>today</span></div>
-      <div class="stripe-legend">
-        <span><span class="swatch" style="background:#15181c"></span>calm (low wind)</span>
-        <span><span class="swatch" style="background:#eaecee"></span>windy</span>
-        <span><span class="tick-mark"></span>day below 10% of capacity</span>
-        <span><span class="tick-mark deep"></span>below 5%</span>
-        <span>— ink line: each year's mean</span>
-      </div>
-    </div>
-    <p class="caveat"><strong>Read within a year, not across.</strong> ${esc(STRIPE.cross_year_caveat)}</p>
-    <p class="src">Mean CF ${STRIPE.mean_cf} · <strong>conservative lower bound</strong> ·
-      ${esc(STRIPE.source)} · <a href="methodology.html#stripe">→ method</a></p>`;
-  drawStripe();
-}
-
-// ============================================================ the tally + records
-function renderTally(counters, records) {
-  const years = Object.keys(counters.years);
-  const rows = years.map((y) => {
-    const c = counters.years[y];
-    const partial = (counters.partial_years || []).includes(Number(y));
-    // gate-of-five strokes for sub-10% days; the last sub-5% of them struck red.
-    const groups = tallyGroups(c.below_10pct);
-    let drawn = 0;
-    const redFrom = c.below_10pct - c.below_5pct;
-    const marks = groups.map((g) => {
-      let span = '';
-      for (let k = 0; k < g; k++) { span += `<span class="mark ${drawn >= redFrom ? 'sub5' : ''}"></span>`; drawn++; }
-      return span;
-    }).join('<span class="mark-gap"></span>');
-    return `<tr class="${partial ? 'partial' : ''}">
-      <td class="year">${y}</td>
-      <td class="marks">${marks}</td>
-      <td class="n">${c.below_10pct}</td>
-      <td class="n red">${c.below_5pct}</td></tr>`;
-  }).join('');
-
-  const r = records;
-  $('tally-body').innerHTML = `
-    <table class="tally">
-      <thead><tr><th>Year</th><th>Days below 10% (red strokes: below 5%)</th><th>&lt;10%</th><th>&lt;5%</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="records">
-      <p class="rec">Lowest day ever: <b>${(r.lowest_cf_day.cf * 100).toFixed(1)}%</b> of capacity on ${esc(r.lowest_cf_day.date)}.</p>
-      <p class="rec">Longest run below 10%: <b>${r.longest_sub10pct_run.days} days</b> (${esc(r.longest_sub10pct_run.start)} → ${esc(r.longest_sub10pct_run.end)}).</p>
-      <p class="caveat"><strong>Both fall in the earliest, most-understated years.</strong> ${esc(records.cross_year_caveat)}</p>
-    </div>
-    ${srcLine(`${counters.source} · conservative lower bound`, 'stripe')}`;
 }
 
 // ============================================================ the live warning light
@@ -862,8 +729,7 @@ async function refreshLive() {
     renderVerdict(state);
     $('clockstrip').textContent =
       `${state.lastUpdated}`;
-    $('freshness').textContent =
-      `Live layer: ${state.lastUpdated}. History rebuilt ${STRIPE ? new Date(STRIPE.generated_utc).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : ''}.`;
+    $('freshness').textContent = `Live layer: ${state.lastUpdated}.`;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
     dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
     dot.hidden = state.mode === 'live';
@@ -876,20 +742,8 @@ async function refreshLive() {
 async function main() {
   // History first (static, always available); then the live layer on top.
   try {
-    const [stripe, counters, records, nameplate] = await Promise.all([
-      getJSON('data/stripe.json'), getJSON('data/counters.json'),
-      getJSON('data/records.json'), getJSON('data/nameplate.json'),
-    ]);
-    STRIPE = stripe; NAMEPLATE = nameplate;
-    renderStripe();
-    renderTally(counters, records);
-  } catch (e) {
-    // Any history feed failing degrades both history entries gracefully — never a blank
-    // section. The live layer below still renders independently.
-    const msg = `<p class="warn">History data unavailable — the live readings below are unaffected. ${esc(e.message || e)}</p>`;
-    $('stripe-body').innerHTML = msg;
-    $('tally-body').innerHTML = msg;
-  }
+    NAMEPLATE = await getJSON('data/nameplate.json');
+  } catch (e) { /* nameplate failure is non-fatal; defaults apply */ }
   // The reliability carpet (Entry 01, under the gauge) is independent: its own fetch so a missing
   // file omits only the carpet, never the live gauge above it. renderReliabilityBlock runs from
   // renderVerdict each poll, so loading the data here is enough.
@@ -912,7 +766,6 @@ async function main() {
   setInterval(refreshWarnings, POLL_MS);
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
-    drawStripe();
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
     if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
