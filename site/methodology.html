@@ -68,6 +68,14 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
   <h2 id="capacity-trap">The capacity trap</h2>
   <p class="meta">Source: Elexon FUELINST + NESO output ÷ DUKES 6.2 nameplate · live ÷ quarterly nameplate</p>
   <p><strong>Formula in words:</strong> live wind + solar output as a share of the 50.4 GW of wind + solar Britain has installed. The numerator is live GB output; the denominator is DUKES UK installed capacity — a slightly large denominator, so the share is mildly conservative. (We deliberately do not use NESO's live embedded-wind capacity here: it is the embedded slice only, and would read a nonsensical share.)</p>
+  <p>The capacity factor here puts <em>embedded</em> wind and solar into the numerator
+(transmission wind from Elexon FUELHH, plus NESO&#8217;s embedded wind and solar outturn), over
+total DUKES wind+solar nameplate. That makes it a <strong>true load factor</strong> &#8212; unlike
+the wind stripe below, which is a deliberate transmission-only <em>lower bound</em>. The
+cross-year caveat that travels with the wind stripe therefore does <strong>not</strong> apply
+to this figure. The live needle reads NESO&#8217;s embedded <em>forecast</em>; the load-duration
+curve reads NESO&#8217;s settled <em>outturn</em> over the last 12 months &#8212; the same measure, with a
+slight forecast-vs-settlement seam, and the curve lags about three weeks behind live.</p>
 
   <h2 id="gas-vs-wind">Gas vs every wind farm</h2>
   <p class="meta">Source: Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot · live</p>

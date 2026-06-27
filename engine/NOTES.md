@@ -468,3 +468,73 @@ in the smaller `.stamp-val.muted` slot. The distinction is size + DOM order, not
 art and source-mix convention (green = reliable, left-to-right) are unchanged; only stamp emphasis
 flips. This is an instrument reading, not an alarm — the needle colour is governed solely by the 50%
 arming threshold (`firmStatus` in `render.js`), not by the stamp order.
+
+## 14. Capacity-factor load-duration curve *(Entry 02, 2026-06-26)*
+
+`engine/capacity.py` computes a per-half-hour renewables capacity factor on the **same basis as the
+live capacity-trap gauge**, then derives a load-duration curve from the rolling last 12 months.
+The output is `site/data/capacity_curve.json`, emitted by `engine.derived.build` (inside the
+`if embedded_rows:` block, alongside the reliability series from §12).
+
+**Basis formula.**
+
+```
+CF = (transmission WIND [Elexon FUELHH, settled]
+      + embedded wind [NESO outturn estimate]
+      + embedded solar [NESO outturn estimate])
+     / DUKES 6.2 wind+solar nameplate (annual-step, MW)
+```
+
+Embedded output is **in the numerator** — this is therefore a **true load factor**, not the
+transmission-only lower bound the wind stripe (§8) carries. The §8 cross-year artifact arises
+because transmission wind grew as a share of total wind capacity over the history; with embedded
+wind added back to the numerator that confound does not apply here. The numerator and denominator
+are on the same total-capacity basis for each half-hour's year (annual-step DUKES), so year-on-year
+movement in the load-duration curve is not an artifact of an expanding transmission share.
+
+**The one remaining seam: live forecast vs settled outturn.** The live gauge needle reads NESO's
+embedded *forecast* (`EMBEDDED_*_FORECAST`, `engine/grid_engine.py`); the historical curve reads
+NESO's embedded *outturn estimate* (`EMBEDDED_*_GENERATION`, the §11 store). These are sibling
+products from the same methodology owner — the outturn estimate is the corrected/settled version,
+the forecast is the forward tick. A small step at the join is expected and disclosed, not a basis
+difference. The settled curve lags live by about three weeks (the §11 embedded-store edge).
+
+**Join.** `build_cf_series` (in `engine/capacity.py`) joins the settled FUELHH store (§6) to the
+embedded store (§11) on `(settlement_date, settlement_period)`. Half-hours absent from either store
+are silently dropped rather than imputed.
+
+**Rolling 365-day window.** `rolling_year` retains the sub-series within 365 days of the latest
+half-hour (the most recent complete calendar year of settled data). The window moves with each
+`engine.derived build` run as the embedded store is extended.
+
+**200-point load-duration downsample.** The rolling-window series typically contains ~17,500
+half-hours. `load_duration_curve` sorts these descending and uniformly samples `CURVE_POINTS = 200`
+index-positions across the sorted list, emitting each as a percentage of nameplate. `curve[0]` is
+the maximum CF attained (the peak of the duration curve); the curve is non-increasing by
+construction. 200 points is sufficient resolution for the dashboard SVG without blowing the JSON
+payload; the full per-half-hour series is never emitted.
+
+**`CURVE_CEILING_PCT = 120`.** The guard allows values up to 120% of nameplate before failing the
+build. CF can legitimately exceed 100% from two sources: (a) NESO's embedded outturn estimates are
+modelled, not metered, and can carry a small upward revision relative to the annual-step DUKES
+denominator; (b) mid-year, the annual-step nameplate (held from the prior year-end) understates
+actual installed capacity, so real output can transiently read above the denominator. A ceiling of
+120% admits these minor metering and timing quirks while still catching a gross feed error (a
+doubled or wrong-unit series would push the curve far above 120%). Values above 100% are real,
+not errors; the ceiling is a sanity bound, not a physical limit.
+
+**Guard set (`guard_payload` in `engine/capacity.py`).** All checks run before `capacity_curve.json`
+is written; any breach raises `GuardError` and the build writes nothing (see §10):
+
+- *Curve length*: exactly `CURVE_POINTS` (200) values.
+- *Window non-empty*: `n_periods > 0`.
+- *Value range*: every curve value in `[0, CURVE_CEILING_PCT]` (i.e. 0–120%).
+- *Non-increasing*: `curve[i] >= curve[i+1]` for all consecutive pairs (load-duration property).
+- *Quartile order*: `p25_pct ≤ median_pct ≤ p75_pct` (a reversed quartile flags a bug in the
+  percentile calculation, not a data anomaly).
+- *Threshold fractions*: `above_50pct_frac`, `above_25pct_frac`, `below_10pct_frac`, and
+  `below_5pct_frac` all in `[0, 1]`.
+
+**Cross-references.** §8 documents the wind stripe's transmission-only lower bound and the
+cross-year artifact that does not apply here. §11 documents the embedded store, its forecast-vs-outturn
+seam, GB scope confirmation, and the ~21-day lag.
