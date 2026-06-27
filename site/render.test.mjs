@@ -5,7 +5,6 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
-  binSeriesToColumns, reliabilityAxisTicks,
   carpetCellColor, gaugeCalibration,
 } from './render.js';
 
@@ -141,42 +140,6 @@ test('unreliableNowPct — 100 − firm, clamped, null when not finite', () => {
 
 test('rgbCss formats a triple', () => {
   assert.equal(rgbCss([1, 2, 3]), 'rgb(1,2,3)');
-});
-
-test('binSeriesToColumns — averages each column, null where all gaps', () => {
-  const v = [0.4, 0.6, null, null, 1.0, 0.0];   // 6 half-hours into 3 columns
-  assert.deepEqual(binSeriesToColumns(v, 3), [0.5, null, 0.5]);
-});
-
-test('binSeriesToColumns — downsamples to fewer columns than samples', () => {
-  const v = Array.from({ length: 100 }, () => 0.5);
-  const cols = binSeriesToColumns(v, 10);
-  assert.equal(cols.length, 10);
-  assert.ok(cols.every((c) => c === 0.5));
-});
-
-test('reliabilityAxisTicks — rolling: month ticks + a year marker on each year change', () => {
-  // 1 May 2025 → 1 Jul 2025 at 30-min steps (covers a 1 Jun boundary).
-  const start = Date.parse('2025-05-01T00:00:00Z'), step = 30 * 60000;
-  const n = ((Date.parse('2025-07-01T00:00:00Z') - start) / step) + 1;
-  const { months, years } = reliabilityAxisTicks(start, step, n, 'rolling');
-  assert.deepEqual(months.map((m) => m.label), ['may', 'jun', 'jul']);
-  assert.deepEqual(years.map((y) => y.label), ['2025']);          // one year, marked once at i=0
-  assert.ok(months[1].frac > 0 && months[1].frac < 1);
-});
-
-test('reliabilityAxisTicks — all: years only, marked on each January', () => {
-  const start = Date.parse('2024-11-01T00:00:00Z'), step = 30 * 60000;
-  const n = ((Date.parse('2025-02-01T00:00:00Z') - start) / step) + 1;
-  const { months, years } = reliabilityAxisTicks(start, step, n, 'all');
-  assert.equal(months.length, 0);
-  assert.deepEqual(years.map((y) => y.label), ['2024', '2025']);  // start + the Jan-2025 boundary
-});
-
-test('reliabilityAxisTicks — empty series yields no ticks', () => {
-  const { months, years } = reliabilityAxisTicks(Date.parse('2025-01-01T00:00:00Z'), 30 * 60000, 0, 'rolling');
-  assert.equal(months.length, 0);
-  assert.equal(years.length, 0);
 });
 
 test('carpetCellColor — cf=0 paper, cf>=satFull saturated full colour, null grey, monotonic', () => {

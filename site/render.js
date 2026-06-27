@@ -169,37 +169,6 @@ export function sourceArcModel(v) {
   };
 }
 
-// --- reliability stripe: binning + axis-tick maths --------------------------
-
-const _REL_MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
-export function binSeriesToColumns(values, nCols) {
-  const n = values.length, out = new Array(nCols);
-  for (let c = 0; c < nCols; c++) {
-    const i0 = Math.floor((c / nCols) * n), i1 = Math.max(i0 + 1, Math.floor(((c + 1) / nCols) * n));
-    let sum = 0, cnt = 0;
-    for (let i = i0; i < i1 && i < n; i++) { if (values[i] != null) { sum += values[i]; cnt++; } }
-    out[c] = cnt ? sum / cnt : null;
-  }
-  return out;
-}
-
-// Tick positions as fractions across the series. 'rolling' -> month + year ticks; 'all' -> years only.
-export function reliabilityAxisTicks(startMs, stepMs, n, mode = 'rolling') {
-  const months = [], years = [];
-  let lastYr = null;
-  for (let i = 0; i < n; i++) {
-    const d = new Date(startMs + i * stepMs);
-    const firstOfMonth = d.getUTCDate() === 1 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
-    if (i === 0 || firstOfMonth) {
-      const frac = i / n;
-      if (mode === 'rolling') months.push({ frac, label: _REL_MON[d.getUTCMonth()] });
-      if (d.getUTCFullYear() !== lastYr) { lastYr = d.getUTCFullYear(); years.push({ frac, label: String(d.getUTCFullYear()) }); }
-    }
-  }
-  return { months, years };
-}
-
 // --- display formatting -----------------------------------------------------
 
 export const fmtPct = (x) => (Number.isFinite(x) ? `${x.toFixed(1)}%` : '—');
