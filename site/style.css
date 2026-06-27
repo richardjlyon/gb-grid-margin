@@ -464,3 +464,5 @@ main { padding-bottom: 40px; }
 .wind-carpet-x { position: relative; height: 1.2em; margin-left: 2.4rem;
   font: 500 11px var(--mono); color: var(--ink); }
 .wind-carpet-x span { position: absolute; transform: translateX(-50%); }
+.wind-drought { width: 100%; display: block; margin-top: 1rem; }
+.wind-caption { font: 400 italic 1rem/1.5 var(--read); color: var(--ink); margin-top: .5rem; }

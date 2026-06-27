@@ -803,7 +803,40 @@ function drawWindCarpet(data) {
   $('wind-carpet-x').innerHTML = carpetMonthTicks().map((t) =>
     `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
 }
-function drawDroughtPlot(data) {}
+function drawDroughtPlot(data) {
+  const cv = $('wind-drought'); if (!cv) return;
+  const lulls = data.lulls || [];
+  const x0ms = Date.parse(data.range.from), x1ms = Date.parse(data.range.to);
+  const cssW = cv.clientWidth || 960, cssH = 220, padB = 18;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const plotH = cssH - padB;
+  const maxDays = Math.max(14, ...lulls.map((l) => l.days));
+  // reference lines at 3 / 7 / 14 days
+  ctx.font = '500 10px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  [[3, '3 days'], [7, '1 week'], [14, '2 weeks']].forEach(([d, lab]) => {
+    const y = plotH - (d / maxDays) * plotH;
+    ctx.strokeStyle = 'rgba(21,24,28,0.12)'; ctx.beginPath();
+    ctx.moveTo(0, y); ctx.lineTo(cssW, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(21,24,28,0.45)'; ctx.fillText(lab, 2, y - 2);
+  });
+  const spikes = droughtSpikes(lulls, { x0ms, x1ms, w: cssW, h: plotH, maxDays });
+  spikes.forEach((s, i) => {
+    const [r, g, b] = windDroughtColor(lulls[i].min_cf, data.windy_anchor_cf);
+    ctx.strokeStyle = s.minor ? 'rgba(140,12,20,0.25)' : `rgb(${r},${g},${b})`;
+    ctx.lineWidth = s.minor ? 1 : 2;
+    ctx.beginPath(); ctx.moveTo(s.x, plotH); ctx.lineTo(s.x, plotH - s.h); ctx.stroke();
+  });
+  // annotate the record
+  const rec = data.summary?.record_lull;
+  if (rec) {
+    const rx = ((Date.parse(rec.start) - x0ms) / Math.max(1, x1ms - x0ms)) * cssW;
+    ctx.fillStyle = '#15181c';
+    ctx.fillText(`${rec.days} days`, Math.min(cssW - 48, rx + 4),
+      plotH - (rec.days / maxDays) * plotH - 4);
+  }
+}
 
 function renderWindUnreliability(data) {
   $('wind-body').innerHTML = `
