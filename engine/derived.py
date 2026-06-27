@@ -413,10 +413,16 @@ def build(out_dir: Path = SITE_DATA) -> int:
              reliability.build_payload(reliability.pack(reliability.rolling_year(full)), generated)),
         ]
 
-        nameplate_mw = round(nameplate["wind_plus_solar_gw"] * 1000)
+        # Per-source gauge nameplates. Wind = DUKES total wind (annual anchor). Solar = the latest
+        # NESO embedded-solar capacity in the store, so the solar gauge matches its NESO-based carpet.
+        wind_nameplate_mw = round(nameplate["wind_gw"] * 1000)
+        _latest_emb = max(embedded_rows, key=lambda r: (r["settlement_date"], r["settlement_period"]))
+        solar_nameplate_mw = round(_latest_emb.get("embedded_solar_capacity_mw")
+                                   or nameplate["solar_gw"] * 1000)
         wind_days = capacity.rolling_days(capacity.build_carpet_days(rows, embedded_rows, ns, "wind"))
         solar_days = capacity.rolling_days(capacity.build_carpet_days(rows, embedded_rows, ns, "solar"))
-        cap_payload = capacity.build_payload(wind_days, solar_days, nameplate_mw, generated)
+        cap_payload = capacity.build_payload(wind_days, solar_days,
+                                             wind_nameplate_mw, solar_nameplate_mw, generated)
         try:
             capacity.guard_payload(cap_payload)
         except GuardError as e:

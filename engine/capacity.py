@@ -74,7 +74,12 @@ def rolling_days(days: list[dict], span_days: int = 365) -> list[dict]:
 
 from engine.guards import require  # noqa: E402  (grouped near use)
 
-SAT = {"wind": 0.55, "solar": 0.60}   # cf at/above which a cell is the palest (full-output) end
+# cf at which a cell is the palest (full-output) end. Set to 1.0 = full nameplate: a cell is only
+# pale at genuine 100% of installed capacity. Wind never approaches that, so its carpet reads
+# predominantly red — the honest "rarely blows" story — rather than looking near-full at a middling
+# 40% CF (the old 0.55 anchor made typical output look pale). Solar reaches higher CF at midday, so
+# its daily eye still shows. Same anchor for both = a fair like-for-like colour scale.
+SAT = {"wind": 1.0, "solar": 1.0}
 
 _BASIS_WIND = (
     "Wind capacity factor per half-hour = (transmission WIND [Elexon FUELHH, settled] + embedded "
@@ -93,14 +98,18 @@ _SRC_SOLAR = "NESO embedded solar / NESO embedded-solar capacity (settled outtur
 
 
 def build_payload(wind_days: list[dict], solar_days: list[dict],
-                  nameplate_mw: int, generated_utc: str) -> dict:
+                  wind_nameplate_mw: int, solar_nameplate_mw: int, generated_utc: str) -> dict:
     ref = wind_days or solar_days
     rng = ({"from": ref[0]["date"], "to": ref[-1]["date"]} if ref else {"from": None, "to": None})
     return {
         "basis_wind": _BASIS_WIND, "basis_solar": _BASIS_SOLAR, "seam_note": _SEAM,
         "source_wind": _SRC_WIND, "source_solar": _SRC_SOLAR,
         "generated_utc": generated_utc, "window": "rolling_365d", "range": rng,
-        "gauge": {"nameplate_mw": nameplate_mw}, "sat": SAT,
+        # Per-source gauge nameplates: wind = DUKES total wind (the live NESO embedded-wind
+        # capacity reads ~146%, so it is routed around — see NOTES §2); solar = the latest NESO
+        # embedded-solar capacity, keeping the solar gauge coherent with the NESO-based carpet.
+        "gauge": {"wind_nameplate_mw": wind_nameplate_mw, "solar_nameplate_mw": solar_nameplate_mw},
+        "sat": SAT,
         "wind": {"days": wind_days}, "solar": {"days": solar_days},
     }
 
@@ -120,6 +129,7 @@ def guard_payload(payload: dict) -> None:
             for v in d["cf"]:
                 require(v is None or 0.0 <= v <= 2.0,
                         f"capacity carpet {kind} {d['date']}: cf {v} out of [0,2]")
-    require(payload["gauge"]["nameplate_mw"] > 0, "capacity gauge nameplate_mw must be > 0")
+    require(payload["gauge"]["wind_nameplate_mw"] > 0, "capacity gauge wind_nameplate_mw must be > 0")
+    require(payload["gauge"]["solar_nameplate_mw"] > 0, "capacity gauge solar_nameplate_mw must be > 0")
     for k, v in payload["sat"].items():
         require(0.0 < v <= 1.0, f"capacity sat {k}={v} out of (0,1]")
