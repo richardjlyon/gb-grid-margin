@@ -466,3 +466,8 @@ main { padding-bottom: 40px; }
 .wind-carpet-x span { position: absolute; transform: translateX(-50%); }
 .wind-drought { width: 100%; display: block; margin-top: 1rem; }
 .wind-caption { font: 400 italic 1rem/1.5 var(--read); color: var(--ink); margin-top: .5rem; }
+.wind-howto { font: 400 0.95rem/1.55 var(--read); color: #3f464d; margin: 0 0 12px; }
+.wind-howto strong { color: var(--ink); font-weight: 600; }
+/* the drought-plot intro follows the carpet's month axis — give it room to breathe */
+.wind-carpet-x + .wind-howto { margin-top: 2.25rem; }
+.wind-drought + .wind-caption { margin-top: .5rem; }

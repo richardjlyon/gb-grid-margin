@@ -661,7 +661,10 @@ function drawWindCarpet(data) {
     const row = rows[String(y)];
     if (!row) return;
     for (let c = 0; c < cols; c++) {
-      const [rr, gg, bb] = windDroughtColor(row[c], data.windy_anchor_cf);
+      // Same colour language as the Entry 02 wind carpet: pale = low output (calm), deepening to
+      // blue at full output. Anchor 1.0 + DIAL_PALETTE.wind.fullRgb match Entry 02 exactly, so the
+      // two carpets read consistently. The "unreliability" emphasis lives in the red drought plot below.
+      const [rr, gg, bb] = carpetCellColor(row[c], 1, DIAL_PALETTE.wind.fullRgb);
       ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
       ctx.fillRect(c * cw, r * cellH, Math.ceil(cw) + 0.5, cellH - 1);
     }
@@ -708,12 +711,14 @@ function drawDroughtPlot(data) {
 
 function renderWindUnreliability(data) {
   $('wind-body').innerHTML = `
+    <p class="wind-howto"><strong>Every day since 2016.</strong> One row per year (2016 at the top), reading January on the left to December on the right. The colour is that day's wind output — pale when the wind barely turned, deepening to blue when it blew hard (the same key as the carpet in section 02). So the pale patches are the calm spells, and you can see them cluster in some seasons and some years more than others.</p>
     <div class="wind-carpet-cell">
       <div class="wind-yaxis" id="wind-carpet-y"></div>
       <canvas id="wind-carpet" class="wind-carpet" role="img"
-        aria-label="Wind daily capacity factor for every day since 2016. Rows are years (2016 at the top), columns are the day of the year (1 January at the left). Pale = a windy day; deep red = a near-calm day."></canvas>
+        aria-label="Wind daily output for every day since 2016. One row per year (2016 at the top), columns run 1 January (left) to 31 December (right). Pale = a near-calm day with little output; deep blue = a windy day at high output — the same colour key as the section 02 wind carpet."></canvas>
     </div>
     <div class="wind-carpet-x" id="wind-carpet-x"></div>
+    <p class="wind-howto"><strong>How long the calm lasts.</strong> Each spike below is a spell when wind output stayed below a tenth of its capacity for one or more days running — taller spikes lasted longer, darker red spikes fell further. The guide lines mark three days, a week and a fortnight.</p>
     <canvas id="wind-drought" class="wind-drought" role="img"
       aria-label="${esc(droughtCaption(data.summary))}"></canvas>
     <p class="wind-caption">${esc(droughtCaption(data.summary))}</p>
