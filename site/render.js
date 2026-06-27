@@ -218,6 +218,19 @@ export function carpetCellColor(cf, satFull, full = _CARPET_FULL) {
   return _oklabToSrgb([0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * t));
 }
 
+// Entry 03 wind carpet: cf -> colour. Windy (high CF) = pale paper; calm (CF->0) = deep red,
+// OKLab-interpolated. INVERTED from the Entry 02 capacity carpet on purpose: here LOW output is
+// the salient (red) end — the failures carry the ink. `windyAnchor` is the palest end (full wind).
+const _WIND_PAPER = [251, 251, 249], _WIND_DEEP = [140, 12, 20], _WIND_GAP = [232, 232, 230];
+export function windDroughtColor(cf, windyAnchor = 0.45) {
+  if (cf == null) return _WIND_GAP.slice();
+  const t = Math.max(0, Math.min(1, cf / windyAnchor));  // 0 at calm, 1 at windy
+  if (t >= 1) return _WIND_PAPER.slice();
+  if (t <= 0) return _WIND_DEEP.slice();
+  const A = _srgbToOklab(_WIND_DEEP), B = _srgbToOklab(_WIND_PAPER);
+  return _oklabToSrgb([0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * t));
+}
+
 // The unreliability ramp (Entry 01 reliability block): a traffic-light gradient on the SHARED
 // 0..1 scale used by the dial track, the carpet, and the legend bar. t=0 -> green (fully reliable),
 // t=0.5 -> amber, t=1 -> red (fully unreliable), interpolated in OKLab so the midpoint reads as a

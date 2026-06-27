@@ -5,7 +5,7 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
-  carpetCellColor, gaugeCalibration, unreliabilityColor,
+  carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -201,4 +201,15 @@ test('gaugeCalibration(null) — percent ticks only, no MW labels', () => {
   assert.deepEqual(t.map((x) => x.pct), [0, 25, 50, 75, 100]);
   assert.ok(t.every((x) => x.label_mw === null));
   assert.equal(t[2].label_pct, '50%');
+});
+
+test('windDroughtColor — windy is pale, calm is deep red, null is grey, monotonic', () => {
+  const pale = [251, 251, 249], deep = [140, 12, 20];
+  assert.deepEqual(windDroughtColor(0.45), pale);   // at/above anchor -> pale
+  assert.deepEqual(windDroughtColor(0.60), pale);   // clamps
+  assert.deepEqual(windDroughtColor(0), deep);       // dead calm -> deepest red
+  assert.deepEqual(windDroughtColor(null), [232, 232, 230]);
+  // redness rises monotonically as CF falls (R stays high, G/B fall).
+  const g = (cf) => windDroughtColor(cf)[1];
+  assert.ok(g(0.05) < g(0.20) && g(0.20) < g(0.40));
 });
