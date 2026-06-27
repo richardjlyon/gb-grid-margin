@@ -395,3 +395,19 @@ main { padding-bottom: 40px; }
 .card-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:28px; margin-top:24px; }
 .card-tile img { width:100%; height:auto; border:1px solid var(--rule); border-radius:6px; display:block; }
 .card-tile figcaption { font-family:var(--read); font-size:.95rem; margin:10px 0 4px; color:var(--ink); }
+
+/* Entry 02 — capacity trap: gauge left, load-duration curve right (mirrors .verdict-cols) */
+.trap-cols { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 28px; align-items: start; }
+.trap-curve { min-width: 0; }
+.trap-curve-cap { margin: 0 0 8px; }
+.ldc { width: 100%; height: auto; display: block; }
+.ldc-ref { stroke: #c8ccd0; stroke-width: 1; stroke-dasharray: 3 3; }
+.ldc-area { fill: rgba(214, 18, 31, 0.14); stroke: none; }
+.ldc-line { fill: none; stroke: #15181c; stroke-width: 1.6; }
+.ldc-median { stroke: #d6121f; stroke-width: 1; stroke-dasharray: 4 3; }
+.ldc-axis { display: flex; justify-content: space-between; font: 500 12px/1 var(--mono, 'Spline Sans Mono', monospace); color: #565e66; margin-top: 4px; }
+.ldc-note { font-size: 13px; color: #565e66; margin: 8px 0 0; }
+.ldc-swatch { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 3px; }
+.ldc-swatch.ref { border-top: 2px dashed #c8ccd0; height: 0; }
+.ldc-swatch.med { border-top: 2px dashed #d6121f; height: 0; }
+@media (max-width: 1024px) { .trap-cols { grid-template-columns: 1fr; gap: 16px; } }

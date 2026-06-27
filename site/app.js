@@ -13,6 +13,7 @@ import {
   capacityTrapStatic, fmtPct, fmtGW, fmtMW,
   reliableShareToColor, rgbCss, unreliableNowPct,
   binSeriesToColumns, reliabilityAxisTicks,
+  loadDurationPaths, capacityThresholdSentences, capacityTypicalBand,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -60,7 +61,9 @@ function arcPath(cx, cy, R, a, b, max) {
 
 // A flat half-dial: quiet base arc, an optional red danger arc, hairline ticks, one needle.
 // `danger` is a [lo, hi] band shaded red on the dial face; `armed` flips the needle red.
-function buildGauge(value, max, { armed = false, danger = null, reliable = null, label = 'gauge' } = {}) {
+// `typical` is a [lo, hi] band drawn muted grey (Entry 02 typical range); `meanMark` is an ink tick.
+function buildGauge(value, max, { armed = false, danger = null, reliable = null,
+                                  typical = null, meanMark = null, label = 'gauge' } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
   for (let v = 0; v <= max; v += max / 6) {
@@ -75,11 +78,23 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
   const seg = (band, color) => band
     ? `<path d="${arcPath(cx, cy, R, band[0], band[1], max)}" fill="none" stroke="${color}" stroke-width="7"/>`
     : '';
+  // typical operating range: a muted band on the dial face (Entry 02). meanMark: an ink tick.
+  const typicalSeg = typical
+    ? `<path d="${arcPath(cx, cy, R, typical[0], typical[1], max)}" fill="none" stroke="#9aa3ab" stroke-width="7"/>`
+    : '';
+  let meanTick = '';
+  if (meanMark != null) {
+    const [ox, oy] = arcPoint(cx, cy, R + 4, Math.min(meanMark, max), max);
+    const [ix, iy] = arcPoint(cx, cy, R - 8, Math.min(meanMark, max), max);
+    meanTick = `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#15181c" stroke-width="2"/>`;
+  }
   return `
   <svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
     <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="#d7dbdf" stroke-width="7"/>
+    ${typicalSeg}
     ${seg(reliable, '#1f9d57')}
     ${seg(danger, '#d6121f')}
+    ${meanTick}
     ${ticks.join('')}
     <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${needleColor}" stroke-width="3" stroke-linecap="round"/>
     <circle cx="${cx}" cy="${cy}" r="5" fill="${needleColor}"/>
@@ -252,18 +267,66 @@ function renderTrap(v) {
   const built = NAMEPLATE ? NAMEPLATE.wind_plus_solar_gw : 50.362;
   const delivering = (v.wind_mw || 0) + (v.solar_mw || 0);
   const t = capacityTrapStatic(delivering, built);
-  $('trap-body').innerHTML = `
-    <div class="gauge-block">
-      ${buildGauge(t.share_pct, 100, { label: 'Wind and solar output as a share of installed capacity' })}
-    </div>
-    <p class="duel-punch">Britain has built <strong>${built.toFixed(1)} GW</strong> of wind and solar.
+
+  // Left gauge: live needle, with the typical range + mean from the settled curve marked on
+  // the dial face (when available), so 'now' reads against typical.
+  const stats = CAPACITY && CAPACITY.stats;
+  const band = stats ? capacityTypicalBand(stats) : null;
+  const gauge = buildGauge(t.share_pct, 100, {
+    label: 'Wind and solar output as a share of installed capacity',
+    typical: band ? [band.lo, band.hi] : null,
+    meanMark: band ? band.mean : null,
+  });
+
+  // Punch line: now + typical, drawn from the same measure.
+  const typicalLine = stats
+    ? ` Over the last 12 months it typically delivered just <strong>${Math.round(stats.median_pct)}%</strong>,
+        and beat half its nameplate only <strong>${Math.round(stats.above_50pct_frac * 100)}%</strong> of the time.`
+    : '';
+  const punch = `<p class="duel-punch">Britain has built <strong>${built.toFixed(1)} GW</strong> of wind and solar.
       Right now the whole fleet is delivering <strong>${fmtGW(delivering)}</strong> — just
-      <strong>${fmtPct(t.share_pct)}</strong> of what's installed.</p>
-    ${srcLine('Elexon FUELINST + NESO embedded output ÷ DUKES 6.2 nameplate (UK, end-2024)', 'capacity-trap')}`;
+      <strong>${fmtPct(t.share_pct)}</strong> of what's installed.${typicalLine}</p>`;
+
+  // Right panel: the load-duration curve (omitted entirely if the file is absent).
+  let curveCol = '';
+  if (CAPACITY && CAPACITY.curve && CAPACITY.curve.length) {
+    const W = 320, H = 180;
+    const { line, area } = loadDurationPaths(CAPACITY.curve, W, H);
+    const s = capacityThresholdSentences(CAPACITY.stats);
+    const medY = (H - (Math.min(100, CAPACITY.stats.median_pct) / 100) * H).toFixed(1);
+    curveCol = `
+      <div class="trap-curve">
+        <p class="trap-curve-cap">How much of its nameplate the fleet delivers, every half-hour of the
+          last 12 months — sorted from its best to its worst. It <strong>${esc(s.aboveHalf)}</strong>.</p>
+        <svg class="ldc" viewBox="0 0 ${W} ${H}" role="img"
+             aria-label="Load-duration curve: renewables output as a share of nameplate, last 12 months. Median ${esc(s.median)}; ${esc(s.aboveHalf)}.">
+          <line class="ldc-ref" x1="0" y1="0" x2="${W}" y2="0"/>
+          <path class="ldc-area" d="${area}"/>
+          <path class="ldc-line" d="${line}"/>
+          <line class="ldc-median" x1="0" y1="${medY}" x2="${W}" y2="${medY}"/>
+        </svg>
+        <div class="ldc-axis"><span>best</span><span>% of the year</span><span>worst</span></div>
+        <p class="ldc-note"><span class="ldc-swatch ref"></span>a well-run dispatchable plant runs ~90% (context, not a grid figure)
+          &middot; <span class="ldc-swatch med"></span>median ${esc(s.median)} &middot; ${esc(s.belowTenth)}</p>
+        ${srcLine(CAPACITY.source, 'capacity-trap')}
+      </div>`;
+  } else {
+    curveCol = srcLine('Elexon FUELINST + NESO embedded output ÷ DUKES 6.2 nameplate (UK, end-2024)', 'capacity-trap');
+  }
+
+  $('trap-body').innerHTML = `
+    <div class="trap-cols">
+      <div class="trap-gauge">
+        <div class="gauge-block">${gauge}</div>
+        ${punch}
+      </div>
+      ${curveCol}
+    </div>`;
 }
 
 // ============================================================ the wind stripe
 let STRIPE = null;
+let CAPACITY = null;   // site/data/capacity_curve.json (load-duration curve + stats)
 function drawStripe() {
   if (!STRIPE) return;
   const canvas = $('stripe-canvas');
@@ -602,6 +665,10 @@ async function main() {
   } catch (e) {
     $('reliability-body').innerHTML = '';
   }
+  // capacity curve (Entry 02 right panel) — independent fetch so a missing file degrades
+  // only the curve, never the gauge or the other history entries.
+  try { CAPACITY = await getJSON('data/capacity_curve.json'); }
+  catch (e) { CAPACITY = null; }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   refreshWarnings();
