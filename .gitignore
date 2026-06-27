@@ -18,6 +18,7 @@ CLAUDE.md
 *.log
 .playwright-mcp/
 .memsearch/
+.superpowers/
 
 # Node (site tooling, if any later)
 node_modules/
