@@ -90,10 +90,12 @@ def test_load_cards_trips_on_broken_record_cf(tmp_path):
 def test_load_cards_trips_cleanly_on_null_lowest_cf_day(tmp_path):
     # summary emits lowest_day=None for an empty store — must be a clean GuardError,
     # never a raw TypeError from dereferencing None.
+    # record_lull is valid here so the lowest_day guard fires first.
     bad = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
            "summary": {
                "counts": {"ge_1d": 0, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
-               "record_lull": None,
+               "record_lull": {"start": "2016-06-03", "end": "2016-06-19", "days": 17,
+                               "min_cf": 0.05, "min_cf_date": "2016-06-10", "severe": False},
                "lowest_day": None,
                "worst_lull_by_year": {},
                "mean_cf": 0.0,
@@ -101,6 +103,23 @@ def test_load_cards_trips_cleanly_on_null_lowest_cf_day(tmp_path):
                "below_5pct_days": 0,
            }}
     with pytest.raises(GuardError, match="lowest_day"):
+        sharecards.load_cards(_write_data(tmp_path, wu=bad))
+
+
+def test_load_cards_trips_cleanly_on_null_record_lull(tmp_path):
+    # summary emits record_lull=None for an empty store — must be a clean GuardError,
+    # never a raw TypeError from the longest-calm card builder dereferencing None.
+    bad = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
+           "summary": {
+               "counts": {"ge_1d": 0, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+               "record_lull": None,
+               "lowest_day": {"date": "2016-01-19", "cf": 0.0087},
+               "worst_lull_by_year": {},
+               "mean_cf": 0.0,
+               "below_10pct_days": 0,
+               "below_5pct_days": 0,
+           }}
+    with pytest.raises(GuardError, match="record_lull"):
         sharecards.load_cards(_write_data(tmp_path, wu=bad))
 
 

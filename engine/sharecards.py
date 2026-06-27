@@ -179,8 +179,8 @@ def guard_card_inputs(latest: dict, nameplate: dict, wu: dict) -> None:
             f"[{_CAPACITY_MIN_GW}, {_CAPACITY_MAX_GW}]")
 
     s = wu["summary"]
-    require(s["record_lull"] is None or s["record_lull"]["days"] >= 0,
-            "wu: negative record_lull days")
+    require(s["record_lull"] is not None and s["record_lull"]["days"] >= 0,
+            "wu: missing or invalid record_lull (empty store?)")
     low = s["lowest_day"]
     require(low is not None, "wu: missing lowest_day (empty store?)")
     check_cf_range(low["date"], low["cf"])
