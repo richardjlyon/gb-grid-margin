@@ -110,3 +110,69 @@ def carpet_matrix(daily_series: list[dict]) -> dict:
     for s in daily_series:
         rows[s["date"][:4]][col[s["date"][5:]]] = s["cf"]
     return {"years": years, "doy": labels, "rows": rows}
+
+
+from engine.derived import partial_years  # noqa: E402  (grouped near use)
+from engine.guards import require  # noqa: E402
+
+_BASIS = (
+    "Daily wind capacity factor = mean-power of (transmission WIND [Elexon FUELHH, settled] + "
+    "embedded wind [NESO outturn]) over the day's joined half-hours / DUKES total UK wind nameplate "
+    "(annual-step). Combined basis: a true load factor, artifact-free across years (unlike the "
+    "transmission-only lower bound). A lull is a run of consecutive days with CF below 10%; severity "
+    "is the lowest CF reached (below 5% = severe). Supersedes the former stripe/tally figures."
+)
+_SOURCE = "Elexon FUELHH (settled) + NESO embedded wind / DUKES 6.2 wind nameplate (annual-step)"
+_THRESHOLDS = [("ge_1d", 1), ("ge_3d", 3), ("ge_7d", 7), ("ge_14d", 14)]
+
+
+def summary(daily_series: list[dict], lulls: list[dict]) -> dict:
+    counts = {key: sum(1 for l in lulls if l["days"] >= n) for key, n in _THRESHOLDS}
+    record = max(lulls, key=lambda l: l["days"]) if lulls else None
+    lowest = min(daily_series, key=lambda s: s["cf"]) if daily_series else None
+    worst: dict[str, int] = {}
+    for l in lulls:
+        y = l["start"][:4]
+        worst[y] = max(worst.get(y, 0), l["days"])
+    lowest_day = None
+    if lowest:
+        lowest_day = {k: lowest[k] for k in ("date", "cf") if k in lowest}
+        for k in ("mean_mw", "capacity_gw"):
+            if k in lowest:
+                lowest_day[k] = lowest[k]
+    return {
+        "counts": counts,
+        "record_lull": record,
+        "lowest_day": lowest_day,
+        "worst_lull_by_year": worst,
+    }
+
+
+def build_payload(daily_series: list[dict], generated_utc: str) -> dict:
+    lulls = lull_episodes(daily_series)
+    dates = [s["date"] for s in daily_series]
+    return {
+        "basis": _BASIS, "source": _SOURCE, "generated_utc": generated_utc,
+        "range": {"from": (dates[0] if dates else None), "to": (dates[-1] if dates else None)},
+        "partial_years": partial_years(dates),
+        "thresholds": {"below_10pct": BELOW_10PCT, "below_5pct": BELOW_5PCT},
+        "windy_anchor_cf": 0.45,
+        "carpet": carpet_matrix(daily_series),
+        "lulls": lulls,
+        "summary": summary(daily_series, lulls),
+    }
+
+
+def guard_payload(payload: dict) -> None:
+    """Build-time gate: fail loudly before wind_unreliability.json is written."""
+    carpet = payload["carpet"]
+    require(len(carpet["doy"]) == 366, f"carpet doy length {len(carpet['doy'])}, expected 366")
+    require(len(carpet["years"]) > 0, "carpet has no years")
+    for y, cells in carpet["rows"].items():
+        require(len(cells) == 366, f"carpet row {y}: {len(cells)} cells, expected 366")
+        for v in cells:
+            require(v is None or 0.0 <= v <= 1.5, f"carpet {y}: cf {v} out of [0,1.5]")
+    for l in payload["lulls"]:
+        require(l["days"] >= 1, f"lull {l['start']}: non-positive length {l['days']}")
+        require(l["start"] <= l["end"], f"lull {l['start']}: start after end")
+        require(0.0 <= l["min_cf"] < BELOW_10PCT, f"lull {l['start']}: min_cf {l['min_cf']} not sub-10%")

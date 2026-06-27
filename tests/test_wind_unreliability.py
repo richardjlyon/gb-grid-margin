@@ -1,3 +1,4 @@
+from engine.guards import GuardError
 from engine.models import NameplateSeries
 from engine import wind_unreliability as wu
 
@@ -75,3 +76,32 @@ def test_carpet_matrix_places_days_by_month_day_with_nulls():
     assert m["rows"]["2019"][i0229] is None     # 2019 had no 29 Feb
     assert m["rows"]["2020"][i0229] == 0.05
     assert m["rows"]["2020"][i0101] is None     # 2020-01-01 not in series
+
+
+def test_summary_counts_and_record():
+    series = [{"date": "2020-01-0%d" % d, "cf": 0.05} for d in range(1, 8)]  # 7-day lull
+    lulls = wu.lull_episodes(series)
+    s = wu.summary(series, lulls)
+    assert s["counts"] == {"ge_1d": 1, "ge_3d": 1, "ge_7d": 1, "ge_14d": 0}
+    assert s["record_lull"]["days"] == 7
+    assert s["lowest_day"]["cf"] == 0.05
+    assert s["worst_lull_by_year"] == {"2020": 7}
+
+
+def test_build_payload_has_provenance_and_passes_guard():
+    series = [{"date": "2020-01-01", "cf": 0.30, "mean_mw": 3000.0, "capacity_gw": 10.0}]
+    p = wu.build_payload(series, "2026-06-27T00:00:00+00:00")
+    assert p["basis"] and p["source"] and p["generated_utc"]
+    assert "rows" in p["carpet"] and "lulls" in p and "summary" in p
+    wu.guard_payload(p)  # must not raise
+
+
+def test_guard_rejects_out_of_range_cf():
+    series = [{"date": "2020-01-01", "cf": 0.30, "mean_mw": 3000.0, "capacity_gw": 10.0}]
+    p = wu.build_payload(series, "2026-06-27T00:00:00+00:00")
+    p["carpet"]["rows"]["2020"][0] = 9.9  # impossible CF
+    try:
+        wu.guard_payload(p)
+        assert False, "expected GuardError"
+    except GuardError:
+        pass
