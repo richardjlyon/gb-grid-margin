@@ -39,15 +39,6 @@ export function unreliableNowPct(firmPct) {
 
 // --- the gate-of-five failure tally ----------------------------------------
 
-// Break a day count into gate-of-five groups for the self-writing tally.
-export function tallyGroups(n) {
-  const out = [];
-  let left = n;
-  while (left >= 5) { out.push(5); left -= 5; }
-  if (left > 0) out.push(left);
-  return out;
-}
-
 // --- the dependence gauge status -------------------------------------------
 
 // The firm-power gauge reads how much of demand firm, dispatchable generation is meeting

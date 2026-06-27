@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  gaugeNeedleAngle, tallyGroups, firmStatus, firmShares,
+  gaugeNeedleAngle, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor, droughtSpikes,
@@ -51,13 +51,6 @@ test('gaugeNeedleAngle maps 0..max onto a -90..+90 half-dial', () => {
 test('gaugeNeedleAngle clamps out-of-range input to the arc ends', () => {
   assert.equal(gaugeNeedleAngle(-10, 60), -90);
   assert.equal(gaugeNeedleAngle(999, 60), 90);
-});
-
-test('tallyGroups breaks a count into gate-of-five groups', () => {
-  assert.deepEqual(tallyGroups(0), []);
-  assert.deepEqual(tallyGroups(3), [3]);
-  assert.deepEqual(tallyGroups(5), [5]);
-  assert.deepEqual(tallyGroups(12), [5, 5, 2]);
 });
 
 test('firmStatus reads the firm-power share; UNRELIABLE (red) when firm power runs low', () => {
