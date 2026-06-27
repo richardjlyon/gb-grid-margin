@@ -302,7 +302,16 @@ const WIND_GAUGE_SRC = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6
 const SOLAR_GAUGE_SRC = 'Live: NESO embedded forecast / NESO embedded-solar capacity';
 // A single annotation — under solar only, to conserve space — explaining the hybrid box-whisker
 // key that sits above each carpet (it serves both sources and the dial bands, same scheme).
-const KEY_NOTE_HTML = `<p class="trap-note">Reading the key above each carpet: the thin line spans the middle 9 in 10 half-hours over the last year, the thick bar the <strong>usual half</strong> (the middle 50% of readings), and the tick the <strong>average</strong>; the &#8220;now&#8221; caret and the dial needle mark the latest half-hour.</p>`;
+// A compact visual key for the box-plot under every carpet legend. Shown ONCE (under the first
+// block on the page) rather than repeated as prose in each section: the mini-glyphs mirror the
+// actual marks, so the legend reads itself. The full sentence lives in the aria-label for AT.
+const KEY_NOTE_HTML = `<div class="legend-key" role="img" aria-label="Key to the box-plot below each carpet legend: the thin line spans the middle 9 in 10 half-hours over the last year; the thick bar the usual half (the middle 50% of readings); the tick the average; the now caret and the dial needle mark the latest half-hour.">
+        <span class="lk-cap">The box-plot below each legend:</span>
+        <span class="lk-item"><span class="lk-g lk-whisker"></span>9 in 10</span>
+        <span class="lk-item"><span class="lk-g lk-bar"></span>usual half</span>
+        <span class="lk-item"><span class="lk-g lk-avg"></span>average</span>
+        <span class="lk-item"><span class="lk-g lk-now"></span>now &middot; dial needle</span>
+      </div>`;
 
 // Lay out the legend's numeric percentile markers (positions in bar-%), dropping any lower-priority
 // label that would collide with a kept one — e.g. solar's all-hours median 0% sitting on top of its
@@ -456,7 +465,7 @@ function renderTrap(v) {
       sat: has ? CAPACITY.sat[kind] : 1, days, dist,
       liveCf: capMw ? (sourceMw / capMw) : 0,
       avgNote: avg == null ? '' : `averages ${avg}% of capacity over the year`,
-      keyNote: (has && kind === 'solar') ? KEY_NOTE_HTML : '',
+      keyNote: '',   // the shared box-plot key is shown once, under the Entry-01 reliability block
       gaugeSrc, carpetSrc, methodAnchor: 'capacity-trap',
     };
   };
