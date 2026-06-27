@@ -18,6 +18,8 @@ from engine.models import NameplateSeries
 BELOW_10PCT = 0.10
 BELOW_5PCT = 0.05
 
+_ONE_DAY = timedelta(days=1)
+
 
 def combined_daily_cf_series(fuelhh_rows: list[dict], embedded_rows: list[dict],
                              ns: NameplateSeries) -> list[dict]:
@@ -48,4 +50,42 @@ def combined_daily_cf_series(fuelhh_rows: list[dict], embedded_rows: list[dict],
             "mean_mw": round(mean_mw, 1),
             "capacity_gw": cap,
         })
+    return out
+
+
+def lull_episodes(daily_series: list[dict], threshold: float = BELOW_10PCT,
+                  severe: float = BELOW_5PCT) -> list[dict]:
+    """Maximal runs of consecutive calendar days with cf < threshold, start-ascending.
+
+    A calendar gap (a missing/omitted day) breaks the run. min_cf is the deepest day in the run;
+    severe is True when the run touched cf < `severe`.
+    """
+    out: list[dict] = []
+    run: list[dict] = []
+
+    def flush():
+        if not run:
+            return
+        deepest = min(run, key=lambda s: s["cf"])
+        out.append({
+            "start": run[0]["date"], "end": run[-1]["date"], "days": len(run),
+            "min_cf": deepest["cf"], "min_cf_date": deepest["date"],
+            "severe": deepest["cf"] < severe,
+        })
+
+    prev = None
+    for s in sorted(daily_series, key=lambda s: s["date"]):
+        adjacent = prev is not None and (
+            date.fromisoformat(s["date"]) - date.fromisoformat(prev) == _ONE_DAY)
+        if s["cf"] < threshold:
+            if run and adjacent:
+                run.append(s)
+            else:
+                flush()
+                run = [s]
+        else:
+            flush()
+            run = []
+        prev = s["date"]
+    flush()
     return out
