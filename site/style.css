@@ -396,18 +396,19 @@ main { padding-bottom: 40px; }
 .card-tile img { width:100%; height:auto; border:1px solid var(--rule); border-radius:6px; display:block; }
 .card-tile figcaption { font-family:var(--read); font-size:.95rem; margin:10px 0 4px; color:var(--ink); }
 
-/* Entry 02 — capacity trap: gauge left, load-duration curve right (mirrors .verdict-cols) */
-.trap-cols { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 28px; align-items: start; }
-.trap-curve { min-width: 0; }
-.trap-curve-cap { margin: 0 0 8px; }
-.ldc { width: 100%; height: auto; display: block; }
-.ldc-ref { stroke: #c8ccd0; stroke-width: 1; stroke-dasharray: 3 3; }
-.ldc-area { fill: rgba(214, 18, 31, 0.14); stroke: none; }
-.ldc-line { fill: none; stroke: #15181c; stroke-width: 1.6; }
-.ldc-median { stroke: #d6121f; stroke-width: 1; stroke-dasharray: 4 3; }
-.ldc-axis { display: flex; justify-content: space-between; font: 500 12px/1 var(--mono, 'Spline Sans Mono', monospace); color: #565e66; margin-top: 4px; }
-.ldc-note { font-size: 13px; color: #565e66; margin: 8px 0 0; }
-.ldc-swatch { display: inline-block; width: 10px; height: 10px; vertical-align: middle; margin-right: 3px; }
-.ldc-swatch.ref { border-top: 2px dashed #c8ccd0; height: 0; }
-.ldc-swatch.med { border-top: 2px dashed #d6121f; height: 0; }
-@media (max-width: 1024px) { .trap-cols { grid-template-columns: 1fr; gap: 16px; } }
+/* Entry 02 — capacity trap: one row, three visual cells (gauge + two carpets) */
+.trap-row { display: grid; grid-template-columns: minmax(240px, 320px) 1fr 1fr; gap: 24px; align-items: start; }
+.trap-row.gauge-only { grid-template-columns: minmax(240px, 360px); }
+.trap-gauge { min-width: 0; }
+.carpet-cell { min-width: 0; }
+.carpet-title { font-weight: 600; margin: 0 0 6px; }
+.carpet { width: 100%; height: 320px; display: block; image-rendering: pixelated; }
+.carpet-axis { display: flex; justify-content: space-between; font: 500 11px/1 'Spline Sans Mono', monospace; color: #565e66; margin-top: 3px; }
+.carpet-cap { font-size: 13px; color: #565e66; margin: 8px 0 0; }
+.carpet-key { font-size: 12px; color: #565e66; margin: 4px 0 0; }
+.carpet-key .ck { display: inline-block; width: 11px; height: 11px; vertical-align: middle; margin: 0 3px; border: 1px solid #d7dbdf; }
+.carpet-key .ck.pale { background: #fbfbf9; }
+.carpet-key .ck.red { background: #d6121f; }
+.gauge .g-pct { font: 600 9px 'Spline Sans Mono', monospace; fill: #15181c; }
+.gauge .g-mw { font: 500 8px 'Spline Sans Mono', monospace; fill: #565e66; }
+@media (max-width: 900px) { .trap-row { grid-template-columns: 1fr; gap: 16px; } .carpet { height: 280px; } }

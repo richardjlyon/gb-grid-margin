@@ -59,11 +59,11 @@ function arcPath(cx, cy, R, a, b, max) {
   return `M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R} ${R} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}`;
 }
 
-// A flat half-dial: quiet base arc, an optional red danger arc, hairline ticks, one needle.
-// `danger` is a [lo, hi] band shaded red on the dial face; `armed` flips the needle red.
-// `typical` is a [lo, hi] band drawn muted grey (Entry 02 typical range); `meanMark` is an ink tick.
+// A flat half-dial: quiet base arc, optional coloured zone arcs, hairline ticks, one needle.
+// `danger` / `reliable` are [lo, hi] bands on the dial face; `armed` flips the needle red.
+// `calibration` is the array from gaugeCalibration(nameplateMw): inner-% + outer-MW labels.
 function buildGauge(value, max, { armed = false, danger = null, reliable = null,
-                                  typical = null, meanMark = null, label = 'gauge' } = {}) {
+                                  calibration = null, label = 'gauge' } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
   for (let v = 0; v <= max; v += max / 6) {
@@ -73,29 +73,28 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
   }
   const [nx, ny] = arcPoint(cx, cy, R - 12, Math.min(value, max), max);
   const needleColor = armed ? '#d6121f' : '#15181c';
-  // Coloured zones (firm gauge): red danger below the threshold, green reliable above it.
-  // Drawn solid over the grey track; the trap gauge passes neither, so it stays grey.
   const seg = (band, color) => band
     ? `<path d="${arcPath(cx, cy, R, band[0], band[1], max)}" fill="none" stroke="${color}" stroke-width="7"/>`
     : '';
-  // typical operating range: a muted band on the dial face (Entry 02). meanMark: an ink tick.
-  const typicalSeg = typical
-    ? `<path d="${arcPath(cx, cy, R, typical[0], typical[1], max)}" fill="none" stroke="#9aa3ab" stroke-width="7"/>`
-    : '';
-  let meanTick = '';
-  if (meanMark != null) {
-    const [ox, oy] = arcPoint(cx, cy, R + 4, Math.min(meanMark, max), max);
-    const [ix, iy] = arcPoint(cx, cy, R - 8, Math.min(meanMark, max), max);
-    meanTick = `<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#15181c" stroke-width="2"/>`;
+  let cal = '';
+  if (calibration) {
+    for (const t of calibration) {
+      const v = t.frac * max;
+      const [ix, iy] = arcPoint(cx, cy, R - 17, v, max);
+      cal += `<text x="${ix.toFixed(1)}" y="${(iy + 3).toFixed(1)}" class="g-pct" text-anchor="middle">${t.label_pct}</text>`;
+      if (t.pct === 0 || t.pct === 50 || t.pct === 100) {
+        const [ox, oy] = arcPoint(cx, cy, R + 15, v, max);
+        cal += `<text x="${ox.toFixed(1)}" y="${(oy + 3).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
+      }
+    }
   }
   return `
-  <svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
+  <svg class="gauge" viewBox="-22 -10 244 140" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
     <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="#d7dbdf" stroke-width="7"/>
-    ${typicalSeg}
     ${seg(reliable, '#1f9d57')}
     ${seg(danger, '#d6121f')}
-    ${meanTick}
     ${ticks.join('')}
+    ${cal}
     <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${needleColor}" stroke-width="3" stroke-linecap="round"/>
     <circle cx="${cx}" cy="${cy}" r="5" fill="${needleColor}"/>
   </svg>`;
@@ -267,63 +266,48 @@ function renderTrap(v) {
   const built = NAMEPLATE ? NAMEPLATE.wind_plus_solar_gw : 50.362;
   const delivering = (v.wind_mw || 0) + (v.solar_mw || 0);
   const t = capacityTrapStatic(delivering, built);
-
-  // Left gauge: live needle, with the typical range + mean from the settled curve marked on
-  // the dial face (when available), so 'now' reads against typical.
-  const stats = CAPACITY && CAPACITY.stats;
-  const band = stats ? capacityTypicalBand(stats) : null;
+  const nameplateMw = (CAPACITY && CAPACITY.gauge && CAPACITY.gauge.nameplate_mw) || Math.round(built * 1000);
   const gauge = buildGauge(t.share_pct, 100, {
     label: 'Wind and solar output as a share of installed capacity',
-    typical: band ? [band.lo, band.hi] : null,
-    meanMark: stats ? stats.median_pct : null,
+    calibration: gaugeCalibration(nameplateMw),
   });
-
-  // Punch line: now + typical, drawn from the same measure.
-  const typicalLine = stats
-    ? ` Over the last 12 months it typically delivered just <strong>${Math.round(stats.median_pct)}%</strong>,
-        and beat half its nameplate only <strong>${Math.round(stats.above_50pct_frac * 100)}%</strong> of the time.`
-    : '';
   const punch = `<p class="duel-punch">Britain has built <strong>${built.toFixed(1)} GW</strong> of wind and solar.
       Right now the whole fleet is delivering <strong>${fmtGW(delivering)}</strong> — just
-      <strong>${fmtPct(t.share_pct)}</strong> of what's installed.${typicalLine}</p>`;
+      <strong>${fmtPct(t.share_pct)}</strong> of what's installed.</p>`;
 
-  // Right panel: the load-duration curve (omitted entirely if the file is absent).
-  let curveCol = '';
-  if (CAPACITY && CAPACITY.curve && CAPACITY.curve.length) {
-    const W = 320, H = 180;
-    const { line, area } = loadDurationPaths(CAPACITY.curve, W, H);
-    const s = capacityThresholdSentences(CAPACITY.stats);
-    const medY = (H - (Math.min(100, CAPACITY.stats.median_pct) / 100) * H).toFixed(1);
-    const refY = (H * 0.1).toFixed(1);
-    curveCol = `
-      <div class="trap-curve">
-        <p class="trap-curve-cap">How much of its nameplate the fleet delivers, every half-hour of the
-          last 12 months — sorted from its best to its worst. It <strong>${esc(s.aboveHalf)}</strong>.</p>
-        <svg class="ldc" viewBox="0 0 ${W} ${H}" role="img"
-             aria-label="Load-duration curve: renewables output as a share of nameplate, last 12 months. Median ${esc(s.median)}; ${esc(s.aboveHalf)}.">
-          <line class="ldc-ref" x1="0" y1="${refY}" x2="${W}" y2="${refY}"/>
-          <path class="ldc-area" d="${area}"/>
-          <path class="ldc-line" d="${line}"/>
-          <line class="ldc-median" x1="0" y1="${medY}" x2="${W}" y2="${medY}"/>
-        </svg>
-        <div class="ldc-axis"><span>best</span><span>% of the year</span><span>worst</span></div>
-        <p class="ldc-note"><span class="ldc-swatch ref"></span>a well-run dispatchable plant runs ~90% (context, not a grid figure)
-          &middot; <span class="ldc-swatch med"></span>median ${esc(s.median)} &middot; ${esc(s.belowTenth)}</p>
-        ${srcLine(CAPACITY.source, 'capacity-trap')}
+  const carpet = (kind, title, caption) => {
+    if (!(CAPACITY && CAPACITY[kind] && CAPACITY[kind].days && CAPACITY[kind].days.length)) return '';
+    const src = kind === 'wind' ? CAPACITY.source_wind : CAPACITY.source_solar;
+    return `
+      <div class="carpet-cell">
+        <p class="carpet-title">${esc(title)}</p>
+        <canvas id="carpet-${kind}" class="carpet" role="img" aria-label="${esc(title)}: ${esc(caption)}"></canvas>
+        <div class="carpet-axis"><span>00</span><span>06</span><span>12</span><span>18</span></div>
+        <p class="carpet-cap">${esc(caption)}</p>
+        ${srcLine(src, 'capacity-trap')}
       </div>`;
-  } else {
-    curveCol = srcLine('Elexon FUELINST + NESO embedded output ÷ DUKES 6.2 nameplate (UK, end-2024)', 'capacity-trap');
-  }
+  };
+
+  const windCap = 'Wind keeps no timetable. The red bands are stretches — hours to days — when it simply stopped. There is no time of day you can count on it.';
+  const solarCap = 'Solar runs to a timetable: strong at midday, nothing at night, far less in winter. The dark is when it gives nothing.';
+  const hasCarpets = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar);
 
   $('trap-body').innerHTML = `
-    <div class="trap-cols">
+    <div class="trap-row${hasCarpets ? '' : ' gauge-only'}">
       <div class="trap-gauge">
         <div class="gauge-block">${gauge}</div>
+        <div class="carpet-key"><span class="ck pale"></span>full output <span class="ck red"></span>nothing</div>
         ${punch}
         ${srcLine('Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 nameplate', 'capacity-trap')}
       </div>
-      ${curveCol}
+      ${carpet('wind', 'Wind, every half-hour of the last year', windCap)}
+      ${carpet('solar', 'Solar, every half-hour of the last year', solarCap)}
     </div>`;
+
+  if (hasCarpets) {
+    drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
+    drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
+  }
 }
 
 // ============================================================ the wind stripe
@@ -393,6 +377,31 @@ function drawStripe() {
   ctx.moveTo(cssW - 0.75, 0);
   ctx.lineTo(cssW - 0.75, bandH);
   ctx.stroke();
+}
+
+// A carpet plot: x = settlement period (time of day, 48), y = day (newest at top). Each cell
+// coloured by its half-hourly capacity factor (carpetCellColor). DPR-aware; redrawn on resize.
+function drawCarpet(canvasId, days, satFull) {
+  const canvas = $(canvasId);
+  if (!canvas || !days || !days.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  const nDays = days.length, P = 48;
+  const colW = cssW / P;                       // a column per half-hour (time of day)
+  for (let sy = 0; sy < cssH; sy++) {          // a screen row per pixel; map to a day (newest at top)
+    const di = Math.min(nDays - 1, Math.floor((sy / cssH) * nDays));
+    const row = days[nDays - 1 - di].cf;       // newest (last) day at the top
+    for (let p = 0; p < P; p++) {
+      const [r, g, b] = carpetCellColor(row[p], satFull);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(p * colW, sy, Math.ceil(colW), 1);
+    }
+  }
 }
 
 function renderStripe() {
@@ -667,16 +676,20 @@ async function main() {
   } catch (e) {
     $('reliability-body').innerHTML = '';
   }
-  // capacity curve (Entry 02 right panel) — independent fetch so a missing file degrades
-  // only the curve, never the gauge or the other history entries.
-  try { CAPACITY = await getJSON('data/capacity_curve.json'); }
+  // capacity carpets (Entry 02 right panels) — independent fetch so a missing file degrades
+  // only the carpets, never the gauge or the other history entries.
+  try { CAPACITY = await getJSON('data/capacity_carpets.json'); }
   catch (e) { CAPACITY = null; }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   refreshWarnings();
   setInterval(refreshWarnings, POLL_MS);
   let t;
-  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { drawStripe(); drawReliabilityStripe(); drawReliabilityKey(); }, 150); });
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
+    drawStripe(); drawReliabilityStripe(); drawReliabilityKey();
+    if (CAPACITY && CAPACITY.wind) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
+    if (CAPACITY && CAPACITY.solar) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
+  }, 150); });
 }
 
 main();
