@@ -12,6 +12,7 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   capacityTrapStatic, fmtPct, fmtGW, fmtMW,
   reliableShareToColor, rgbCss, unreliableNowPct,
+  binSeriesToColumns, reliabilityAxisTicks,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -376,31 +377,23 @@ function drawReliabilityKey() {
   for (let i = 0; i < W; i++) { ctx.fillStyle = relColour(1 - i / (W - 1)); ctx.fillRect(i, 0, 1, H); }
 }
 
-function layoutReliabilityAxis(cssW) {
+function layoutReliabilityAxis(cssW, mode = 'rolling') {
   const months = $('reliability-months'), years = $('reliability-years');
   if (!months || !years) return;
   months.innerHTML = ''; years.innerHTML = '';
-  const start = Date.parse(RELIABILITY.start_utc), step = RELIABILITY.step_minutes * 60000, n = RELIABILITY.values.length;
-  let lastX = -999, lastYr = null;
-  for (let i = 0; i < n; i++) {
-    const d = new Date(start + i * step);
-    if (i === 0 || (d.getUTCDate() === 1 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0)) {
-      const x = (i / n) * cssW;
-      if (x - lastX >= 30) {                              // responsive thinning so labels never collide
-        lastX = x;
-        const m = document.createElement('span');
-        m.textContent = _MONTHS[d.getUTCMonth()].toLowerCase();
-        m.style.left = `${x}px`;
-        months.appendChild(m);
-      }
-      if (d.getUTCFullYear() !== lastYr) {                // year marker on every year change
-        lastYr = d.getUTCFullYear();
-        const y = document.createElement('span');
-        y.textContent = lastYr;
-        y.style.left = `${x}px`;
-        years.appendChild(y);
-      }
-    }
+  const ticks = reliabilityAxisTicks(Date.parse(RELIABILITY.start_utc), RELIABILITY.step_minutes * 60000,
+    RELIABILITY.values.length, mode);
+  let lastX = -999;
+  for (const m of ticks.months) {
+    const x = m.frac * cssW;
+    if (x - lastX < 30) continue;                     // responsive thinning
+    lastX = x;
+    const el = document.createElement('span');
+    el.textContent = m.label; el.style.left = `${x}px`; months.appendChild(el);
+  }
+  for (const y of ticks.years) {
+    const el = document.createElement('span');
+    el.textContent = y.label; el.style.left = `${y.frac * cssW}px`; years.appendChild(el);
   }
 }
 
@@ -408,7 +401,7 @@ function drawReliabilityStripe() {
   if (!RELIABILITY) return;
   const canvas = $('reliability-canvas');
   if (!canvas) return;
-  const vals = RELIABILITY.values, n = vals.length;
+  const vals = RELIABILITY.values;
   const dpr = window.devicePixelRatio || 1;
   const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
   canvas.width = Math.round(cssW * dpr);
@@ -416,13 +409,9 @@ function drawReliabilityStripe() {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
-  // one column per CSS pixel; mean of the half-hours that fall in it (null where all-blank → gap grey).
+  const cols = binSeriesToColumns(vals, cssW);
   for (let sx = 0; sx < cssW; sx++) {
-    const i0 = Math.floor((sx / cssW) * n);
-    const i1 = Math.max(i0 + 1, Math.floor(((sx + 1) / cssW) * n));
-    let sum = 0, cnt = 0;
-    for (let i = i0; i < i1 && i < n; i++) { if (vals[i] != null) { sum += vals[i]; cnt++; } }
-    ctx.fillStyle = relColour(cnt ? sum / cnt : null);
+    ctx.fillStyle = relColour(cols[sx]);
     ctx.fillRect(sx, 0, 1, cssH);
   }
   layoutReliabilityAxis(cssW);
