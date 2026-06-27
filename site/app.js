@@ -11,7 +11,7 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
   unreliableNowPct,
-  carpetCellColor, gaugeCalibration,
+  carpetCellColor, gaugeCalibration, unreliabilityColor,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -56,8 +56,12 @@ function arcPath(cx, cy, R, a, b, max) {
 // `dist` = {p10,p25,p50,p75,p90} (percentages) paints the rolling-year output distribution onto the
 // circumference: a faint p10–p90 arc (9 times in 10), a stronger p25–p75 arc (the usual half), and a
 // median tick — so the live needle reads against where output normally sits.
+// `trackRamp` (t in [0,1] -> [r,g,b]) paints the base arc as a green->amber->red gradient (the
+// unreliability gauge): 0% = green/reliable, 100% = red/unreliable. When set, the percentile band
+// arcs are suppressed (the gradient would muddy them; the legend box-plot carries the distribution),
+// but the mean tick + needle stay so "now" still reads against the rolling-year average.
 function buildGauge(value, max, { armed = false, danger = null, reliable = null,
-                                  calibration = null, label = 'gauge', dist = null,
+                                  calibration = null, label = 'gauge', dist = null, trackRamp = null,
                                   palette = { track: '#d7dbdf', band: '#b4bac1', core: '#7c838a' } } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
@@ -73,12 +77,27 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
     : '';
   let distArcs = '', median = '';
   if (dist) {
-    const arc = (lo, hi, color) => `<path d="${arcPath(cx, cy, R, lo, hi, max)}" fill="none" stroke="${color}" stroke-width="7"/>`;
-    distArcs = arc(dist.p10, dist.p90, palette.band) + arc(dist.p25, dist.p75, palette.core);  // 9-in-10, then the usual half
+    if (!trackRamp) {   // percentile band arcs would muddy a gradient track — suppress them there
+      const arc = (lo, hi, color) => `<path d="${arcPath(cx, cy, R, lo, hi, max)}" fill="none" stroke="${color}" stroke-width="7"/>`;
+      distArcs = arc(dist.p10, dist.p90, palette.band) + arc(dist.p25, dist.p75, palette.core);  // 9-in-10, then the usual half
+    }
     const c = Number.isFinite(dist.mean) ? dist.mean : dist.p50;   // central tick = the average (load factor)
     const [mx1, my1] = arcPoint(cx, cy, R + 5, c, max);
     const [mx2, my2] = arcPoint(cx, cy, R - 5, c, max);
     median = `<line x1="${mx1.toFixed(1)}" y1="${my1.toFixed(1)}" x2="${mx2.toFixed(1)}" y2="${my2.toFixed(1)}" stroke="#15181c" stroke-width="2.2"/>`;
+  }
+  // Base arc: a single quiet track, or a green->amber->red gradient (drawn as contiguous segments,
+  // since SVG strokes can't follow an arc with a gradient) when trackRamp is given.
+  let trackArc;
+  if (trackRamp) {
+    const N = 30, segs = [];
+    for (let i = 0; i < N; i++) {
+      const [r, g, b] = trackRamp((i + 0.5) / N);
+      segs.push(`<path d="${arcPath(cx, cy, R, (i / N) * max, ((i + 1) / N) * max, max)}" fill="none" stroke="rgb(${r},${g},${b})" stroke-width="7"/>`);
+    }
+    trackArc = segs.join('');
+  } else {
+    trackArc = `<path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="${palette.track}" stroke-width="7"/>`;
   }
   let cal = '';
   if (calibration) {
@@ -100,7 +119,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
   }
   return `
   <svg class="gauge" viewBox="-6 -12 232 130" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
-    <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="${palette.track}" stroke-width="7"/>
+    ${trackArc}
     ${distArcs}
     ${seg(reliable, '#1f9d57')}
     ${seg(danger, '#d6121f')}
@@ -303,8 +322,15 @@ function numsRow(marks) {
 // the same width as the stripe below it) and carrying a live "now" caret at the instantaneous
 // capacity-factor reading — the same value the dial needle points to. `satFull` is the carpet's
 // saturation anchor (CAPACITY.sat[kind] for Entry 02), passed in so the legend closes over nothing.
-function legendFor(kind, cf, pal, dist, satFull, unitNoun) {
+// `ramp` (optional) recolours the legend for the unreliability block: {css} is the green->amber->red
+// gradient for the bar, {lo,hi} are the end labels ("Reliable" / "Unreliable" rather than the default
+// "No output" / "Full output"). The box-plot then draws in neutral slate/ink so it reads cleanly over
+// the coloured ramp instead of competing with it.
+function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp) {
   const noun = unitNoun || 'capacity';
+  const boxBand = ramp ? '#9aa3ab' : pal.band, boxCore = ramp ? '#4b535b' : pal.core;
+  const barCss = ramp ? ramp.css : `linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})`;
+  const loLab = ramp ? ramp.lo : 'No output', hiLab = ramp ? ramp.hi : 'Full output';
   const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
   const pos = L(cf);
   // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
@@ -319,25 +345,25 @@ function legendFor(kind, cf, pal, dist, satFull, unitNoun) {
     const avg = Math.round(dist.mean);
     box = `
         <span class="cl-box" aria-hidden="true" title="last year: average ${avg}%, usual half ${p25}-${p75}%, 9-in-10 ${p10}-${p90}% of ${noun}">
-          <span class="cl-box-line" style="left:${x(dist.p10).toFixed(1)}%; width:${(x(dist.p90) - x(dist.p10)).toFixed(1)}%; background:${pal.band}"></span>
-          <span class="cl-box-iqr" style="left:${x(dist.p25).toFixed(1)}%; width:${(x(dist.p75) - x(dist.p25)).toFixed(1)}%; background:${pal.core}"></span>
+          <span class="cl-box-line" style="left:${x(dist.p10).toFixed(1)}%; width:${(x(dist.p90) - x(dist.p10)).toFixed(1)}%; background:${boxBand}"></span>
+          <span class="cl-box-iqr" style="left:${x(dist.p25).toFixed(1)}%; width:${(x(dist.p75) - x(dist.p25)).toFixed(1)}%; background:${boxCore}"></span>
           <span class="cl-box-avg" style="left:${x(dist.mean).toFixed(1)}%"></span>
         </span>
         ${numsRow([
-          { pos: x(dist.p10), txt: `${p10}%`, color: pal.core, pr: 1 },   // widest interval (9-in-10) ends
+          { pos: x(dist.p10), txt: `${p10}%`, color: boxCore, pr: 1 },   // widest interval (9-in-10) ends
           { pos: x(dist.mean), txt: `${avg}%`, cls: 'cl-num-avg', pr: 2 },  // average (mean / load factor)
-          { pos: x(dist.p90), txt: `${p90}%`, color: pal.core, pr: 1 },
+          { pos: x(dist.p90), txt: `${p90}%`, color: boxCore, pr: 1 },
         ])}`;
   }
   return `
     <div class="carpet-legend">
-      <span class="cl-lab">No output</span>
+      <span class="cl-lab">${loLab}</span>
       <span class="cl-bar-wrap">
-        <span class="cl-bar" style="background:linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})" aria-hidden="true"></span>
+        <span class="cl-bar" style="background:${barCss}" aria-hidden="true"></span>
         <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${Math.round(cf * 100)}% of ${noun}">now</span>
         ${box}
       </span>
-      <span class="cl-lab">Full output</span>
+      <span class="cl-lab">${hiLab}</span>
     </div>`;
 }
 
@@ -374,9 +400,20 @@ function avgFromDays(days) {
 function renderMetricBlock(cfg) {
   const pal = cfg.palette;
   const hasCarpet = !!(cfg.days && cfg.days.length);
+  // A traffic-light block (reliability) supplies cfg.rampFn; the dial track, the carpet and the legend
+  // bar then share that one ramp. The legend bar samples it at 0/25/50/75/100% so the CSS gradient
+  // matches the OKLab canvas ramp; cfg.rampLabels relabels the bar ends (Reliable / Unreliable).
+  const ramp = cfg.rampFn ? {
+    css: `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map((t) => {
+      const [r, g, b] = cfg.rampFn(t); return `rgb(${r},${g},${b}) ${t * 100}%`;
+    }).join(', ')})`,
+    lo: cfg.rampLabels ? cfg.rampLabels.lo : 'No output',
+    hi: cfg.rampLabels ? cfg.rampLabels.hi : 'Full output',
+  } : null;
   const gauge = buildGauge((cfg.liveCf ?? 0) * 100, 100, {
     label: cfg.gaugeLabel ?? `${cfg.label} output as a share of installed capacity`,
     calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
+    trackRamp: cfg.rampFn || null,
   });
   const avgNote = cfg.avgNote ? `<span class="trap-avg">${cfg.avgNote}</span>` : '';
   const srcP = (cls, txt) =>
@@ -395,7 +432,7 @@ function renderMetricBlock(cfg) {
     : srcP('trap-src-gauge', cfg.gaugeSrc);
   return `
       <p class="trap-label">${esc(cfg.label)}${avgNote}</p>
-      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun) : ''}
+      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp) : ''}
       <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
       ${strip}
       ${cfg.keyNote}`;
@@ -455,21 +492,23 @@ function renderReliabilityBlock(v) {
   host.innerHTML = `
     <div class="trap-grid${has ? '' : ' gauge-only'}">
       ${renderMetricBlock({
-        kind: 'reliability', label: 'Unreliable share', palette: REL_PALETTE,
+        kind: 'reliability', label: 'Unreliability', palette: REL_PALETTE,
         nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
         liveCf: nowPct == null ? null : nowPct / 100,
         avgNote: avg == null ? '' : `averaged ${avg}% of demand over the year`,
         keyNote: has ? KEY_NOTE_HTML : '',
         unitNoun: 'demand',
+        rampFn: unreliabilityColor, rampLabels: { lo: 'Reliable', hi: 'Unreliable' },
         gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (1 - firm share)',
         carpetSrc: src, methodAnchor: 'reliability',
-        gaugeLabel: 'Unreliable share of national demand',
-        carpetAria: 'Unreliable share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = demand fully met by firm power, deepening red = increasing unreliable share.',
+        gaugeLabel: 'Unreliability — unreliable share of national demand',
+        carpetAria: 'Unreliable share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Green = demand fully met by firm power, through amber to deep red = increasingly leaning on weather and imports.',
       })}
     </div>`;
   if (has) {
     syncBlockHeights();
-    drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, REL_PALETTE.fullRgb);
+    drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null,
+      { rampFn: unreliabilityColor, keepWorstHigh: true });
   }
 }
 
@@ -587,7 +626,14 @@ function drawStripe() {
 // output, deepening to `full` (the source hue) at full capacity. The date axis is lowest-output-wins
 // downsampled so a sub-pixel calm spell (now palest) is never averaged out. DPR-aware; redrawn on
 // resize, with its month axis re-laid out to match.
-function drawCarpetCanvas(canvasId, days, satFull, full) {
+// `opts.rampFn` (cf -> [r,g,b]) overrides the default paper->`full` colour (used by the unreliability
+// carpet's green->amber->red ramp). `opts.keepWorstHigh` flips the downsample to keep the HIGHEST cf
+// per spanned column instead of the lowest: for output carpets the worst case is LOW (calm), so the
+// minimum is preserved; for the unreliability carpet the worst case is HIGH (most unreliable), so the
+// maximum must be preserved — otherwise a screen-resolution downsample would silently drop the worst
+// half-hours. Either way no worst-case spell is averaged out of existence.
+function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
+  const { rampFn = null, keepWorstHigh = false } = opts;
   const canvas = $(canvasId);
   if (!canvas || !days || !days.length) return;
   const dpr = window.devicePixelRatio || 1;
@@ -603,12 +649,13 @@ function drawCarpetCanvas(canvasId, days, satFull, full) {
     const d0 = Math.floor((sx / cssW) * nDays);
     const d1 = Math.max(d0 + 1, Math.floor(((sx + 1) / cssW) * nDays));
     for (let p = 0; p < P; p++) {
-      let minCf = Infinity, saw = false;
+      let worst = keepWorstHigh ? -Infinity : Infinity, saw = false;
       for (let d = d0; d < d1 && d < nDays; d++) {
         const v = days[d].cf[p];               // oldest (first) day at the left
-        if (v != null) { saw = true; if (v < minCf) minCf = v; }
+        if (v != null) { saw = true; worst = keepWorstHigh ? Math.max(worst, v) : Math.min(worst, v); }
       }
-      const [r, g, b] = carpetCellColor(saw ? minCf : null, satFull, full);
+      const cf = saw ? worst : null;
+      const [r, g, b] = rampFn ? rampFn(cf) : carpetCellColor(cf, satFull, full);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.fillRect(sx, p * rowH, 1, Math.ceil(rowH));
     }
@@ -775,7 +822,7 @@ async function main() {
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
     if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
-    if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, REL_PALETTE.fullRgb);
+    if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
   }, 150); });
 }
 

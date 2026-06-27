@@ -218,6 +218,26 @@ export function carpetCellColor(cf, satFull, full = _CARPET_FULL) {
   return _oklabToSrgb([0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * t));
 }
 
+// The unreliability ramp (Entry 01 reliability block): a traffic-light gradient on the SHARED
+// 0..1 scale used by the dial track, the carpet, and the legend bar. t=0 -> green (fully reliable),
+// t=0.5 -> amber, t=1 -> red (fully unreliable), interpolated in OKLab so the midpoint reads as a
+// true amber rather than the muddy brown a naive sRGB green->red blend would give. This is a
+// CONTINUOUS gradient, NOT a threshold: amber is only the midpoint hue, never an arming line (the old
+// thresholded 40%/65% stripe ramp was deliberately removed). Green = reliable / red = unreliable
+// matches the verdict gauge directly above this block. null -> neutral gap grey.
+const _RAMP_GREEN = [26, 157, 84], _RAMP_AMBER = [230, 160, 25], _RAMP_RED = [214, 18, 31];
+export function unreliabilityColor(t) {
+  if (t == null) return _CARPET_GAP.slice();
+  t = Math.max(0, Math.min(1, t));
+  const [lo, hi, k] = t <= 0.5
+    ? [_RAMP_GREEN, _RAMP_AMBER, t / 0.5]
+    : [_RAMP_AMBER, _RAMP_RED, (t - 0.5) / 0.5];
+  if (k <= 0) return lo.slice();
+  if (k >= 1) return hi.slice();
+  const A = _srgbToOklab(lo), B = _srgbToOklab(hi);
+  return _oklabToSrgb([0, 1, 2].map((i) => A[i] + (B[i] - A[i]) * k));
+}
+
 // The gauge tick model at 0/25/50/75/100%: dial fraction + the inner (%) and outer (MW) labels.
 // 0% and 100% are always present; MW ends are 0 and the full nameplate.
 export function gaugeCalibration(nameplateMw) {

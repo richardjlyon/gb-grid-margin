@@ -5,7 +5,7 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
-  carpetCellColor, gaugeCalibration,
+  carpetCellColor, gaugeCalibration, unreliabilityColor,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -162,6 +162,25 @@ test('carpetCellColor — cf=0 paper, cf>=satFull saturated full colour, null gr
     assert.ok(L <= prev + 1e-9, `lightness should not increase at cf=${cf.toFixed(2)}`);
     prev = L;
   }
+});
+
+test('unreliabilityColor — green at 0, amber mid, red at 1, gap grey, hue progresses green->red', () => {
+  const green = unreliabilityColor(0), amber = unreliabilityColor(0.5), red = unreliabilityColor(1);
+  assert.deepEqual(green, [26, 157, 84]);            // fully reliable -> green endpoint verbatim
+  assert.deepEqual(amber, [230, 160, 25]);           // midpoint -> amber endpoint verbatim
+  assert.deepEqual(red, [214, 18, 31]);              // fully unreliable -> red endpoint verbatim
+  assert.deepEqual(unreliabilityColor(null), [232, 232, 230]);  // gap grey
+  assert.deepEqual(unreliabilityColor(1.5), red);    // clamps above 1
+  assert.deepEqual(unreliabilityColor(-1), green);   // clamps below 0
+  // Lower half (green->amber): a quarter-point sits between the two endpoints per channel — redder
+  // (higher R) and less blue than green, not yet amber.
+  const q1 = unreliabilityColor(0.25);
+  assert.ok(q1[0] > green[0] && q1[0] < amber[0], 'q1 red between green and amber');
+  assert.ok(q1[2] < green[2] && q1[2] > amber[2], 'q1 blue between green and amber');
+  // Upper half (amber->red): a three-quarter point loses green channel toward red but stays warm.
+  const q3 = unreliabilityColor(0.75);
+  assert.ok(q3[1] < amber[1] && q3[1] > red[1], 'q3 green channel between amber and red');
+  assert.ok(q3[0] > 150, 'q3 stays warm (high red channel)');
 });
 
 test('gaugeCalibration — five ticks, 0% and 100% present, MW ends 0 and nameplate', () => {

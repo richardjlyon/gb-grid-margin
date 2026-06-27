@@ -586,18 +586,26 @@ reliable share is intentionally NOT clamped so the above-100% property is preser
 share-card ramp. The two files have different contracts; do not mix them.
 
 **Carpet shape.** Days × 48, date left→right (oldest→newest), settlement period top→bottom
-(SP1 = 00:00 local). Rolling 365-day window (`capacity.rolling_days`). Colour: white (0%
-unreliable, demand fully met) → full red (100% unreliable), OKLab-interpolated. `sat = 1.0` means
-100% unreliable maps to the full-red colour.
+(SP1 = 00:00 local). Rolling 365-day window (`capacity.rolling_days`). Colour: a continuous
+traffic-light ramp — green (0% unreliable, demand fully met) → amber → red (100% unreliable),
+OKLab-interpolated (`render.js unreliabilityColor`, shared by the carpet, the dial track and the
+legend bar). Green = reliable / red = unreliable matches the verdict gauge above; amber is the
+midpoint hue only, NOT a threshold. Drawn with `keepWorstHigh: true`: when a screen column spans
+several days the HIGHEST (most-unreliable) cell wins — the inverse of the output carpets'
+darkest-wins, because for unreliability the worst case is high, not low. (`sat` stays 1.0 in the
+payload but the rampFn path ignores it and maps `cf` directly.)
 
 **`reliability_carpet.json` shape.** `{basis, source, metric, caveats, generated_utc,
 window:"rolling_365d", range, sat:1.0, days:[{date, cf:[48]}]}`. `cf` values are floats in
 `[0, 1]` (clamped unreliable share) or `null` (missing half-hour).
 
-**Dial.** `renderReliabilityBlock` in `site/app.js` renders a plain 0–100% arc (no nameplate / MW
-labels — it is a share, not a capacity factor). The needle reads `unreliableNowPct(firmPct)` =
-`max(0, min(100, 100 − firmPct))` (clamped). Behind the needle: faint 9-in-10 band (p10–p90),
-darker usual-half arc (p25–p75), ink mean tick — the same distribution scheme as Entry-02's dials.
+**Dial.** `renderReliabilityBlock` in `site/app.js` renders a plain 0–100% arc whose TRACK is the
+same green→amber→red ramp (`buildGauge`'s `trackRamp` option, drawn as 30 contiguous coloured
+segments since an SVG stroke can't carry a gradient along an arc). No nameplate / MW labels — it is
+a share, not a capacity factor. The needle reads `unreliableNowPct(firmPct)` =
+`max(0, min(100, 100 − firmPct))` (clamped); an ink tick marks the rolling-year mean. The
+percentile band arcs are SUPPRESSED on a ramp track (they would muddy the gradient) — the full
+distribution lives in the legend box-plot below instead.
 
 **Legend.** &#8220;now&#8221; caret + box-plot (thin whisker = 9-in-10 / p10–p90, thick bar =
 usual half / p25–p75, tick = mean), identical scheme to Entry-02 (§14). Numbers label the
