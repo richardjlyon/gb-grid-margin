@@ -12,6 +12,7 @@ import {
   fmtGW, fmtMW,
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor,
+  windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -777,6 +778,27 @@ async function refreshWarnings() {
   }
 }
 
+// ============================================================ wind unreliability (Entry 03)
+// Tasks 10–11 replace these stubs with real canvas drawing.
+function drawWindCarpet(data) { window.__windData = data; }
+function drawDroughtPlot(data) {}
+
+function renderWindUnreliability(data) {
+  $('wind-body').innerHTML = `
+    <div class="wind-carpet-cell">
+      <div class="wind-yaxis" id="wind-carpet-y"></div>
+      <canvas id="wind-carpet" class="wind-carpet" role="img"
+        aria-label="Wind daily capacity factor for every day since 2016. Rows are years (2016 at the top), columns are the day of the year (1 January at the left). Pale = a windy day; deep red = a near-calm day."></canvas>
+    </div>
+    <div class="wind-carpet-x" id="wind-carpet-x"></div>
+    <canvas id="wind-drought" class="wind-drought" role="img"
+      aria-label="${esc(droughtCaption(data.summary))}"></canvas>
+    <p class="wind-caption">${esc(droughtCaption(data.summary))}</p>
+    <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#wind-unreliability">how this is measured</a></p>`;
+  drawWindCarpet(data);
+  drawDroughtPlot(data);
+}
+
 // ============================================================ orchestration
 async function refreshLive() {
   try {
@@ -821,6 +843,13 @@ async function main() {
   // only the carpets, never the gauge or the other history entries.
   try { CAPACITY = await getJSON('data/capacity_carpets.json'); }
   catch (e) { CAPACITY = null; }
+  // wind unreliability (Entry 03) — independent fetch; a missing file degrades only this section.
+  try {
+    const windData = await getJSON('data/wind_unreliability.json');
+    renderWindUnreliability(windData);
+  } catch (e) {
+    $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
+  }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   refreshWarnings();
@@ -832,6 +861,7 @@ async function main() {
     if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
     if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
+    if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
   }, 150); });
 }
 
