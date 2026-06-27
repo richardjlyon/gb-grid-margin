@@ -588,8 +588,7 @@ share-card ramp. The two files have different contracts; do not mix them.
 **Carpet shape.** Days × 48, date left→right (oldest→newest), settlement period top→bottom
 (SP1 = 00:00 local). Rolling 365-day window (`capacity.rolling_days`). Colour: white (0%
 unreliable, demand fully met) → full red (100% unreliable), OKLab-interpolated. `sat = 1.0` means
-100% unreliable maps to the full-red colour (unlike the capacity carpets where `sat` is a CF
-fraction below 1.0).
+100% unreliable maps to the full-red colour.
 
 **`reliability_carpet.json` shape.** `{basis, source, metric, caveats, generated_utc,
 window:"rolling_365d", range, sat:1.0, days:[{date, cf:[48]}]}`. `cf` values are floats in
