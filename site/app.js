@@ -11,7 +11,7 @@ import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
   unreliableNowPct,
-  carpetCellColor, gaugeCalibration, unreliabilityColor,
+  carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
 } from './render.js';
 
@@ -483,10 +483,13 @@ function renderTrap(v) {
 }
 
 // Entry 01: the reliability metric block, rendered under the gauge+receipt into #reliability-body.
-// Third consumer of renderMetricBlock. The dial/carpet show the UNRELIABLE share of demand (1 - firm):
-// white = reliable, deep red = unreliable. No nameplate (the dial is a plain 0-100% share), so the
-// MW calibration labels are suppressed. The live needle reads 1 - firm share, the same measure the
-// gauge above it draws, so the two can never disagree.
+// Third consumer of renderMetricBlock. It reads RELIABILITY — the firm share of demand — so its dial
+// moves the SAME way as the verdict gauge above it: the needle swings RIGHT toward green as the grid
+// leans on firm power, and LEFT into red (the alarm) as it leans on weather and imports. No nameplate
+// (a plain 0-100% share), so the MW calibration labels are suppressed.
+//   The carpet stores the UNRELIABLE share per half-hour and is painted unchanged (red = the bad
+// half-hours either way), so only the dial, the legend ends and the box-plot are flipped onto the
+// reliable axis: the live needle, the now-caret and the percentile box are derived from 1 − unreliable.
 let REL_CARPET = null;   // site/data/reliability_carpet.json (days x 48 of unreliable share)
 
 function renderReliabilityBlock(v) {
@@ -494,25 +497,33 @@ function renderReliabilityBlock(v) {
   if (!host) return;
   const has = !!(REL_CARPET && REL_CARPET.days && REL_CARPET.days.length);
   const m = v ? sourceArcModel(v) : null;
-  const nowPct = m ? unreliableNowPct(m.firmPct) : null;   // 0..100 (clamped) or null
+  const u = m ? unreliableNowPct(m.firmPct) : null;        // unreliable share now, 0..100 (clamped)
+  const nowPct = u == null ? null : 100 - u;               // RELIABLE share now — what the dial reads
   const days = has ? REL_CARPET.days : null;
-  const dist = has ? distForDays(REL_CARPET, days) : null;
-  const avg = avgFromDays(days);
+  // The carpet's distribution is over the unreliable share; mirror each percentile onto the reliable
+  // axis (reliable = 100 − unreliable, so the percentile order reverses) for the dial + legend box.
+  const uDist = has ? distForDays(REL_CARPET, days) : null;
+  const dist = uDist ? {
+    p10: 100 - uDist.p90, p25: 100 - uDist.p75, p50: 100 - uDist.p50,
+    p75: 100 - uDist.p25, p90: 100 - uDist.p10, mean: 100 - uDist.mean,
+  } : null;
+  const avgU = avgFromDays(days);
+  const avg = avgU == null ? null : 100 - avgU;            // mean reliable share over the year
   const src = (REL_CARPET && REL_CARPET.source) || 'Elexon FUELHH (settled) + NESO embedded';
   host.innerHTML = `
     <div class="trap-grid${has ? '' : ' gauge-only'}">
       ${renderMetricBlock({
-        kind: 'reliability', label: 'Unreliability', palette: REL_PALETTE,
+        kind: 'reliability', label: 'Reliability', palette: REL_PALETTE,
         nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
         liveCf: nowPct == null ? null : nowPct / 100,
         avgNote: avg == null ? '' : `averaged ${avg}% of demand over the year`,
         keyNote: has ? KEY_NOTE_HTML : '',
         unitNoun: 'demand',
-        rampFn: unreliabilityColor, rampLabels: { lo: 'Reliable', hi: 'Unreliable' },
-        gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (1 - firm share)',
+        rampFn: reliabilityColor, rampLabels: { lo: 'Unreliable', hi: 'Reliable' },
+        gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (firm share)',
         carpetSrc: src, methodAnchor: 'reliability',
-        gaugeLabel: 'Unreliability — unreliable share of national demand',
-        carpetAria: 'Unreliable share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Green = demand fully met by firm power, through amber to deep red = increasingly leaning on weather and imports.',
+        gaugeLabel: 'Reliability — firm share of national demand',
+        carpetAria: 'Reliable (firm) share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Green = demand fully met by firm power, through amber to deep red = increasingly leaning on weather and imports.',
       })}
     </div>`;
   if (has) {

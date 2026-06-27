@@ -5,7 +5,7 @@ import {
   gaugeNeedleAngle, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
-  carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor, droughtSpikes,
+  carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor, windDroughtColor, droughtSpikes,
   droughtCaption, carpetMonthTicks,
 } from './render.js';
 
@@ -148,7 +148,7 @@ test('carpetCellColor — cf=0 paper, cf>=satFull saturated full colour, null gr
 
 test('unreliabilityColor — green at 0, amber mid, red at 1, gap grey, hue progresses green->red', () => {
   const green = unreliabilityColor(0), amber = unreliabilityColor(0.5), red = unreliabilityColor(1);
-  assert.deepEqual(green, [26, 157, 84]);            // fully reliable -> green endpoint verbatim
+  assert.deepEqual(green, [27, 110, 69]);            // fully reliable -> green endpoint verbatim (#1b6e45)
   assert.deepEqual(amber, [230, 160, 25]);           // midpoint -> amber endpoint verbatim
   assert.deepEqual(red, [214, 18, 31]);              // fully unreliable -> red endpoint verbatim
   assert.deepEqual(unreliabilityColor(null), [232, 232, 230]);  // gap grey
@@ -163,6 +163,17 @@ test('unreliabilityColor — green at 0, amber mid, red at 1, gap grey, hue prog
   const q3 = unreliabilityColor(0.75);
   assert.ok(q3[1] < amber[1] && q3[1] > red[1], 'q3 green channel between amber and red');
   assert.ok(q3[0] > 150, 'q3 stays warm (high red channel)');
+});
+test('reliabilityColor — the unreliability ramp reversed: red at 0% reliable, green at 100%', () => {
+  // The Entry-01 block reads RELIABILITY: 0 (none reliable) is the alarm (red), 1 (all firm) is green.
+  // It is exactly unreliabilityColor read from the other end, so red/amber/green endpoints match verbatim.
+  assert.deepEqual(reliabilityColor(0), [214, 18, 31]);            // 0% reliable -> red
+  assert.deepEqual(reliabilityColor(0.5), [230, 160, 25]);         // midpoint -> amber
+  assert.deepEqual(reliabilityColor(1), [27, 110, 69]);            // 100% reliable -> green (#1b6e45)
+  assert.deepEqual(reliabilityColor(0.25), unreliabilityColor(0.75)); // mirror identity, mid-low sample
+  assert.deepEqual(reliabilityColor(null), [232, 232, 230]);       // gap grey, distinct from 0
+  assert.deepEqual(reliabilityColor(-1), [214, 18, 31]);           // clamps below 0 -> red
+  assert.deepEqual(reliabilityColor(1.5), [27, 110, 69]);          // clamps above 1 -> green (#1b6e45)
 });
 
 test('gaugeCalibration — five ticks, 0% and 100% present, MW ends 0 and nameplate', () => {

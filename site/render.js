@@ -212,7 +212,7 @@ export function windDroughtColor(cf, windyAnchor = 0.45) {
 // CONTINUOUS gradient, NOT a threshold: amber is only the midpoint hue, never an arming line (the old
 // thresholded 40%/65% stripe ramp was deliberately removed). Green = reliable / red = unreliable
 // matches the verdict gauge directly above this block. null -> neutral gap grey.
-const _RAMP_GREEN = [26, 157, 84], _RAMP_AMBER = [230, 160, 25], _RAMP_RED = [214, 18, 31];
+const _RAMP_GREEN = [27, 110, 69], _RAMP_AMBER = [230, 160, 25], _RAMP_RED = [214, 18, 31];  // green #1b6e45 — the reliable green shared with the verdict gauge
 export function unreliabilityColor(t) {
   if (t == null) return _CARPET_GAP.slice();
   t = Math.max(0, Math.min(1, t));
@@ -223,6 +223,14 @@ export function unreliabilityColor(t) {
   if (k >= 1) return hi.slice();
   const A = _srgbToOklab(lo), B = _srgbToOklab(hi);
   return _oklabToSrgb([0, 1, 2].map((i) => A[i] + (B[i] - A[i]) * k));
+}
+
+// The RELIABILITY ramp (Entry 01 block, the form actually shown): unreliabilityColor read from the
+// other end so the dial reads firm/reliable share — t=0 (no firm power) -> red (the alarm), t=1 (all
+// firm) -> green. Reversing here, not duplicating the OKLab maths, keeps the two ramps a single source
+// of truth and guarantees the green/amber/red endpoints match the carpet's. null -> neutral gap grey.
+export function reliabilityColor(t) {
+  return unreliabilityColor(t == null ? null : 1 - t);
 }
 
 // The gauge tick model at 0/25/50/75/100%: dial fraction + the inner (%) and outer (MW) labels.
