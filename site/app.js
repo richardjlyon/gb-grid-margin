@@ -294,13 +294,14 @@ function renderTrap(v) {
     const { line, area } = loadDurationPaths(CAPACITY.curve, W, H);
     const s = capacityThresholdSentences(CAPACITY.stats);
     const medY = (H - (Math.min(100, CAPACITY.stats.median_pct) / 100) * H).toFixed(1);
+    const refY = (H * 0.1).toFixed(1);
     curveCol = `
       <div class="trap-curve">
         <p class="trap-curve-cap">How much of its nameplate the fleet delivers, every half-hour of the
           last 12 months — sorted from its best to its worst. It <strong>${esc(s.aboveHalf)}</strong>.</p>
         <svg class="ldc" viewBox="0 0 ${W} ${H}" role="img"
              aria-label="Load-duration curve: renewables output as a share of nameplate, last 12 months. Median ${esc(s.median)}; ${esc(s.aboveHalf)}.">
-          <line class="ldc-ref" x1="0" y1="0" x2="${W}" y2="0"/>
+          <line class="ldc-ref" x1="0" y1="${refY}" x2="${W}" y2="${refY}"/>
           <path class="ldc-area" d="${area}"/>
           <path class="ldc-line" d="${line}"/>
           <line class="ldc-median" x1="0" y1="${medY}" x2="${W}" y2="${medY}"/>
