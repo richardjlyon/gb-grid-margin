@@ -24,7 +24,7 @@ from pathlib import Path
 from engine import capacity, embedded_history, reliability, wind_unreliability
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
-from engine.guards import GuardError
+from engine.guards import GuardError, check_nameplate_sane, check_shares_sum_100
 from engine.history import read_store
 from engine.models import NameplateSeries
 
@@ -180,6 +180,14 @@ def build(out_dir: Path = SITE_DATA) -> int:
     # sound, dated denominator (the live NESO embedded-wind capacity is embedded-only —
     # it would read ~146% of capacity; see engine/NOTES.md §2 and §8).
     nameplate = json.loads(NAMEPLATE_ANCHOR_PATH.read_text())
+
+    try:
+        for y, yd in ytd["years"].items():
+            check_shares_sum_100(f"ytd {y}", yd["shares_pct"])
+        check_nameplate_sane(nameplate)
+    except GuardError as e:
+        print(f"derived build failed (GuardError): {e}", file=sys.stderr)
+        return 1
 
     # Reliability stripe series (Stage B): national reliable share per half-hour, from the
     # FUELHH store joined to the embedded store. Skipped (not fatal) if embedded isn't built.
