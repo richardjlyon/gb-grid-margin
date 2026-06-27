@@ -212,3 +212,11 @@ test('gaugeCalibration — five ticks, 0% and 100% present, MW ends 0 and namepl
   assert.equal(t[2].label_mw, '25,181');       // 50% of 50,362
   assert.ok(Math.abs(t[2].frac - 0.5) < 1e-9);
 });
+
+test('gaugeCalibration(null) — percent ticks only, no MW labels', () => {
+  const t = gaugeCalibration(null);
+  assert.equal(t.length, 5);
+  assert.deepEqual(t.map((x) => x.pct), [0, 25, 50, 75, 100]);
+  assert.ok(t.every((x) => x.label_mw === null));
+  assert.equal(t[2].label_pct, '50%');
+});

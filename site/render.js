@@ -256,6 +256,6 @@ export function gaugeCalibration(nameplateMw) {
     pct,
     frac: pct / 100,
     label_pct: `${pct}%`,
-    label_mw: Math.round((nameplateMw * pct) / 100).toLocaleString('en-GB'),
+    label_mw: nameplateMw == null ? null : Math.round((nameplateMw * pct) / 100).toLocaleString('en-GB'),
   }));
 }
