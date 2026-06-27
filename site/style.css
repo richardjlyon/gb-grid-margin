@@ -305,6 +305,7 @@ main { padding-bottom: 40px; }
   border-left: 3px solid transparent; border-right: 3px solid transparent; border-top: 4px solid var(--ink);
 }
 .rel-key-ticks { display: flex; justify-content: space-between; width: 150px; margin-top: 2px; font-family: var(--mono); font-size: 0.62rem; color: var(--slate); }
+.rel-key-note { margin: 1px 0 0; font: 0.56rem var(--mono); color: var(--slate); text-align: right; }
 #reliability-canvas { width: 100%; height: 40px; display: block; border: 1px solid var(--rule); background: var(--paper); }
 .rel-axis { position: relative; margin: 3px 0 0; height: 26px; }
 .rel-months { position: relative; height: 12px; }

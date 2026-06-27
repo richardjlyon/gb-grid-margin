@@ -438,3 +438,32 @@ is documented in the `reliable_share` docstring and disclosed in the JSON `cavea
 `2015-12-31T23:30Z` in the FUELHH store — a pre-existing Stage 4 boundary quirk (settlement
 period 48 of 2016-01-01 starts at 23:30 on the calendar-previous UTC day). It packs
 contiguously at the grid head and the rolling-year file is unaffected.
+
+## 13. Reliability stripe — Stage C *(2026-06-26)*
+
+Stage C adds the stripe to the live dashboard (Entry 01, under the gauge) and a Python share-card
+sibling (`engine/sharecards.py` `reliability-now` card).
+
+**Colour ramp.** Single red ink, inverted: pale (paper) = firm, full red = unreliable. Firm-share
+domain `[lo=0.40, hi=0.65]` (`RELIABILITY_RAMP` in `render.js`). The gauge's 50% arming threshold
+is the midpoint of this range: the stripe and the dial share one threshold and cannot give
+contradictory readings. The scale saturates — i.e. reaches maximum red — at 40% firm; anything
+below that maps to the same full red. Disclosed in the key note and in `methodology.html`.
+
+**JS↔Python colour parity lock.** `reliableShareToColor(s)` in `render.js` and
+`reliable_share_to_color(s)` in `engine/sharecards.py` are parity-locked: `tests/test_sharecards.py`
+`test_color_parity` runs the Python function against 200 sample values and asserts exact RGB match
+with the JS formula evaluated in Node.
+
+**Lazy all-time toggle.** `site/data/reliability_year.json` (~25 kB) is loaded at startup;
+`reliability_all.json` (~2.2 MB) is fetched only on first click of "Since 2016", then cached in
+`REL_ALL`. A `REL_ALL_PROMISE` guard prevents double-fetch on rapid clicks. A failed fetch leaves
+the current view unchanged.
+
+**Gauge flip (lead unreliable, instrument-not-alarm).** The stamp pair in Entry 01 leads with the
+unreliable (weather & imports) share in the larger `.stamp-val.lead` slot and places the firm share
+in the smaller `.stamp-val.muted` slot. The distinction is size + DOM order, not colour only — the
+`lead` class uses `clamp(2.2rem, 5.75vw, 3.2rem)`, the `muted` class is default size. The gauge arc
+art and source-mix convention (green = reliable, left-to-right) are unchanged; only stamp emphasis
+flips. This is an instrument reading, not an alarm — the needle colour is governed solely by the 50%
+arming threshold (`firmStatus` in `render.js`), not by the stamp order.

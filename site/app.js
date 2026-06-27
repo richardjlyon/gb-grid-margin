@@ -366,16 +366,21 @@ function renderStripe() {
 // Identical formula to the dial by construction (engine.reliability reuses compute_verdict), so the
 // stripe and the gauge above it can never disagree. Canvas, re-binned to its container on resize.
 let RELIABILITY = null;
-let REL_ROLLING = null, REL_ALL = null, REL_MODE = 'rolling';
+let REL_ROLLING = null, REL_ALL = null, REL_ALL_PROMISE = null, REL_MODE = 'rolling';
 // (ramp constants live in render.js — RELIABILITY_RAMP, reliableShareToColor, rgbCss)
 function relColour(s) { return rgbCss(reliableShareToColor(s)); }
 
 function drawReliabilityKey() {
   const cv = $('reliability-key');
   if (!cv) return;
-  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = cv.clientWidth, cssH = cv.clientHeight;
+  cv.width = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // left = 0% unreliable (firm = 1, pale) … right = 100% unreliable (firm = 0, red)
-  for (let i = 0; i < W; i++) { ctx.fillStyle = relColour(1 - i / (W - 1)); ctx.fillRect(i, 0, 1, H); }
+  for (let i = 0; i < cssW; i++) { ctx.fillStyle = relColour(1 - i / (cssW - 1)); ctx.fillRect(i, 0, 1, cssH); }
 }
 
 function layoutReliabilityAxis(cssW, mode = 'rolling') {
@@ -424,7 +429,7 @@ function renderReliabilityStripe() {
   $(‘reliability-body’).innerHTML = `
     <div class="rel-strip">
       <div class="rel-head">
-        <p class="rel-cap">The same measure, every half-hour of the last year — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
+        <p class="rel-cap">The same measure, ${REL_MODE === 'all' ? 'every half-hour since 2016' : 'every half-hour of the last year'} — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
         <div class="rel-toggle" role="group" aria-label="Stripe range">
           <button type="button" data-range="rolling" aria-pressed="${REL_MODE === ‘rolling’}"${REL_MODE === ‘rolling’ ? ‘ class="on"’ : ‘’}>Rolling year</button>
           <button type="button" data-range="all" aria-pressed="${REL_MODE === ‘all’}"${REL_MODE === ‘all’ ? ‘ class="on"’ : ‘’}>Since 2016</button>
@@ -436,6 +441,7 @@ function renderReliabilityStripe() {
             <span class="rel-now" id="reliability-now" hidden>now</span>
           </div>
           <div class="rel-key-ticks"><span>0%</span><span>100%</span></div>
+          <p class="rel-key-note">scale saturates at 40% firm</p>
         </div>
       </div>
       <canvas id="reliability-canvas" role="img"
@@ -452,8 +458,9 @@ function renderReliabilityStripe() {
 
 async function switchReliabilityRange(range) {
   if (range === ‘all’ && !REL_ALL) {
-    try { REL_ALL = await getJSON(‘data/reliability_all.json’); }
-    catch (e) { return; }                       // keep current view if the big file is unavailable
+    if (!REL_ALL_PROMISE) REL_ALL_PROMISE = getJSON(‘data/reliability_all.json’);
+    try { REL_ALL = await REL_ALL_PROMISE; }
+    catch (e) { REL_ALL_PROMISE = null; return; } // keep current view if the big file is unavailable
   }
   REL_MODE = range;
   RELIABILITY = range === ‘all’ ? REL_ALL : REL_ROLLING;
