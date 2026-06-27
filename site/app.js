@@ -426,13 +426,13 @@ function drawReliabilityStripe() {
 function renderReliabilityStripe() {
   if (!RELIABILITY) return;
   const r = RELIABILITY;
-  $(‘reliability-body’).innerHTML = `
+  $('reliability-body').innerHTML = `
     <div class="rel-strip">
       <div class="rel-head">
         <p class="rel-cap">The same measure, ${REL_MODE === 'all' ? 'every half-hour since 2016' : 'every half-hour of the last year'} — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
         <div class="rel-toggle" role="group" aria-label="Stripe range">
-          <button type="button" data-range="rolling" aria-pressed="${REL_MODE === ‘rolling’}"${REL_MODE === ‘rolling’ ? ‘ class="on"’ : ‘’}>Rolling year</button>
-          <button type="button" data-range="all" aria-pressed="${REL_MODE === ‘all’}"${REL_MODE === ‘all’ ? ‘ class="on"’ : ‘’}>Since 2016</button>
+          <button type="button" data-range="rolling" aria-pressed="${REL_MODE === 'rolling'}"${REL_MODE === 'rolling' ? ' class="on"' : ''}>Rolling year</button>
+          <button type="button" data-range="all" aria-pressed="${REL_MODE === 'all'}"${REL_MODE === 'all' ? ' class="on"' : ''}>Since 2016</button>
         </div>
         <div class="rel-key">
           <span class="rel-key-lab">unreliable share of demand</span>
@@ -448,22 +448,22 @@ function renderReliabilityStripe() {
         aria-label="Reliable (firm) share of GB demand, every half-hour from ${esc(r.range.from)} to ${esc(r.range.to)}: pale where firm power carried demand, red where it leaned on weather and imports."></canvas>
       <div class="rel-axis"><div class="rel-months" id="reliability-months"></div><div class="rel-years" id="reliability-years"></div></div>
       <p class="caveat"><strong>Settled history, about three weeks behind live.</strong> The stripe is settled Elexon FUELHH with NESO’s embedded outturn estimates; the live gauge and the ‘now’ marker read NESO’s embedded <em>forecast</em> — the same measure, a slight forecast-vs-settlement seam, so read ‘now’ as indicative.</p>
-      ${srcLine(r.source, ‘reliability’)}
+      ${srcLine(r.source, 'reliability')}
     </div>`;
   drawReliabilityKey();
   drawReliabilityStripe();
-  $(‘reliability-body’).querySelectorAll(‘.rel-toggle button’).forEach((b) =>
-    b.addEventListener(‘click’, () => switchReliabilityRange(b.dataset.range)));
+  $('reliability-body').querySelectorAll('.rel-toggle button').forEach((b) =>
+    b.addEventListener('click', () => switchReliabilityRange(b.dataset.range)));
 }
 
 async function switchReliabilityRange(range) {
-  if (range === ‘all’ && !REL_ALL) {
-    if (!REL_ALL_PROMISE) REL_ALL_PROMISE = getJSON(‘data/reliability_all.json’);
+  if (range === 'all' && !REL_ALL) {
+    if (!REL_ALL_PROMISE) REL_ALL_PROMISE = getJSON('data/reliability_all.json');
     try { REL_ALL = await REL_ALL_PROMISE; }
     catch (e) { REL_ALL_PROMISE = null; return; } // keep current view if the big file is unavailable
   }
   REL_MODE = range;
-  RELIABILITY = range === ‘all’ ? REL_ALL : REL_ROLLING;
+  RELIABILITY = range === 'all' ? REL_ALL : REL_ROLLING;
   renderReliabilityStripe();
   updateReliabilityNow(LAST_STATE);             // re-place the caret (live value unchanged)
 }
