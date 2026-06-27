@@ -10,8 +10,7 @@ import { resolveWarnings } from './warnings.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
-  reliableShareToColor, rgbCss, unreliableNowPct,
-  binSeriesToColumns, reliabilityAxisTicks,
+  unreliableNowPct,
   carpetCellColor, gaugeCalibration,
 } from './render.js';
 
@@ -88,6 +87,8 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
       const v = t.frac * max;
       const [ix, iy] = arcPoint(cx, cy, R - 17, v, max);
       cal += `<text x="${ix.toFixed(1)}" y="${(iy + 3).toFixed(1)}" class="g-pct" text-anchor="middle">${t.label_pct}</text>`;
+      // Skip the outer MW label when there is no nameplate (e.g. the reliability dial): keep the inner %.
+      if (t.label_mw == null) continue;
       if (t.pct === 0 || t.pct === 100) {
         const [ox, oy] = arcPoint(cx, cy, R + 15, v, max);
         cal += `<text x="${ox.toFixed(1)}" y="${(oy + 11).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
@@ -184,6 +185,7 @@ function renderVerdict(state) {
     $('verdict-body').innerHTML =
       `<p class="warn">No current reading. ${esc(state.reason || state.lastUpdated || '')}</p>`;
     $('entry-trap').hidden = true;
+    renderReliabilityBlock(null);
     return;
   }
   const v = state.verdict;
@@ -261,6 +263,7 @@ function renderVerdict(state) {
     ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${fmtUTC(v.snapshot) || `${String(v.snapshot).slice(11, 16)}Z`}`, 'verdict')}`;
 
   renderTrap(v);
+  renderReliabilityBlock(v);
 }
 
 // Per-source colour identities. The dial bands use three shades (track / 9-in-10 / usual-half), luma-
@@ -271,6 +274,10 @@ const DIAL_PALETTE = {
   wind: { track: '#cbdef0', band: '#9cbfe3', core: '#4e8dcd', full: '#1f6fc0', fullRgb: [31, 111, 192] },
   solar: { track: '#e8d9be', band: '#d4b684', core: '#b17c23', full: '#e0921a', fullRgb: [224, 146, 26] },
 };
+
+// Reliability dial/carpet — single red. Bands behind the needle are red-tinted greys (luma-matched
+// to the wind/solar band greys); full = the gauge's unreliable red.
+const REL_PALETTE = { track: '#e3d2d4', band: '#cda9ad', core: '#b3565d', full: '#d6121f', fullRgb: [214, 18, 31] };
 
 // Entry 02 source lines + the box-whisker key note, lifted to module scope so the shared
 // renderMetricBlock references them by name rather than closing over renderTrap.
@@ -342,6 +349,7 @@ function legendFor(kind, cf, pal, dist, satFull) {
 // delivers" figure. The percentile band stays as the variability picture. Memoised on `node._dist`.
 function distForDays(node, days) {
   if (node._dist) return node._dist;
+  if (!days || !days.length) return null;
   const vals = [];
   for (const d of days) for (const cf of d.cf) if (cf != null) vals.push(cf);
   if (!vals.length) return null;
@@ -425,6 +433,41 @@ function renderTrap(v) {
     syncBlockHeights();
     drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
+  }
+}
+
+// Entry 01: the reliability metric block, rendered under the gauge+receipt into #reliability-body.
+// Third consumer of renderMetricBlock. The dial/carpet show the UNRELIABLE share of demand (1 - firm):
+// white = reliable, deep red = unreliable. No nameplate (the dial is a plain 0-100% share), so the
+// MW calibration labels are suppressed. The live needle reads 1 - firm share, the same measure the
+// gauge above it draws, so the two can never disagree.
+let REL_CARPET = null;   // site/data/reliability_carpet.json (days x 48 of unreliable share)
+
+function renderReliabilityBlock(v) {
+  const host = $('reliability-body');
+  if (!host) return;
+  const has = !!(REL_CARPET && REL_CARPET.days && REL_CARPET.days.length);
+  const m = v ? sourceArcModel(v) : null;
+  const nowPct = m ? unreliableNowPct(m.firmPct) : null;   // 0..100 (clamped) or null
+  const days = has ? REL_CARPET.days : null;
+  const dist = has ? distForDays(REL_CARPET, days) : null;
+  const avg = avgFromDays(days);
+  const src = (REL_CARPET && REL_CARPET.source) || 'Elexon FUELHH (settled) + NESO embedded';
+  host.innerHTML = `
+    <div class="trap-grid${has ? '' : ' gauge-only'}">
+      ${renderMetricBlock({
+        kind: 'reliability', label: 'Unreliable share', palette: REL_PALETTE,
+        nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
+        liveCf: nowPct == null ? null : nowPct / 100,
+        avgNote: avg == null ? '' : `averaged ${avg}% of demand over the year`,
+        keyNote: has ? KEY_NOTE_HTML : '',
+        gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (1 - firm share)',
+        carpetSrc: src, methodAnchor: 'reliability',
+      })}
+    </div>`;
+  if (has) {
+    syncBlockHeights();
+    drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, REL_PALETTE.fullRgb);
   }
 }
 
@@ -601,130 +644,6 @@ function renderStripe() {
   drawStripe();
 }
 
-// ============================================================ the reliability stripe (Entry 01, under the gauge)
-// The same firm-share measure as the live gauge, every half-hour of the last year. Single red ink,
-// inverted: pale (paper) = firm carried demand, deep red = the grid leaned on weather + imports.
-// Identical formula to the dial by construction (engine.reliability reuses compute_verdict), so the
-// stripe and the gauge above it can never disagree. Canvas, re-binned to its container on resize.
-let RELIABILITY = null;
-let REL_ROLLING = null, REL_ALL = null, REL_ALL_PROMISE = null, REL_MODE = 'rolling';
-// (ramp constants live in render.js — RELIABILITY_RAMP, reliableShareToColor, rgbCss)
-function relColour(s) { return rgbCss(reliableShareToColor(s)); }
-
-function drawReliabilityKey() {
-  const cv = $('reliability-key');
-  if (!cv) return;
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = cv.clientWidth, cssH = cv.clientHeight;
-  cv.width = Math.round(cssW * dpr);
-  cv.height = Math.round(cssH * dpr);
-  const ctx = cv.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  // left = 0% unreliable (firm = 1, pale) … right = 100% unreliable (firm = 0, red)
-  for (let i = 0; i < cssW; i++) { ctx.fillStyle = relColour(1 - i / (cssW - 1)); ctx.fillRect(i, 0, 1, cssH); }
-}
-
-function layoutReliabilityAxis(cssW, mode = 'rolling') {
-  const months = $('reliability-months'), years = $('reliability-years');
-  if (!months || !years) return;
-  months.innerHTML = ''; years.innerHTML = '';
-  const ticks = reliabilityAxisTicks(Date.parse(RELIABILITY.start_utc), RELIABILITY.step_minutes * 60000,
-    RELIABILITY.values.length, mode);
-  let lastX = -999;
-  for (const m of ticks.months) {
-    const x = m.frac * cssW;
-    if (x - lastX < 30) continue;                     // responsive thinning
-    lastX = x;
-    const el = document.createElement('span');
-    el.textContent = m.label; el.style.left = `${x}px`; months.appendChild(el);
-  }
-  for (const y of ticks.years) {
-    const el = document.createElement('span');
-    el.textContent = y.label; el.style.left = `${y.frac * cssW}px`; years.appendChild(el);
-  }
-}
-
-function drawReliabilityStripe() {
-  if (!RELIABILITY) return;
-  const canvas = $('reliability-canvas');
-  if (!canvas) return;
-  const vals = RELIABILITY.values;
-  const dpr = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssW, cssH);
-  const cols = binSeriesToColumns(vals, cssW);
-  for (let sx = 0; sx < cssW; sx++) {
-    ctx.fillStyle = relColour(cols[sx]);
-    ctx.fillRect(sx, 0, 1, cssH);
-  }
-  layoutReliabilityAxis(cssW, REL_MODE);
-}
-
-function renderReliabilityStripe() {
-  if (!RELIABILITY) return;
-  const r = RELIABILITY;
-  $('reliability-body').innerHTML = `
-    <div class="rel-strip">
-      <div class="rel-head">
-        <p class="rel-cap">The same measure, ${REL_MODE === 'all' ? 'every half-hour since 2016' : 'every half-hour of the last year'} — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
-        <div class="rel-toggle" role="group" aria-label="Stripe range">
-          <button type="button" data-range="rolling" aria-pressed="${REL_MODE === 'rolling'}"${REL_MODE === 'rolling' ? ' class="on"' : ''}>Rolling year</button>
-          <button type="button" data-range="all" aria-pressed="${REL_MODE === 'all'}"${REL_MODE === 'all' ? ' class="on"' : ''}>Since 2016</button>
-        </div>
-        <div class="rel-key">
-          <span class="rel-key-lab">unreliable share of demand</span>
-          <div class="rel-key-wrap">
-            <canvas id="reliability-key" width="300" height="18"></canvas>
-            <span class="rel-now" id="reliability-now" hidden>now</span>
-          </div>
-          <div class="rel-key-ticks"><span>0%</span><span>100%</span></div>
-          <p class="rel-key-note">scale saturates at 40% firm</p>
-        </div>
-      </div>
-      <canvas id="reliability-canvas" role="img"
-        aria-label="Reliable (firm) share of GB demand, every half-hour from ${esc(r.range.from)} to ${esc(r.range.to)}: pale where firm power carried demand, red where it leaned on weather and imports."></canvas>
-      <div class="rel-axis"><div class="rel-months" id="reliability-months"></div><div class="rel-years" id="reliability-years"></div></div>
-      <p class="caveat"><strong>Settled history, about three weeks behind live.</strong> The stripe is settled Elexon FUELHH with NESO’s embedded outturn estimates; the live gauge and the ‘now’ marker read NESO’s embedded <em>forecast</em> — the same measure, a slight forecast-vs-settlement seam, so read ‘now’ as indicative.</p>
-      ${srcLine(r.source, 'reliability')}
-    </div>`;
-  drawReliabilityKey();
-  drawReliabilityStripe();
-  $('reliability-body').querySelectorAll('.rel-toggle button').forEach((b) =>
-    b.addEventListener('click', () => switchReliabilityRange(b.dataset.range)));
-}
-
-async function switchReliabilityRange(range) {
-  if (range === 'all' && !REL_ALL) {
-    if (!REL_ALL_PROMISE) REL_ALL_PROMISE = getJSON('data/reliability_all.json');
-    try { REL_ALL = await REL_ALL_PROMISE; }
-    catch (e) { REL_ALL_PROMISE = null; return; } // keep current view if the big file is unavailable
-  }
-  REL_MODE = range;
-  RELIABILITY = range === 'all' ? REL_ALL : REL_ROLLING;
-  renderReliabilityStripe();
-  updateReliabilityNow(LAST_STATE);             // re-place the caret (live value unchanged)
-}
-
-// Place the "now" caret on the key at the live reading's position. The stripe is always the
-// share-of-demand (Using) basis, so we read firmPct on that basis regardless of the gauge toggle.
-// unreliable = 100 − firm; the key runs 0%→100% unreliable left→right, so left% IS that value.
-function updateReliabilityNow(state) {
-  const el = $('reliability-now');
-  if (!el) return;
-  const v = state && state.verdict;
-  const m = v ? sourceArcModel(v) : null;
-  if (!m) { el.hidden = true; return; }
-  const unreliable = unreliableNowPct(m.firmPct);
-  if (unreliable == null) { el.hidden = true; return; }
-  el.style.left = `${unreliable}%`;
-  el.setAttribute('aria-label', `Now: ${Math.round(unreliable)}% unreliable`);
-  el.hidden = false;
-}
-
 // ============================================================ the tally + records
 function renderTally(counters, records) {
   const years = Object.keys(counters.years);
@@ -805,7 +724,6 @@ async function refreshLive() {
   try {
     const state = await resolveState({}, () => Date.now());
     renderVerdict(state);
-    updateReliabilityNow(state);
     $('clockstrip').textContent =
       `${state.lastUpdated}`;
     $('freshness').textContent =
@@ -836,15 +754,11 @@ async function main() {
     $('stripe-body').innerHTML = msg;
     $('tally-body').innerHTML = msg;
   }
-  // The reliability stripe (Entry 01, under the gauge) is independent: its own fetch so a missing
-  // file omits only the stripe, never the live gauge above it.
-  try {
-    REL_ROLLING = await getJSON('data/reliability_year.json');
-    RELIABILITY = REL_ROLLING;
-    renderReliabilityStripe();
-  } catch (e) {
-    $('reliability-body').innerHTML = '';
-  }
+  // The reliability carpet (Entry 01, under the gauge) is independent: its own fetch so a missing
+  // file omits only the carpet, never the live gauge above it. renderReliabilityBlock runs from
+  // renderVerdict each poll, so loading the data here is enough.
+  try { REL_CARPET = await getJSON('data/reliability_carpet.json'); }
+  catch (e) { REL_CARPET = null; }
   // capacity carpets (Entry 02 right panels) — independent fetch so a missing file degrades
   // only the carpets, never the gauge or the other history entries.
   try { CAPACITY = await getJSON('data/capacity_carpets.json'); }
@@ -855,10 +769,11 @@ async function main() {
   setInterval(refreshWarnings, POLL_MS);
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
-    drawStripe(); drawReliabilityStripe(); drawReliabilityKey();
+    drawStripe();
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
     if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
+    if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, REL_PALETTE.fullRgb);
   }, 150); });
 }
 
