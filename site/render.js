@@ -217,3 +217,33 @@ export const fmtPct = (x) => (Number.isFinite(x) ? `${x.toFixed(1)}%` : '—');
 export const fmtPct0 = (x) => (Number.isFinite(x) ? `${Math.round(x)}%` : '—');
 export const fmtGW = (mw) => (Number.isFinite(mw) ? `${(mw / 1000).toFixed(1)} GW` : '—');
 export const fmtMW = (mw) => (Number.isFinite(mw) ? `${Math.round(mw).toLocaleString('en-GB')} MW` : '—');
+
+// --- the capacity-trap load-duration curve (Entry 02) -----------------------
+// A 200-point load-duration curve: y = % of nameplate (descending), index i ↔ x = i/(n-1)
+// across the year. Mapped into a [0,w]×[0,h] box with y inverted (0% at the bottom). The
+// area path closes down to the baseline so it can be filled. Pure geometry — no DOM.
+export function loadDurationPaths(curve, w, h) {
+  const n = curve.length;
+  if (!n) return { line: '', area: '' };
+  const x = (i) => (n === 1 ? 0 : (i / (n - 1)) * w);
+  const y = (pct) => h - (Math.min(100, Math.max(0, pct)) / 100) * h;
+  let line = `M ${x(0).toFixed(1)} ${y(curve[0]).toFixed(1)}`;
+  for (let i = 1; i < n; i++) line += ` L ${x(i).toFixed(1)} ${y(curve[i]).toFixed(1)}`;
+  const area = `${line} L ${w.toFixed(1)} ${h.toFixed(1)} L 0 ${h.toFixed(1)} Z`;
+  return { line, area };
+}
+
+// Plain-language threshold copy from the stats block (tested, not inlined in app.js).
+export function capacityThresholdSentences(stats) {
+  const pc = (f) => `${Math.round(f * 100)}%`;
+  return {
+    aboveHalf: `beats half its nameplate just ${pc(stats.above_50pct_frac)} of the year`,
+    belowTenth: `runs below a tenth of nameplate ${pc(stats.below_10pct_frac)} of the year`,
+    median: `${Math.round(stats.median_pct)}%`,
+  };
+}
+
+// Typical operating range [lo,hi] + mean (all % of nameplate) for the gauge dial face.
+export function capacityTypicalBand(stats) {
+  return { lo: stats.p25_pct, hi: stats.p75_pct, mean: stats.mean_pct };
+}

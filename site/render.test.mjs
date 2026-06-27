@@ -6,6 +6,7 @@ import {
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   binSeriesToColumns, reliabilityAxisTicks,
+  loadDurationPaths, capacityThresholdSentences, capacityTypicalBand,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -188,4 +189,28 @@ test('reliabilityAxisTicks — empty series yields no ticks', () => {
   const { months, years } = reliabilityAxisTicks(Date.parse('2025-01-01T00:00:00Z'), 30 * 60000, 0, 'rolling');
   assert.equal(months.length, 0);
   assert.equal(years.length, 0);
+});
+
+test('loadDurationPaths — line is monotonic-down in screen space, area closes to baseline', () => {
+  const { line, area } = loadDurationPaths([100, 50, 0], 200, 100);
+  // y(100)=0 (top), y(50)=50, y(0)=100 (bottom) → y increases across the line
+  assert.match(line, /^M 0.0 0.0 L 100.0 50.0 L 200.0 100.0$/);
+  assert.ok(area.startsWith(line));
+  assert.match(area, /L 200.0 100.0 L 0 100.0 Z$/);   // down to baseline and closed
+});
+
+test('loadDurationPaths — empty curve yields empty paths', () => {
+  assert.deepEqual(loadDurationPaths([], 200, 100), { line: '', area: '' });
+});
+
+test('capacityThresholdSentences — rounds fracs to whole percents', () => {
+  const s = capacityThresholdSentences({ above_50pct_frac: 0.082, below_10pct_frac: 0.31, median_pct: 23.4 });
+  assert.equal(s.aboveHalf, 'beats half its nameplate just 8% of the year');
+  assert.equal(s.belowTenth, 'runs below a tenth of nameplate 31% of the year');
+  assert.equal(s.median, '23%');
+});
+
+test('capacityTypicalBand — passes p25/p75/mean through', () => {
+  assert.deepEqual(capacityTypicalBand({ p25_pct: 11, p75_pct: 38, mean_pct: 25 }),
+    { lo: 11, hi: 38, mean: 25 });
 });
