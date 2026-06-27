@@ -7,10 +7,9 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
-import { shareButtons } from './share.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
-  capacityTrapStatic, fmtPct, fmtGW, fmtMW,
+  fmtGW, fmtMW,
   reliableShareToColor, rgbCss, unreliableNowPct,
   binSeriesToColumns, reliabilityAxisTicks,
   carpetCellColor, gaugeCalibration,
@@ -19,13 +18,7 @@ import {
 const $ = (id) => document.getElementById(id);
 const POLL_MS = 5 * 60 * 1000;
 
-// Gauge view (Using / Generating), persisted like the Subsidy Clock's nominal/real switch.
-const VIEW_KEY = 'gg-gauge-view';
-const getGaugeView = () => {
-  try { return localStorage.getItem(VIEW_KEY) === 'generating' ? 'generating' : 'using'; } catch { return 'using'; }
-};
-const setGaugeView = (val) => { try { localStorage.setItem(VIEW_KEY, val); } catch { /* private mode */ } };
-let LAST_STATE = null;   // last live state, so the toggle can re-render without a refetch
+let LAST_STATE = null;   // last live state, so the reliability caret can re-place without a refetch
 
 async function getJSON(url) {
   const r = await fetch(url, { cache: 'no-store' });
@@ -62,11 +55,15 @@ function arcPath(cx, cy, R, a, b, max) {
 // A flat half-dial: quiet base arc, optional coloured zone arcs, hairline ticks, one needle.
 // `danger` / `reliable` are [lo, hi] bands on the dial face; `armed` flips the needle red.
 // `calibration` is the array from gaugeCalibration(nameplateMw): inner-% + outer-MW labels.
+// `dist` = {p10,p25,p50,p75,p90} (percentages) paints the rolling-year output distribution onto the
+// circumference: a faint p10–p90 arc (9 times in 10), a stronger p25–p75 arc (the usual half), and a
+// median tick — so the live needle reads against where output normally sits.
 function buildGauge(value, max, { armed = false, danger = null, reliable = null,
-                                  calibration = null, label = 'gauge' } = {}) {
+                                  calibration = null, label = 'gauge', dist = null,
+                                  palette = { track: '#d7dbdf', band: '#b4bac1', core: '#7c838a' } } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
-  for (let v = 0; v <= max; v += max / 6) {
+  for (let v = 0; v <= max; v += max / 4) {   // ticks at 0/25/50/75/100, aligned with the labels
     const [ox, oy] = arcPoint(cx, cy, R + 3, v, max);
     const [ix, iy] = arcPoint(cx, cy, R - 6, v, max);
     ticks.push(`<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#565e66" stroke-width="1.4"/>`);
@@ -76,46 +73,70 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
   const seg = (band, color) => band
     ? `<path d="${arcPath(cx, cy, R, band[0], band[1], max)}" fill="none" stroke="${color}" stroke-width="7"/>`
     : '';
+  let distArcs = '', median = '';
+  if (dist) {
+    const arc = (lo, hi, color) => `<path d="${arcPath(cx, cy, R, lo, hi, max)}" fill="none" stroke="${color}" stroke-width="7"/>`;
+    distArcs = arc(dist.p10, dist.p90, palette.band) + arc(dist.p25, dist.p75, palette.core);  // 9-in-10, then the usual half
+    const c = Number.isFinite(dist.mean) ? dist.mean : dist.p50;   // central tick = the average (load factor)
+    const [mx1, my1] = arcPoint(cx, cy, R + 5, c, max);
+    const [mx2, my2] = arcPoint(cx, cy, R - 5, c, max);
+    median = `<line x1="${mx1.toFixed(1)}" y1="${my1.toFixed(1)}" x2="${mx2.toFixed(1)}" y2="${my2.toFixed(1)}" stroke="#15181c" stroke-width="2.2"/>`;
+  }
   let cal = '';
   if (calibration) {
     for (const t of calibration) {
       const v = t.frac * max;
       const [ix, iy] = arcPoint(cx, cy, R - 17, v, max);
       cal += `<text x="${ix.toFixed(1)}" y="${(iy + 3).toFixed(1)}" class="g-pct" text-anchor="middle">${t.label_pct}</text>`;
-      if (t.pct === 0 || t.pct === 50 || t.pct === 100) {
+      if (t.pct === 0 || t.pct === 100) {
         const [ox, oy] = arcPoint(cx, cy, R + 15, v, max);
         cal += `<text x="${ox.toFixed(1)}" y="${(oy + 11).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
+      } else if (t.pct === 50) {
+        // The peak (50%-mark) power figure sits clearly above the dial, well clear of the "50%" label.
+        const [ox, oy] = arcPoint(cx, cy, R + 18, v, max);
+        cal += `<text x="${ox.toFixed(1)}" y="${(oy - 2).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}</text>`;
       }
     }
   }
   return `
-  <svg class="gauge" viewBox="-22 -10 244 140" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
-    <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="#d7dbdf" stroke-width="7"/>
+  <svg class="gauge" viewBox="-6 -12 232 130" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
+    <path d="${arcPath(cx, cy, R, 0, max, max)}" fill="none" stroke="${palette.track}" stroke-width="7"/>
+    ${distArcs}
     ${seg(reliable, '#1f9d57')}
     ${seg(danger, '#d6121f')}
     ${ticks.join('')}
+    ${median}
     ${cal}
     <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${needleColor}" stroke-width="3" stroke-linecap="round"/>
     <circle cx="${cx}" cy="${cy}" r="5" fill="${needleColor}"/>
   </svg>`;
 }
 
-// The source-mix arc: each slice ∝ output, reliable (green) from the left, unreliable (red) to the
-// right, then the magenta export tail beyond the demand mark. `model` is sourceArcModel(v, view).
+// Whole-percent shares via largest remainder: floor each share, then hand the leftover percent(s) to
+// the largest fractional parts (or claw back if the floors overshoot). Guarantees a column of integer
+// percentages sums to exactly 100. Returns a Map keyed by the slice object.
+function integerShares(slices, total) {
+  const out = new Map();
+  if (!(total > 0)) { slices.forEach((s) => out.set(s, 0)); return out; }
+  const raw = slices.map((s) => (Math.max(0, s.mw) / total) * 100);
+  const floor = raw.map(Math.floor);
+  let rem = 100 - floor.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac);
+  for (let k = 0; rem > 0 && k < order.length; k++) { floor[order[k].i] += 1; rem -= 1; }
+  for (let k = order.length - 1; rem < 0 && k >= 0; k--) { if (floor[order[k].i] > 0) { floor[order[k].i] -= 1; rem += 1; } }
+  slices.forEach((s, i) => out.set(s, floor[i]));
+  return out;
+}
+
+// The source-mix arc (share of demand): each slice ∝ output, reliable (green) from the left,
+// unreliable (red) to the right, then the magenta export tail beyond the demand mark when Britain is
+// exporting a surplus. `model` is sourceArcModel(v).
 function buildSourceArc(model, { armed = false } = {}) {
   const cx = 100, cy = 104, R = 86;
-  const using = model.view === 'using';
-  const ss = model.selfSufficiencyMw;                         // signed net flow (+import / −export)
-  // 'using': arc is demand; a surplus spills as a tail beyond it. 'generating': arc is generation;
-  // demand is marked on it, with the beyond-demand surplus (export) or the gap to demand (import)
-  // flagged on the OUTER edge so the green/red source slices underneath stay intact.
-  const demandMw = using ? model.arcTotal : model.arcTotal + ss;
-  const total = (using ? model.arcTotal + model.exportMw : model.arcTotal + Math.max(0, ss)) || 1;
+  const total = (model.arcTotal + model.exportMw) || 1;       // demand, plus any exported-surplus tail
   const GAP = total * 0.004;
   const band = (v0, v1, color) =>
     `<path d="${arcPath(cx, cy, R, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="12"/>`;
-  const outer = (v0, v1, color) =>
-    `<path d="${arcPath(cx, cy, R + 10, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="3.5"/>`;
   const tick = (val, color, len, w) => {
     const [ox, oy] = arcPoint(cx, cy, R + len / 2, val, total);
     const [ix, iy] = arcPoint(cx, cy, R - len / 2, val, total);
@@ -130,30 +151,32 @@ function buildSourceArc(model, { armed = false } = {}) {
     svg += band(lo, hi, s.color);
     cum += s.mw;
   }
-  if (using && model.exportMw > 0) {                          // surplus spills beyond the demand arc
+  if (model.exportMw > 0) {                                   // surplus spills beyond the demand arc
     svg += band(model.arcTotal + GAP / 2, total, COL_EXPORT);
     svg += tick(model.arcTotal, '#15181c', 16, 2.2);         // "demand met" divider
-  } else if (!using && Math.abs(ss) >= 1) {                   // generating: mark demand + flag the trade
-    svg += (ss < 0)
-      ? outer(demandMw, model.arcTotal, COL_EXPORT)           // generation beyond demand → exported
-      : outer(model.arcTotal, demandMw, '#7d1420');           // generation short of demand → imports filled it
-    svg += tick(demandMw, '#15181c', 16, 2.2);               // demand marker
   }
-  // Needle points at the firm boundary (where green meets red) — the headline firm share.
+  // Inner group-indicator arc, set in a little from the outer ring: green = reliable share of demand,
+  // red = unreliable share. The outer ring now carries per-source colours, so this is the two-colour
+  // reliable/unreliable read. firmMw = where reliable meets unreliable.
   const firmMw = model.slices.filter((s) => s.group === 'reliable').reduce((a, s) => a + s.mw, 0);
-  const [nx, ny] = arcPoint(cx, cy, R - 14, firmMw, total);
+  const Ri = 66, IGAP = total * 0.006;
+  const inner = (v0, v1, color) =>
+    `<path d="${arcPath(cx, cy, Ri, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="7"/>`;
+  if (firmMw > IGAP) svg += inner(0, firmMw - IGAP / 2, '#1b6e45');                       // reliable (green)
+  if (model.arcTotal - firmMw > IGAP) svg += inner(firmMw + IGAP / 2, model.arcTotal, '#d6121f'); // unreliable (red)
+  // Needle points at the firm boundary; shortened to sit just inside the inner arc.
+  const [nx, ny] = arcPoint(cx, cy, Ri - 6, firmMw, total);
   const ncol = armed ? '#d6121f' : '#15181c';
   svg += `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${ncol}" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="5" fill="${ncol}"/>`;
-  const basis = model.view === 'using' ? 'share of demand' : 'share of generation';
-  return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="Source mix — ${basis}, firm ${model.firmPct}%">${svg}</svg>`;
+  return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="Source mix — share of demand, firm ${model.firmPct}%">${svg}</svg>`;
 }
 
 // ============================================================ live entries
 let NAMEPLATE = null; // DUKES anchor (sound capacity-trap denominator)
 
 function renderVerdict(state) {
-  LAST_STATE = state;   // so the Using/Generating toggle can re-render without a refetch
-  const badge = state.mode === 'live' ? 'live'
+  LAST_STATE = state;   // cached so the reliability caret can re-place without a refetch
+  const badge = state.mode === 'live' ? ''   // live is the normal state — no label, only flag the abnormal
     : `<span class="modebadge ${state.mode}">${state.mode}</span>`;
   $('verdict-mode').innerHTML = badge;
 
@@ -164,60 +187,48 @@ function renderVerdict(state) {
     return;
   }
   const v = state.verdict;
-  const view = getGaugeView();
-  const m = sourceArcModel(v, view);
+  const m = sourceArcModel(v);
   const status = firmStatus(m.firmPct);
-  const using = view === 'using';
-  // One integer pair so the two stamps always sum to 100 (no 80% + 21% rounding artefact).
-  const firmInt = Number.isFinite(m.firmPct) ? Math.round(m.firmPct) : null;
-  const firmStamp = firmInt == null ? '—' : `${firmInt}%`;
-  const weatherStamp = firmInt == null ? '—' : `${100 - firmInt}%`;
 
   // Receipt rows derive from the SAME model the arc draws, so the table and the gauge never disagree.
   const rel = m.slices.filter((s) => s.group === 'reliable');
   const unr = m.slices.filter((s) => s.group === 'unreliable');
   const sumMw = (a) => a.reduce((s, x) => s + x.mw, 0);
-  const pctOf = (mw) => (m.arcTotal > 0 ? Math.round((mw / m.arcTotal) * 1000) / 10 : NaN);
-  const toRow = (s) => ({ fuel: s.label, mw: s.mw, pct: pctOf(s.mw), color: s.color });
+  // Whole-percent shares (largest remainder) so the displayed integers sum to exactly 100.
+  const pctByKey = integerShares(m.slices, m.arcTotal);
+  const groupPct = (a) => a.reduce((s, x) => s + (pctByKey.get(x) || 0), 0);
+  const toRow = (s) => ({ fuel: s.label, mw: s.mw, pct: pctByKey.get(s) || 0, color: s.color });
   const firmRows = rel.map(toRow);
   const varRows = unr.map(toRow);
-  const maxPct = Math.max(...[...firmRows, ...varRows].map((r) => r.pct).filter(Number.isFinite), 1);
+  const relPct = groupPct(rel);            // reliable + unreliable = 100 by construction
+  const unrPct = groupPct(unr);
+  const firmStamp = `${relPct}%`;
+  const weatherStamp = `${unrPct}%`;
+  const maxPct = Math.max(...[...firmRows, ...varRows].map((r) => r.pct), 1);
   // Each row's bar is its slice colour in the arc, so the receipt doubles as the gauge legend.
   const row = (r) => Number.isFinite(r.pct) ? `
     <tr>
       <td class="fuel">${esc(r.fuel)}</td>
       <td class="n">${fmtMW(r.mw)}</td>
-      <td class="n">${fmtPct(r.pct)}</td>
+      <td class="n">${r.pct}%</td>
       <td class="bar-cell"><div class="bar" style="width:${(Math.max(0, r.pct) / maxPct * 100).toFixed(0)}%;background:${r.color}"></div></td>
     </tr>` : '';
-  const groupHead = (label, mw, pct, red) => `
-    <tr class="group ${red ? 'fail' : ''}"><td class="fuel">${label}</td>
-      <td class="n">${fmtMW(mw)}</td><td class="n">${fmtPct(pct)}</td><td class="bar-cell"></td></tr>`;
+  const groupHead = (label, mw, pct, tone) => `
+    <tr class="group ${tone || ''}"><td class="fuel">${label}</td>
+      <td class="n">${fmtMW(mw)}</td><td class="n">${pct}%</td><td class="bar-cell"></td></tr>`;
 
-  const netImp = m.selfSufficiencyMw;
-  const weatherLabel = using ? 'Weather &amp; imports' : 'Wind &amp; solar';
-  const totalLabel = using ? 'National demand' : 'Total generation';
-  const ssline = using
-    ? (m.exportMw > 0 ? `<p class="ssline export">Exporting ${fmtGW(m.exportMw)} surplus — generated beyond demand</p>` : '')
-    : `<p class="ssline">${netImp >= 0 ? `Importing ${fmtGW(netImp)} — short of self-sufficiency` : `Exporting ${fmtGW(-netImp)} — beyond self-sufficiency`}</p>`;
+  const weatherLabel = 'Weather &amp; imports';
+  const totalLabel = 'National demand';
+  const ssline = m.exportMw > 0
+    ? `<p class="ssline export">Exporting ${fmtGW(m.exportMw)} surplus — generated beyond demand</p>` : '';
   // The interconnection row has no proportional bar (it isn't part of the 100%), so its bar cell
-  // carries a fixed colour swatch as the legend key: magenta for exported surplus, import-red
-  // (matching the Imports slice, render.js COL_IMPORTS) for net imports.
-  const extra = using
-    ? (m.exportMw > 0 ? { label: 'Exported (surplus)', mw: m.exportMw, color: COL_EXPORT } : null)
-    : (netImp < 0 ? { label: 'Net exports', mw: -netImp, color: COL_EXPORT }
-      : { label: 'Net imports', mw: netImp, color: '#7d1420' });
+  // carries a fixed colour swatch as the legend key: magenta for an exported surplus (COL_EXPORT).
+  const extra = m.exportMw > 0 ? { label: 'Exported (surplus)', mw: m.exportMw, color: COL_EXPORT } : null;
   const extraRow = extra
     ? `<tr class="export-row"><td class="fuel">${extra.label}</td><td class="n">${fmtMW(extra.mw)}</td><td class="n">—</td><td class="bar-cell"><div class="bar" style="width:16px;background:${extra.color}"></div></td></tr>`
     : '';
-  const toggle = `
-    <div class="gauge-toggle" role="group" aria-label="Gauge view">
-      <button type="button" data-view="using" aria-pressed="${using}"${using ? ' class="on"' : ''}>Using</button>
-      <button type="button" data-view="generating" aria-pressed="${!using}"${!using ? ' class="on"' : ''}>Generating</button>
-    </div>`;
 
   $('verdict-body').innerHTML = `
-    ${toggle}
     <div class="verdict-cols">
       <div class="verdict-gauge">
         <div class="gauge-block">
@@ -225,22 +236,21 @@ function renderVerdict(state) {
           <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
         </div>
         <div class="stamp-pair">
-          <div class="stamp"><span class="stamp-val muted">${firmStamp}</span>
+          <div class="stamp"><span class="stamp-val reliable">${firmStamp}</span>
             <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
-          <div class="stamp"><span class="stamp-val lead ${status.armed ? 'red' : ''}">${weatherStamp}</span>
+          <div class="stamp"><span class="stamp-val unreliable">${weatherStamp}</span>
             <span class="stamp-label">${weatherLabel}</span></div>
         </div>
-        <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
         ${ssline}
       </div>
       <div class="verdict-receipt">
         <table class="receipt">
-          <caption>The receipt — ${using ? "what's meeting demand right now" : 'what Britain is generating right now'}</caption>
+          <caption>The receipt — what's meeting demand right now</caption>
           <thead><tr><th>Source</th><th>Output</th><th>Share</th><th class="bar-cell"></th></tr></thead>
           <tbody>
-            ${groupHead('Gas/nuclear/biofuel/hydro', sumMw(rel), pctOf(sumMw(rel)), false)}
+            ${groupHead('Reliable', sumMw(rel), relPct, 'pass')}
             ${firmRows.map((r) => row(r)).join('')}
-            ${groupHead(weatherLabel, sumMw(unr), pctOf(sumMw(unr)), true)}
+            ${groupHead('Unreliable', sumMw(unr), unrPct, 'fail')}
             ${varRows.map((r) => row(r)).join('')}
             <tr class="total"><td class="fuel">${totalLabel}</td><td class="n">${fmtMW(m.arcTotal)}</td><td class="n">100% ✓</td><td class="bar-cell"></td></tr>
             ${extraRow}
@@ -250,64 +260,207 @@ function renderVerdict(state) {
     </div>
     ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${fmtUTC(v.snapshot) || `${String(v.snapshot).slice(11, 16)}Z`}`, 'verdict')}`;
 
-  // share the live firm-power card
-  $('verdict-body').insertAdjacentHTML('beforeend', shareButtons(
-    { slug: 'firm-now', figure: `${100 - Math.round(m.firmPct)}% unreliable`,
-      label: "of Britain's grid is weather-dependent or imported right now — wind, solar and interconnectors that fall away together" }));
-
-  $('verdict-body').querySelectorAll('.gauge-toggle button').forEach((b) =>
-    b.addEventListener('click', () => { setGaugeView(b.dataset.view); renderVerdict(LAST_STATE); }));
-
   renderTrap(v);
 }
 
+// Per-source colour identities. The dial bands use three shades (track / 9-in-10 / usual-half), luma-
+// matched to the original greys (218/185/130) so perceived brightness is unchanged; `full` (+ fullRgb)
+// is the saturated end of the carpet & legend ramp (white = no output → this hue = full output).
+// Blue = wind, yellowy-orange = solar.
+const DIAL_PALETTE = {
+  wind: { track: '#cbdef0', band: '#9cbfe3', core: '#4e8dcd', full: '#1f6fc0', fullRgb: [31, 111, 192] },
+  solar: { track: '#e8d9be', band: '#d4b684', core: '#b17c23', full: '#e0921a', fullRgb: [224, 146, 26] },
+};
+
+// Lay out the legend's numeric percentile markers (positions in bar-%), dropping any lower-priority
+// label that would collide with a kept one — e.g. solar's all-hours median 0% sitting on top of its
+// 0% lower quartile. Median wins (pr 2) over the quartile ends (pr 1).
+const _NUM_MINGAP = 7;   // bar-% within which two labels would overlap
+function numsRow(marks) {
+  const kept = [];
+  for (const m of [...marks].sort((a, b) => b.pr - a.pr)) {
+    if (kept.every((k) => Math.abs(k.pos - m.pos) >= _NUM_MINGAP)) kept.push(m);
+  }
+  kept.sort((a, b) => a.pos - b.pos);
+  const span = (m) => `<span class="cl-num ${m.cls || ''}" style="left:${m.pos.toFixed(1)}%${m.color ? `; color:${m.color}` : ''}">${m.txt}</span>`;
+  return `<span class="cl-nums" aria-hidden="true">${kept.map(span).join('')}</span>`;
+}
+
+// Entry 02: one block per source (wind, then solar). Each block is a full-width source label row,
+// then the live dial (1/3 column) beside its half-hourly carpet (2/3 column), then an aligned row
+// of the two source lines. A single colour legend sits above. No combined/aggregate gauge — solar
+// must not flatter the wind reading; each uses its own nameplate so dial and carpet share a basis.
 function renderTrap(v) {
   $('entry-trap').hidden = false;
-  const built = NAMEPLATE ? NAMEPLATE.wind_plus_solar_gw : 50.362;
-  const delivering = (v.wind_mw || 0) + (v.solar_mw || 0);
-  const t = capacityTrapStatic(delivering, built);
-  const nameplateMw = (CAPACITY && CAPACITY.gauge && CAPACITY.gauge.nameplate_mw) || Math.round(built * 1000);
-  const gauge = buildGauge(t.share_pct, 100, {
-    label: 'Wind and solar output as a share of installed capacity',
-    calibration: gaugeCalibration(nameplateMw),
-  });
-  const punch = `<p class="duel-punch">Britain has built <strong>${built.toFixed(1)} GW</strong> of wind and solar.
-      Right now the whole fleet is delivering <strong>${fmtGW(delivering)}</strong> — just
-      <strong>${fmtPct(t.share_pct)}</strong> of what's installed.</p>`;
-
-  const carpet = (kind, title, caption) => {
-    if (!(CAPACITY && CAPACITY[kind] && CAPACITY[kind].days && CAPACITY[kind].days.length)) return '';
-    const src = kind === 'wind' ? CAPACITY.source_wind : CAPACITY.source_solar;
-    return `
-      <div class="carpet-cell">
-        <p class="carpet-title">${esc(title)}</p>
-        <canvas id="carpet-${kind}" class="carpet" role="img" aria-label="${esc(title)}: ${esc(caption)}"></canvas>
-        <div class="carpet-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
-        <p class="carpet-cap">${esc(caption)}</p>
-        ${srcLine(src, 'capacity-trap')}
-      </div>`;
-  };
-
-  const windCap = 'Wind keeps no timetable. The red bands are stretches — hours to days — when it simply stopped. There is no time of day you can count on it.';
-  const solarCap = 'Solar runs to a timetable: strong at midday, nothing at night, far less in winter. The dark is when it gives nothing.';
+  const dukesWind = NAMEPLATE ? NAMEPLATE.wind_gw : 32.082;
+  const dukesSolar = NAMEPLATE ? NAMEPLATE.solar_gw : 18.28;
+  const g = (CAPACITY && CAPACITY.gauge) || {};
+  const windCapMw = g.wind_nameplate_mw || Math.round(dukesWind * 1000);
+  const solarCapMw = g.solar_nameplate_mw || Math.round(dukesSolar * 1000);
   const hasCarpets = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
 
-  $('trap-body').innerHTML = `
-    <div class="trap-row${hasCarpets ? '' : ' gauge-only'}">
-      <div class="trap-gauge">
-        <div class="gauge-block">${gauge}</div>
-        <div class="carpet-key"><span class="ck pale"></span>full output <span class="ck red"></span>nothing</div>
-        ${punch}
-        ${srcLine('Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 nameplate', 'capacity-trap')}
+  // Per-source dial palettes — three shades each (track / 9-in-10 band / usual-half core), luma-
+  // matched to the original greys (218/185/130) so perceived brightness is unchanged. Blue = wind,
+  // yellowy-orange = solar.
+  const gaugeFor = (sourceMw, capMw, label, dist, palette) => buildGauge(capMw ? (sourceMw / capMw) * 100 : 0, 100, {
+    label, calibration: gaugeCalibration(capMw), dist, palette,
+  });
+  const srcP = (cls, txt) =>
+    `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#capacity-trap">→ method</a></p>`;
+
+  // Mean capacity factor over the rolling year (all half-hourly cells) — the "rarely tops a quarter"
+  // fact, stated in the label row beside the live dial.
+  const avgPct = (kind) => {
+    if (!hasCarpets) return null;
+    let s = 0, n = 0;
+    for (const d of CAPACITY[kind].days) for (const cf of d.cf) if (cf != null) { s += cf; n += 1; }
+    return n ? Math.round((s / n) * 100) : null;
+  };
+
+  // Output distribution over the rolling year (half-hourly cells) — painted onto the dial so "now"
+  // reads against where output sits. The CENTRAL marker is the MEAN (= the load factor / annual
+  // capacity factor), not the median: solar is dark over half the year, so its median is 0% — a fact
+  // about the Earth's rotation, not about the panels. The mean is the fair, standard "what it
+  // delivers" figure. The percentile band stays as the variability picture. Memoised on the payload.
+  const distFor = (kind) => {
+    if (!hasCarpets) return null;
+    const node = CAPACITY[kind];
+    if (node._dist) return node._dist;
+    const vals = [];
+    for (const d of node.days) for (const cf of d.cf) if (cf != null) vals.push(cf);
+    if (!vals.length) return null;
+    const mean = (vals.reduce((s, v) => s + v, 0) / vals.length) * 100;
+    vals.sort((a, b) => a - b);
+    const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))] * 100;
+    return (node._dist = { p10: q(0.1), p25: q(0.25), p50: q(0.5), p75: q(0.75), p90: q(0.9), mean });
+  };
+
+  // Each source gets its own colour legend, sharing its label's row in the stripe column (so it is
+  // the same width as the stripe below it) and carrying a live "now" caret at the instantaneous
+  // capacity-factor reading — the same value the dial needle points to.
+  const legendFor = (kind, cf, pal, dist) => {
+    const satFull = (CAPACITY && CAPACITY.sat && CAPACITY.sat[kind]) || 1;
+    const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
+    const pos = L(cf);
+    // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
+    // dial bands): p10–p90 whisker (pal.band), p25–p75 usual half (pal.core), and an AVERAGE tick
+    // (ink) — the mean / load factor, not the median (see distFor). Numbers label the 9-in-10 ends
+    // and the average.
+    let box = '';
+    if (dist) {
+      const x = (pPct) => L(pPct / 100);   // dist percentiles are 0..100
+      const [p10, p90] = [dist.p10, dist.p90].map(Math.round);
+      const [p25, p75] = [dist.p25, dist.p75].map(Math.round);
+      const avg = Math.round(dist.mean);
+      box = `
+        <span class="cl-box" aria-hidden="true" title="last year: average ${avg}%, usual half ${p25}–${p75}%, 9-in-10 ${p10}–${p90}% of capacity">
+          <span class="cl-box-line" style="left:${x(dist.p10).toFixed(1)}%; width:${(x(dist.p90) - x(dist.p10)).toFixed(1)}%; background:${pal.band}"></span>
+          <span class="cl-box-iqr" style="left:${x(dist.p25).toFixed(1)}%; width:${(x(dist.p75) - x(dist.p25)).toFixed(1)}%; background:${pal.core}"></span>
+          <span class="cl-box-avg" style="left:${x(dist.mean).toFixed(1)}%"></span>
+        </span>
+        ${numsRow([
+          { pos: x(dist.p10), txt: `${p10}%`, color: pal.core, pr: 1 },   // widest interval (9-in-10) ends
+          { pos: x(dist.mean), txt: `${avg}%`, cls: 'cl-num-avg', pr: 2 },  // average (mean / load factor)
+          { pos: x(dist.p90), txt: `${p90}%`, color: pal.core, pr: 1 },
+        ])}`;
+    }
+    return `
+    <div class="carpet-legend">
+      <span class="cl-lab">No output</span>
+      <span class="cl-bar-wrap">
+        <span class="cl-bar" style="background:linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})" aria-hidden="true"></span>
+        <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${Math.round(cf * 100)}% of capacity">now</span>
+        ${box}
+      </span>
+      <span class="cl-lab">Full output</span>
+    </div>`;
+  };
+
+  const block = (kind, label, sourceMw, capMw, gaugeSrc, carpetSrc) => {
+    const pal = DIAL_PALETTE[kind];
+    const gauge = gaugeFor(sourceMw, capMw, `${label} output as a share of installed capacity`, distFor(kind), pal);
+    const avg = avgPct(kind);
+    const avgNote = avg == null ? '' : `<span class="trap-avg">averages ${avg}% of capacity over the year</span>`;
+    const cf = capMw ? (sourceMw / capMw) : 0;
+    // A single annotation — under solar only, to conserve space — explaining the hybrid box-whisker
+    // key that sits above each carpet (it serves both sources and the dial bands, same scheme).
+    const keyNote = (hasCarpets && kind === 'solar')
+      ? `<p class="trap-note">Reading the key above each carpet: the thin line spans the middle 9 in 10 half-hours over the last year, the thick bar the <strong>usual half</strong> (the middle 50% of readings), and the tick the <strong>average</strong>; the &#8220;now&#8221; caret and the dial needle mark the latest half-hour.</p>`
+      : '';
+    const strip = hasCarpets ? `
+      <div class="carpet-cell">
+        <div class="carpet-stage">
+          <div class="carpet-yaxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+          <canvas id="carpet-${kind}" class="carpet" role="img"
+            aria-label="${esc(label)} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity."></canvas>
+        </div>
+        <div class="carpet-xaxis" id="carpet-${kind}-x"></div>
       </div>
-      ${carpet('wind', 'Wind, every half-hour of the last year', windCap)}
-      ${carpet('solar', 'Solar, every half-hour of the last year', solarCap)}
+      ${srcP('trap-src-gauge', gaugeSrc)}
+      ${srcP('trap-src-strip', carpetSrc)}`
+      : srcP('trap-src-gauge', gaugeSrc);
+    return `
+      <p class="trap-label">${esc(label)}${avgNote}</p>
+      ${hasCarpets ? legendFor(kind, cf, pal, distFor(kind)) : ''}
+      <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
+      ${strip}
+      ${keyNote}`;
+  };
+
+  const windGaugeSrc = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 wind nameplate';
+  const solarGaugeSrc = 'Live: NESO embedded forecast / NESO embedded-solar capacity';
+  const cWind = (CAPACITY && CAPACITY.source_wind) || windGaugeSrc;
+  const cSolar = (CAPACITY && CAPACITY.source_solar) || solarGaugeSrc;
+
+  $('trap-body').innerHTML = `
+    <div class="trap-grid${hasCarpets ? '' : ' gauge-only'}">
+      ${block('wind', 'Wind', v.wind_mw || 0, windCapMw, windGaugeSrc, cWind)}
+      ${block('solar', 'Solar', v.solar_mw || 0, solarCapMw, solarGaugeSrc, cSolar)}
     </div>`;
 
   if (hasCarpets) {
-    drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
-    drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
+    syncCarpetHeight();
+    drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
+    drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
   }
+}
+
+// Match each carpet to the VISIBLE DIAL height beside it (the semicircle arc, not the gauge's full
+// SVG box, which carries the calibration labels above/below). The arc spans radius R of the viewBox
+// width, so its rendered height is gaugeWidth × R/viewBoxWidth. Mirrored onto the grid as --carpet-h
+// before drawCarpet so the canvas measures the right height.
+const DIAL_ARC_RATIO = 86 / 232;   // buildGauge R / viewBox width — keep in sync with buildGauge
+function syncCarpetHeight() {
+  const gauge = document.querySelector('.trap-gauge-cell .gauge');
+  const grid = document.querySelector('.trap-grid');
+  if (!gauge || !grid) return;
+  const h = Math.round(gauge.getBoundingClientRect().width * DIAL_ARC_RATIO);
+  if (h > 0) grid.style.setProperty('--carpet-h', `${h}px`);
+}
+
+// Month ticks for a carpet's date (X) axis: one label at each month boundary, positioned by its
+// fractional offset along the day array. Oldest day is at the left (frac 0), newest at the right.
+const _CARPET_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function layoutCarpetAxis(kind, days) {
+  const el = $(`carpet-${kind}-x`);
+  if (!el || !days || !days.length) return;
+  let last = null, html = '';
+  for (let i = 0; i < days.length; i++) {
+    const ds = days[i].date, mo = ds.slice(5, 7);
+    if (mo === last) continue;
+    last = mo;
+    // Skip the partial leading month (the rolling window starts mid-month) — its label would
+    // collide with the first full month's tick a few days to its right.
+    if (i === 0 && parseInt(ds.slice(8, 10), 10) > 1) continue;
+    const frac = i / days.length;
+    if (frac > 0.96) continue;                 // drop a label that would collide with the right edge
+    // Stamp the year on January (the rollover) so the timeline is unambiguous: months left of it are
+    // the prior year, right of it the current — the right edge is the latest settled month (~3 weeks
+    // behind today), so the current month is not yet in the settled carpet.
+    const yr = mo === '01' ? ` <b>’${ds.slice(2, 4)}</b>` : '';
+    html += `<span style="left:${(frac * 100).toFixed(2)}%">${_CARPET_MON[parseInt(mo, 10) - 1]}${yr}</span>`;
+  }
+  el.innerHTML = html;
 }
 
 // ============================================================ the wind stripe
@@ -379,9 +532,12 @@ function drawStripe() {
   ctx.stroke();
 }
 
-// A carpet plot: x = settlement period (time of day, 48), y = day (newest at top). Each cell
-// coloured by its half-hourly capacity factor (carpetCellColor). DPR-aware; redrawn on resize.
-function drawCarpet(canvasId, days, satFull) {
+// A carpet plot: x = date (oldest left → newest right), y = time of day (SP1=00:00 top → SP48
+// bottom). Each cell coloured by its half-hourly capacity factor (carpetCellColor): white = no
+// output, deepening to `full` (the source hue) at full capacity. The date axis is lowest-output-wins
+// downsampled so a sub-pixel calm spell (now palest) is never averaged out. DPR-aware; redrawn on
+// resize, with its month axis re-laid out to match.
+function drawCarpet(canvasId, days, satFull, full) {
   const canvas = $(canvasId);
   if (!canvas || !days || !days.length) return;
   const dpr = window.devicePixelRatio || 1;
@@ -392,21 +548,22 @@ function drawCarpet(canvasId, days, satFull) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
   const nDays = days.length, P = 48;
-  const colW = cssW / P;                       // a column per half-hour (time of day)
-  for (let sy = 0; sy < cssH; sy++) {          // a screen row per pixel; map to a day (newest at top)
-    const d0 = Math.floor((sy / cssH) * nDays);
-    const d1 = Math.max(d0 + 1, Math.floor(((sy + 1) / cssH) * nDays));
+  const rowH = cssH / P;                        // a row per half-hour (time of day)
+  for (let sx = 0; sx < cssW; sx++) {           // a screen column per pixel; map to a date span
+    const d0 = Math.floor((sx / cssW) * nDays);
+    const d1 = Math.max(d0 + 1, Math.floor(((sx + 1) / cssW) * nDays));
     for (let p = 0; p < P; p++) {
       let minCf = Infinity, saw = false;
       for (let d = d0; d < d1 && d < nDays; d++) {
-        const v = days[nDays - 1 - d].cf[p];   // newest (last) day at the top
+        const v = days[d].cf[p];               // oldest (first) day at the left
         if (v != null) { saw = true; if (v < minCf) minCf = v; }
       }
-      const [r, g, b] = carpetCellColor(saw ? minCf : null, satFull);
+      const [r, g, b] = carpetCellColor(saw ? minCf : null, satFull, full);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
-      ctx.fillRect(p * colW, sy, Math.ceil(colW), 1);
+      ctx.fillRect(sx, p * rowH, 1, Math.ceil(rowH));
     }
   }
+  layoutCarpetAxis(canvasId.replace('carpet-', ''), days);
 }
 
 function renderStripe() {
@@ -554,7 +711,7 @@ function updateReliabilityNow(state) {
   const el = $('reliability-now');
   if (!el) return;
   const v = state && state.verdict;
-  const m = v ? sourceArcModel(v, 'using') : null;
+  const m = v ? sourceArcModel(v) : null;
   if (!m) { el.hidden = true; return; }
   const unreliable = unreliableNowPct(m.firmPct);
   if (unreliable == null) { el.hidden = true; return; }
@@ -648,7 +805,9 @@ async function refreshLive() {
       `${state.lastUpdated}`;
     $('freshness').textContent =
       `Live layer: ${state.lastUpdated}. History rebuilt ${STRIPE ? new Date(STRIPE.generated_utc).toISOString().slice(0, 16).replace('T', ' ') + ' UTC' : ''}.`;
-    $('live-dot').textContent = state.mode === 'live' ? 'Live' : state.mode === 'fallback' ? 'Last good' : 'Offline';
+    const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
+    dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
+    dot.hidden = state.mode === 'live';
   } catch (e) {
     $('verdict-body').innerHTML = `<p class="warn">Live layer error — no current reading. ${esc(e.message || e)}</p>`;
     $('entry-trap').hidden = true;
@@ -692,8 +851,9 @@ async function main() {
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
     drawStripe(); drawReliabilityStripe(); drawReliabilityKey();
-    if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
-    if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
+    if (CAPACITY && CAPACITY.sat) syncCarpetHeight();
+    if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
+    if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
   }, 150); });
 }
 

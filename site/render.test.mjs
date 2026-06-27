@@ -11,21 +11,9 @@ import {
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
 
-test('sourceArcModel — generating view: domestic generation, imports off-arc', () => {
-  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 10000, solar_mw: 0, net_import_mw: -4000, national_demand_mw: 26000 };
-  const m = sourceArcModel(v, 'generating');
-  assert.equal(m.arcTotal, 30000);            // firm 20000 + wind 10000
-  assert.equal(m.firmPct, 66.7);
-  assert.equal(m.exportMw, 0);
-  assert.equal(m.selfSufficiencyMw, -4000);
-  assert.equal(m.slices.find((s) => s.key === 'imports'), undefined);
-  assert.ok(approx(m.slices.find((s) => s.key === 'wind').frac, 1 / 3));
-  assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
-});
-
-test('sourceArcModel — using view, importing: imports is a slice, fracs tile demand', () => {
+test('sourceArcModel — importing: imports is a slice, fracs tile demand', () => {
   const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 8000, solar_mw: 2000, net_import_mw: 6000, national_demand_mw: 36000 };
-  const m = sourceArcModel(v, 'using');
+  const m = sourceArcModel(v);
   assert.equal(m.arcTotal, 36000);
   assert.equal(m.firmPct, 55.6);
   assert.equal(m.exportMw, 0);
@@ -33,9 +21,9 @@ test('sourceArcModel — using view, importing: imports is a slice, fracs tile d
   assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
 });
 
-test('sourceArcModel — using view, exporting: weather slice shrinks, surplus is the tail', () => {
+test('sourceArcModel — exporting: weather slice shrinks, surplus is the tail', () => {
   const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 10000, solar_mw: 0, net_import_mw: -4500, national_demand_mw: 25500 };
-  const m = sourceArcModel(v, 'using');
+  const m = sourceArcModel(v);
   assert.equal(m.arcTotal, 25500);
   assert.equal(m.firmPct, 78.4);
   assert.equal(m.exportMw, 4500);
@@ -44,9 +32,9 @@ test('sourceArcModel — using view, exporting: weather slice shrinks, surplus i
   assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));       // served slices tile demand
 });
 
-test('sourceArcModel — using view, over-export: no negative slices (clamp), firm shrinks', () => {
+test('sourceArcModel — over-export: no negative slices (clamp), firm shrinks', () => {
   const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 2000, solar_mw: 0, net_import_mw: -5000, national_demand_mw: 17000 };
-  const m = sourceArcModel(v, 'using');
+  const m = sourceArcModel(v);
   assert.equal(m.exportMw, 5000);
   assert.equal(m.firmPct, 100);
   assert.ok(approx(m.slices.find((s) => s.key === 'wind').mw, 0));
@@ -191,16 +179,26 @@ test('reliabilityAxisTicks — empty series yields no ticks', () => {
   assert.equal(years.length, 0);
 });
 
-test('carpetCellColor — cf=0 deep red, cf>=satFull pale, null grey, monotonic', () => {
-  const red = carpetCellColor(0, 0.55);
-  const pale = carpetCellColor(0.55, 0.55);
-  const over = carpetCellColor(0.9, 0.55);     // clamps to pale
-  assert.deepEqual(red, [214, 18, 31]);
-  assert.deepEqual(pale, [251, 251, 249]);
-  assert.deepEqual(over, pale);
-  assert.deepEqual(carpetCellColor(null, 0.55), [232, 232, 230]);   // gap grey
-  const mid = carpetCellColor(0.275, 0.55);    // halfway -> between red and pale on each channel
-  assert.ok(mid[0] > red[0] && mid[0] < pale[0]);
+test('carpetCellColor — cf=0 paper, cf>=satFull saturated full colour, null grey, monotonic', () => {
+  const blue = [31, 111, 192];
+  const none = carpetCellColor(0, 0.55, blue);
+  const full = carpetCellColor(0.55, 0.55, blue);
+  const over = carpetCellColor(0.9, 0.55, blue);     // clamps to full
+  assert.deepEqual(none, [251, 251, 249]);           // no output -> white paper
+  assert.deepEqual(full, blue);                       // full output -> saturated source colour
+  assert.deepEqual(over, full);
+  assert.deepEqual(carpetCellColor(null, 0.55, blue), [232, 232, 230]);   // gap grey
+  const mid = carpetCellColor(0.275, 0.55, blue);    // halfway (OKLab) -> between paper and full per channel
+  assert.ok(mid[0] > full[0] && mid[0] < none[0]);
+  assert.ok(mid[2] > full[2] && mid[2] < none[2]);
+  // OKLab ramp is monotonic in lightness: each step toward full output is no lighter than the last.
+  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  let prev = lum(none);
+  for (let cf = 0.05; cf <= 0.55; cf += 0.05) {
+    const L = lum(carpetCellColor(cf, 0.55, blue));
+    assert.ok(L <= prev + 1e-9, `lightness should not increase at cf=${cf.toFixed(2)}`);
+    prev = L;
+  }
 });
 
 test('gaugeCalibration — five ticks, 0% and 100% present, MW ends 0 and nameplate', () => {

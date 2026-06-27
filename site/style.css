@@ -15,6 +15,7 @@
   --rule-soft: #eaecee;   /* intra-table rules, the stripe's pale (windy) end */
   --red:       #d6121f;   /* debit red — THE accent: headline, armed needle, failures */
   --red-deep:  #a8101b;   /* deep debit — failing body ink at small sizes, sub-5% ticks */
+  --heading:   var(--red);/* section-headline colour (Entry 01's red) — one knob for all headlines */
   --hatch:     #c9c6c0;   /* known-gap days only (never white, never red) */
   --hatch-bg:  #edebe6;
 
@@ -141,11 +142,11 @@ main { padding-bottom: 40px; }
 .headline {
   font-family: var(--display); font-weight: 700; line-height: 1.05;
   font-size: clamp(1.7rem, 4.2vw, 2.7rem); letter-spacing: -0.02em;
-  color: var(--red); margin: 0 0 8px;
+  color: var(--heading); margin: 0 0 8px;
 }
 .headline.ink { color: var(--ink); }
 .def {
-  font-family: var(--read); font-style: italic; color: var(--slate);
+  font-family: var(--read); font-style: italic; color: #3f464d; font-size: 1.15rem;
   margin: 0 0 18px;
 }
 .src {
@@ -175,17 +176,6 @@ main { padding-bottom: 40px; }
   .verdict-cols { grid-template-columns: 1fr; gap: 4px; }
 }
 
-/* ---------- the Using / Generating toggle (mirrors the Subsidy Clock switch) ---------- */
-.gauge-toggle {
-  display: flex; width: max-content; margin: 0 auto 10px; border: 1px solid var(--ink);
-  border-radius: 999px; overflow: hidden; background: var(--paper);
-}
-.gauge-toggle button {
-  font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.08em;
-  text-transform: uppercase; padding: 6px 16px; border: 0; background: transparent;
-  color: var(--ink); cursor: pointer;
-}
-.gauge-toggle button.on { background: var(--ink); color: var(--paper); }
 .gauge-block { text-align: center; margin: 6px 0 2px; }
 .gauge { width: min(440px, 92%); height: auto; display: block; margin: 0 auto; }
 .gauge-zonelabels {
@@ -204,17 +194,12 @@ main { padding-bottom: 40px; }
   letter-spacing: -0.02em; line-height: 1; display: block;
 }
 .stamp-val.red { color: var(--red); }
-.stamp-val.lead { font-size: clamp(2.2rem, 5.75vw, 3.2rem); }
-.stamp-val.muted { color: var(--slate); }
+.stamp-val.reliable { color: #1b6e45; }     /* reliable group — green, matches the receipt + inner arc */
+.stamp-val.unreliable { color: var(--red); }/* unreliable group — red */
 .stamp-label {
   font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.11em;
   text-transform: uppercase; color: var(--slate); margin-top: 6px; display: block;
 }
-.status-line {
-  font-family: var(--display); font-size: 0.78rem; letter-spacing: 0.12em;
-  text-transform: uppercase; text-align: center; margin: 14px 0 0; color: var(--ink);
-}
-.status-line.armed { color: var(--red); }
 .ssline {
   font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.04em;
   text-align: center; margin: 4px 0 0; color: var(--slate);
@@ -223,13 +208,13 @@ main { padding-bottom: 40px; }
 .receipt .export-row td { color: var(--slate); font-style: italic; border-top: 1px dashed #cfd4d8; }
 
 /* ---------- the receipt table ---------- */
-.receipt { width: 100%; border-collapse: collapse; margin: 20px 0 0; font-family: var(--mono); }
+.receipt { width: 100%; border-collapse: collapse; margin: 12px 0 0; font-family: var(--mono); }
 .receipt caption {
   font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--slate); text-align: left;
-  padding-bottom: 8px; border-bottom: 1px solid var(--ink);
+  padding-bottom: 6px; border-bottom: 1px solid var(--ink);
 }
-.receipt th, .receipt td { padding: 7px 8px; font-size: 0.86rem; }
+.receipt th, .receipt td { padding: 5px 8px; font-size: 0.86rem; }
 .receipt thead th {
   font-family: var(--display); font-weight: 500; font-size: 0.66rem;
   text-transform: uppercase; letter-spacing: 0.08em; color: var(--slate);
@@ -244,16 +229,17 @@ main { padding-bottom: 40px; }
 .bar.red { background: var(--red); }
 .receipt tr.total td {
   border-top: 2px solid var(--ink); border-bottom: none; font-weight: 600;
-  padding-top: 9px; color: var(--ink);
+  padding-top: 6px; color: var(--ink);
 }
 /* subtotal rows that head each reliability group (Firm power / Weather & imports) */
 .receipt tr.group td {
-  border-top: 1px solid var(--ink); border-bottom: none; padding-top: 11px;
+  border-top: 1px solid var(--ink); border-bottom: none; padding-top: 7px;
   font-family: var(--display); font-weight: 500; font-size: 0.74rem;
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink);
 }
 .receipt tr.group.fail td.fuel, .receipt tr.group.fail td.n { color: var(--red-deep); }
-.receipt tr.group + tr td { padding-top: 8px; }
+.receipt tr.group.pass td.fuel, .receipt tr.group.pass td.n { color: #1b6e45; }   /* reliable = green */
+.receipt tr.group + tr td { padding-top: 5px; }
 .receipt td.fuel { padding-left: 16px; }
 .receipt tr.group td.fuel, .receipt tr.total td.fuel { padding-left: 8px; }
 
@@ -396,19 +382,67 @@ main { padding-bottom: 40px; }
 .card-tile img { width:100%; height:auto; border:1px solid var(--rule); border-radius:6px; display:block; }
 .card-tile figcaption { font-family:var(--read); font-size:.95rem; margin:10px 0 4px; color:var(--ink); }
 
-/* Entry 02 — capacity trap: one row, three visual cells (gauge + two carpets) */
-.trap-row { display: grid; grid-template-columns: minmax(240px, 320px) 1fr 1fr; gap: 24px; align-items: start; }
-.trap-row.gauge-only { grid-template-columns: minmax(240px, 360px); }
-.trap-gauge { min-width: 0; }
-.carpet-cell { min-width: 0; }
-.carpet-title { font-weight: 600; margin: 0 0 6px; }
-.carpet { width: 100%; height: 320px; display: block; image-rendering: pixelated; }
-.carpet-axis { display: flex; justify-content: space-between; font: 500 11px/1 'Spline Sans Mono', monospace; color: #565e66; margin-top: 3px; }
-.carpet-cap { font-size: 13px; color: #565e66; margin: 8px 0 0; }
-.carpet-key { font-size: 12px; color: #565e66; margin: 4px 0 0; }
-.carpet-key .ck { display: inline-block; width: 11px; height: 11px; vertical-align: middle; margin: 0 3px; border: 1px solid #d7dbdf; }
-.carpet-key .ck.pale { background: #fbfbf9; }
-.carpet-key .ck.red { background: #d6121f; }
+/* Entry 02 — capacity trap: per-source blocks (label row · dial 1/3 + carpet 2/3 · aligned source row) */
+.trap-grid { display: grid; grid-template-columns: 1fr 2fr; column-gap: 24px; row-gap: 4px; align-items: stretch; }
+.trap-grid.gauge-only { grid-template-columns: 1fr; }
+
+/* the single colour legend shares the Wind label's row, in the stripe column (same width as the
+   stripe), the gradient bar filling the column between its end labels */
+.carpet-legend { grid-column: 2; align-self: center; display: flex; align-items: center; gap: 10px; margin: 18px 0 24px;
+  font-family: var(--display); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate); }
+.carpet-legend .cl-bar-wrap { position: relative; flex: 1 1 0; display: flex; align-items: center; }
+/* ramp gradient (white = no output → saturated source colour = full output) is set inline per source */
+.carpet-legend .cl-bar { width: 100%; height: 10px; border: 1px solid var(--rule); }
+/* live "now" caret over the bar, at the instantaneous capacity-factor reading (cf. Entry 01) */
+.carpet-legend .cl-now { position: absolute; bottom: 100%; margin-bottom: 4px; transform: translateX(-50%);
+  font-size: 0.56rem; font-weight: 600; letter-spacing: 0.04em; color: var(--ink); white-space: nowrap; pointer-events: none; }
+.carpet-legend .cl-now::after { content: ''; position: absolute; left: 50%; top: 100%; transform: translateX(-50%);
+  border-left: 3px solid transparent; border-right: 3px solid transparent; border-top: 4px solid var(--ink); }
+/* rolling-year distribution box-plot below the bar: p10–p90 whisker, p25–p75 usual half, average tick.
+   Colours are set inline per source (band/core hue) to match the dial's distribution bands. */
+.carpet-legend .cl-box { position: absolute; top: 100%; left: 0; right: 0; height: 8px; margin-top: 3px; }
+.carpet-legend .cl-box-line { position: absolute; top: 3px; height: 2px; background: var(--slate); }
+.carpet-legend .cl-box-iqr { position: absolute; top: 1px; height: 6px; background: var(--slate); }
+.carpet-legend .cl-box-avg { position: absolute; top: 0; width: 2px; height: 8px; background: var(--ink); transform: translateX(-50%); }
+/* numeric markers under the box: the 9-in-10 ends (in the source hue) and the average (ink) */
+.carpet-legend .cl-nums { position: absolute; top: 100%; left: 0; right: 0; margin-top: 14px; height: 0.8em; }
+.carpet-legend .cl-num { position: absolute; transform: translateX(-50%); white-space: nowrap;
+  font: 600 0.64rem/1 'Spline Sans Mono', monospace; letter-spacing: 0; text-transform: none; }
+.carpet-legend .cl-num-avg { color: var(--ink); }
+
+/* the source label (Wind / Solar) sits in the gauge column, with the rolling-year average alongside */
+.trap-label { grid-column: 1; margin: 16px 0 2px; font-family: var(--display); font-weight: 600;
+  font-size: 1.05rem; color: var(--ink); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.trap-avg { font-family: var(--read); font-weight: 400; font-size: 0.85rem; color: var(--slate); }
+
+.trap-gauge-cell { grid-column: 1; min-width: 0; }
+/* one neutral full-width note (under solar only) explaining the hybrid box-whisker key */
+.trap-note { grid-column: 1 / -1; margin: 8px 0 2px; font-family: var(--read); font-size: 0.8rem;
+  color: var(--slate); line-height: 1.5; }
+.trap-note strong { color: var(--ink); font-weight: 600; }
+/* bottom-align the stripe so its base lines up with the dial below it (legend sits just above) */
+.carpet-cell { grid-column: 2; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+.carpet-stage { flex: 0 0 auto; display: flex; gap: 6px; height: var(--carpet-h, 150px); }
+.carpet-yaxis { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: space-between;
+  font: 500 11px/1 'Spline Sans Mono', monospace; color: #565e66; }
+.carpet { flex: 1 1 0; min-width: 0; height: 100%; display: block; image-rendering: pixelated;
+  box-sizing: border-box; border: 1px solid var(--rule); }
+.carpet-xaxis { position: relative; height: 14px; margin: 3px 0 0; font: 500 11px/1 'Spline Sans Mono', monospace; color: #565e66; }
+.carpet-xaxis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+.carpet-xaxis b { color: var(--ink); font-weight: 600; }
+
+/* the two source lines share one grid row below their unit, so they align vertically */
+.trap-src { margin: 6px 0 0; }
+.trap-src-gauge { grid-column: 1; }
+.trap-src-strip { grid-column: 2; }
+
 .gauge .g-pct { font: 600 9px 'Spline Sans Mono', monospace; fill: #15181c; }
 .gauge .g-mw { font: 500 7px 'Spline Sans Mono', monospace; fill: #565e66; }
-@media (max-width: 900px) { .trap-row { grid-template-columns: 1fr; gap: 16px; } .carpet { height: 280px; } }
+/* The trap dials fill their 1/3 column; the calibration text is enlarged for legibility. */
+.trap-gauge-cell .gauge { width: 100%; max-width: 380px; }
+.trap-gauge-cell .gauge .g-pct { font-size: 10px; }
+.trap-gauge-cell .gauge .g-mw { font-size: 8px; }
+@media (max-width: 900px) {
+  .trap-grid, .trap-grid.gauge-only { grid-template-columns: 1fr; }
+  .trap-label, .carpet-legend, .trap-gauge-cell, .carpet-cell, .trap-src-gauge, .trap-src-strip { grid-column: 1; }
+}

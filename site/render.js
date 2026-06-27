@@ -106,27 +106,25 @@ export function firmShares(v) {
 }
 
 // --- the source-mix arc (the gauge) ----------------------------------------
-// The gauge is a proportional arc: one slice per source, length ∝ output, green-toned for the
-// reliable (dispatchable, weather-independent) sources and red-toned for the unreliable
-// (weather & imports) sources. Two views of the same mix, picked by a toggle:
-//   'using'      — the arc is 100% of national demand (what Britain consumes). Imports are a
-//                  slice when importing; on export the weather slices shrink to what served
-//                  demand and the surplus becomes a magenta spill-over tail (exportMw).
-//   'generating' — the arc is 100% of domestic generation (firm + wind + solar). Interconnection
-//                  is not a slice; it is reported as the signed self-sufficiency readout.
-// The arc only ever draws POSITIVE slices; a negative net flow (export) is the tail, never a slice.
+// The gauge is a proportional arc on the SHARE-OF-DEMAND basis: the arc is 100% of national demand
+// (what Britain consumes right now). One slice per source, length ∝ output — green-toned for the
+// reliable (dispatchable, weather-independent) sources, red-toned for the unreliable (weather &
+// imports). Imports are a slice when importing; on export the weather slices shrink to what served
+// demand and the surplus becomes a magenta spill-over tail (exportMw). Only POSITIVE slices are
+// drawn; a negative net flow (export) is the tail, never a slice. (The old "generating" basis —
+// share of domestic generation — was removed; self-sufficiency is read off the import/export line.)
 const ARC_RELIABLE = [
   ['gas', 'Gas', '#1b5e3f', (v) => v.gas_mw],
   ['nuclear', 'Nuclear', '#2e7d52', (v) => v.nuclear_mw],
   ['biofuel', 'Biofuel', '#4a9c73', (v) => v.biomass_mw],
   ['hydro', 'Hydro & other', '#79c1a0', (v) => v.other_mw],
 ];
-const COL_WIND = '#d6121f';     // the headline unreliable — brand red
-const COL_SOLAR = '#f08a3c';    // warm amber — nods to "sun", clearly distinct from wind
-const COL_IMPORTS = '#7d1420';  // deep maroon — darkened so it can't be confused with wind
-export const COL_EXPORT = '#c2188f';   // magenta — surplus sent abroad (deliberately not red/green)
+const COL_WIND = '#1f6fc0';     // wind — the blue from Entry 02 (per-source identity, not red)
+const COL_SOLAR = '#e0921a';    // solar — the yellow-orange from Entry 02
+const COL_IMPORTS = '#c2188f';  // imports — magenta (interconnector flows)
+export const COL_EXPORT = '#c2188f';   // magenta — surplus sent abroad (interconnector flows)
 
-export function sourceArcModel(v, view) {
+export function sourceArcModel(v) {
   const num = (x) => (Number.isFinite(x) ? x : 0);
   const reliable = ARC_RELIABLE.map(([key, label, color, get]) => ({
     key, label, color, group: 'reliable', mw: Math.max(0, num(get(v))),
@@ -138,40 +136,31 @@ export function sourceArcModel(v, view) {
   const netImp = num(v.net_import_mw);
   const red = (key, label, color, mw) => ({ key, label, color, group: 'unreliable', mw });
 
-  let arcTotal; let firmServed; let slices; let exportMw = 0;
+  const arcTotal = num(v.national_demand_mw);        // the arc is national demand
+  let firmServed; let slices; let exportMw = 0;
 
-  if (view === 'generating') {
-    arcTotal = firm + weather;                       // domestic generation
+  if (netImp >= 0) {                                 // importing: imports is a real slice
     firmServed = firm;
     slices = [...reliable,
       red('wind', 'Wind', COL_WIND, wind),
-      red('solar', 'Solar', COL_SOLAR, solar)];
-  } else {                                           // 'using' — arc is national demand
-    arcTotal = num(v.national_demand_mw);
-    if (netImp >= 0) {                               // importing: imports is a real slice
-      firmServed = firm;
-      slices = [...reliable,
-        red('wind', 'Wind', COL_WIND, wind),
-        red('solar', 'Solar', COL_SOLAR, solar),
-        red('imports', 'Imports', COL_IMPORTS, netImp)];
-    } else {                                         // exporting: surplus is the tail, not a slice
-      const exportTotal = -netImp;
-      const exportFromWeather = Math.min(exportTotal, weather);   // exports come off the surplus
-      const exportFromFirm = exportTotal - exportFromWeather;     // …then off firm (over-export)
-      const weatherServed = weather - exportFromWeather;
-      firmServed = firm - exportFromFirm;
-      const fScale = firm > 0 ? firmServed / firm : 0;
-      const wScale = weather > 0 ? weatherServed / weather : 0;
-      slices = [
-        ...reliable.map((r) => ({ ...r, mw: r.mw * fScale })),
-        red('wind', 'Wind', COL_WIND, wind * wScale),
-        red('solar', 'Solar', COL_SOLAR, solar * wScale)];
-      exportMw = exportTotal;
-    }
+      red('solar', 'Solar', COL_SOLAR, solar),
+      red('imports', 'Imports', COL_IMPORTS, netImp)];
+  } else {                                           // exporting: surplus is the tail, not a slice
+    const exportTotal = -netImp;
+    const exportFromWeather = Math.min(exportTotal, weather);     // exports come off the surplus
+    const exportFromFirm = exportTotal - exportFromWeather;       // …then off firm (over-export)
+    const weatherServed = weather - exportFromWeather;
+    firmServed = firm - exportFromFirm;
+    const fScale = firm > 0 ? firmServed / firm : 0;
+    const wScale = weather > 0 ? weatherServed / weather : 0;
+    slices = [
+      ...reliable.map((r) => ({ ...r, mw: r.mw * fScale })),
+      red('wind', 'Wind', COL_WIND, wind * wScale),
+      red('solar', 'Solar', COL_SOLAR, solar * wScale)];
+    exportMw = exportTotal;
   }
   const denom = arcTotal > 0 ? arcTotal : 1;
   return {
-    view,
     slices: slices.map((s) => ({ ...s, frac: s.mw / denom })),
     arcTotal,
     firmPct: Math.round((firmServed / denom) * 1000) / 10,
@@ -219,15 +208,45 @@ export const fmtGW = (mw) => (Number.isFinite(mw) ? `${(mw / 1000).toFixed(1)} G
 export const fmtMW = (mw) => (Number.isFinite(mw) ? `${Math.round(mw).toLocaleString('en-GB')} MW` : '—');
 
 // --- the capacity-trap carpets + gauge calibration (Entry 02) ----------------
-const _CARPET_PAPER = [251, 251, 249], _CARPET_RED = [214, 18, 31], _CARPET_GAP = [232, 232, 230];
+const _CARPET_PAPER = [251, 251, 249], _CARPET_FULL = [214, 18, 31], _CARPET_GAP = [232, 232, 230];
 
-// One carpet cell: cf -> colour. Pale paper at/above satFull (full output), deep red at 0 (calm/dark).
-// cf null -> neutral grey (a genuine data gap, distinct from solar's honest night-time 0).
-export function carpetCellColor(cf, satFull) {
+// sRGB <-> OKLab (Björn Ottosson, 2020). OKLab is a perceptually-uniform space: equal steps in its
+// coordinates read as equal perceived steps, and a white->colour line holds a single hue (no detour
+// through purple, the way a naive sRGB blend does). We interpolate the carpet/legend ramp here so an
+// equal capacity-factor step is an equal perceived-density step. The CSS legend bar mirrors this with
+// `linear-gradient(... in oklab, ...)`. See methodology.html #capacity-trap.
+const _s2l = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const _l2s = (c) => { const v = c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; return Math.max(0, Math.min(255, Math.round(v * 255))); };
+function _srgbToOklab([r, g, b]) {
+  const R = _s2l(r), G = _s2l(g), B = _s2l(b);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s];
+}
+function _oklabToSrgb([L, a, b]) {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3;
+  return [_l2s(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+          _l2s(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+          _l2s(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)];
+}
+
+// One carpet cell: cf -> colour. White paper at 0 (no output), deepening to the saturated `full`
+// colour at/above satFull (full output), interpolated in OKLab for a perceptually-uniform ramp.
+// `full` is the per-source [r,g,b] (blue for wind, amber for solar); it defaults to the original red.
+// The exact endpoints are returned verbatim (no OKLab round-trip drift). cf null -> neutral grey (a
+// data gap, not an honest 0).
+export function carpetCellColor(cf, satFull, full = _CARPET_FULL) {
   if (cf == null) return _CARPET_GAP.slice();
-  const c = Math.max(0, Math.min(1, cf / satFull));
-  const t = 1 - c;                                  // 0 at full output (pale), 1 at zero (red)
-  return [0, 1, 2].map((k) => Math.round(_CARPET_PAPER[k] + (_CARPET_RED[k] - _CARPET_PAPER[k]) * t));
+  const t = Math.max(0, Math.min(1, cf / satFull));  // 0 at no output (paper), 1 at full (saturated)
+  if (t <= 0) return _CARPET_PAPER.slice();
+  if (t >= 1) return full.slice();
+  const A = _srgbToOklab(_CARPET_PAPER), B = _srgbToOklab(full);
+  return _oklabToSrgb([0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * t));
 }
 
 // The gauge tick model at 0/25/50/75/100%: dial fraction + the inner (%) and outer (MW) labels.
