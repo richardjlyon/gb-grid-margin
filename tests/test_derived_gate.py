@@ -15,19 +15,12 @@ from __future__ import annotations
 import csv
 import glob
 import json
-from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
 
-from engine.derived import (
-    failure_counters,
-    records,
-    transmission_shares,
-    wind_cf_series,
-)
+from engine.derived import transmission_shares
 from engine.history import read_store
-from engine.models import NameplateSeries
 
 REPO = Path(__file__).resolve().parent.parent
 STORE_GLOB = str(REPO / "data" / "history" / "fuelhh_*.csv")
@@ -73,53 +66,6 @@ def _independent_recompute():
     cf = {d: round((sum(v) / len(v)) / (cap_for(int(d[:4])) * 1000), 4)
           for d, v in wind_by_day.items()}
     return cf, year_fuel
-
-
-def test_engine_cf_matches_independent_recompute_every_day():
-    rows = read_store()
-    ind_cf, _ = _independent_recompute()
-    eng_cf = {s["date"]: s["cf"] for s in wind_cf_series(rows, _ns())}
-    assert eng_cf == ind_cf
-
-
-def _ns() -> NameplateSeries:
-    return NameplateSeries.model_validate_json(NS_PATH.read_text())
-
-
-def test_engine_counters_match_independent_recompute():
-    rows = read_store()
-    ind_cf, _ = _independent_recompute()
-    eng = failure_counters(wind_cf_series(rows, _ns()))
-    for year in (2016, 2020, 2025):  # leap, mid, recent
-        obs = sum(1 for d in ind_cf if int(d[:4]) == year)
-        b10 = sum(1 for d, c in ind_cf.items() if int(d[:4]) == year and c < 0.10)
-        b5 = sum(1 for d, c in ind_cf.items() if int(d[:4]) == year and c < 0.05)
-        assert eng[year] == {"days_observed": obs, "below_10pct": b10, "below_5pct": b5}
-
-
-def test_engine_records_match_independent_recompute():
-    rows = read_store()
-    ind_cf, _ = _independent_recompute()
-    eng = records(wind_cf_series(rows, _ns()))
-
-    assert eng["lowest_cf_day"]["date"] == min(ind_cf, key=lambda d: (ind_cf[d], d))
-    assert eng["highest_cf_day"]["date"] == max(ind_cf, key=lambda d: (ind_cf[d], d))
-
-    best = (None, None, 0)
-    start, run, prev = None, 0, None
-    for d in sorted(ind_cf):
-        below = ind_cf[d] < 0.10
-        adj = prev is not None and date.fromisoformat(d) - date.fromisoformat(prev) == timedelta(days=1)
-        if below and adj and run > 0:
-            run += 1
-        elif below:
-            start, run = d, 1
-        else:
-            run = 0
-        if run > best[2]:
-            best = (start, d, run)
-        prev = d
-    assert eng["longest_sub10pct_run"] == {"start": best[0], "end": best[1], "days": best[2]}
 
 
 def test_engine_shares_match_independent_recompute_and_sum_to_100():

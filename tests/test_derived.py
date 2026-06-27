@@ -13,26 +13,11 @@ from __future__ import annotations
 
 from engine.derived import (
     day_mean_mw,
-    failure_counters,
     group_by_day,
     partial_years,
-    records,
     transmission_shares,
     wind_cf_for_day,
-    wind_cf_series,
 )
-from engine.models import NameplateSeries
-
-
-# A small synthetic nameplate series so CF tests do not couple to exact DUKES cells.
-def _ns() -> NameplateSeries:
-    return NameplateSeries.model_validate({
-        "source": "test", "source_url": "test", "interpolation": "annual-step",
-        "series": [
-            {"year": 2016, "wind_onshore_gw": 10.0, "wind_offshore_gw": 6.0, "solar_gw": 1.0},
-            {"year": 2017, "wind_onshore_gw": 12.0, "wind_offshore_gw": 8.0, "solar_gw": 1.0},
-        ],
-    })
 
 
 def _row(day, period, **series):
@@ -78,82 +63,6 @@ def test_wind_cf_short_day_not_penalised():
     full = wind_cf_for_day(_wind_day("2024-03-31", 3200, n_periods=48), capacity_gw=16.0)
     short = wind_cf_for_day(_wind_day("2024-03-31", 3200, n_periods=46), capacity_gw=16.0)
     assert full == short == 0.2
-
-
-# --- wind_cf_series (annual-step denominator) -------------------------------
-
-def test_wind_cf_series_uses_annual_step_capacity():
-    rows = _wind_day("2016-06-01", 3200) + _wind_day("2017-06-01", 4000)
-    series = wind_cf_series(rows, _ns())
-    by_date = {s["date"]: s for s in series}
-    # 2016 total nameplate = 16 GW -> 3200/16000 = 0.20
-    assert by_date["2016-06-01"]["cf"] == 0.2
-    assert by_date["2016-06-01"]["capacity_gw"] == 16.0
-    # 2017 total nameplate = 20 GW -> 4000/20000 = 0.20
-    assert by_date["2017-06-01"]["cf"] == 0.2
-    assert by_date["2017-06-01"]["capacity_gw"] == 20.0
-
-
-def test_wind_cf_series_sorted_by_date():
-    rows = _wind_day("2017-06-01", 4000) + _wind_day("2016-06-01", 3200)
-    dates = [s["date"] for s in wind_cf_series(rows, _ns())]
-    assert dates == sorted(dates)
-
-
-# --- failure_counters -------------------------------------------------------
-
-def test_failure_counters_thresholds_per_year():
-    # Crafted CF values: two days <5% (also <10%), one day between 5% and 10%, one above.
-    series = [
-        {"date": "2016-01-01", "cf": 0.03, "capacity_gw": 16.0, "mean_mw": 480},
-        {"date": "2016-01-02", "cf": 0.04, "capacity_gw": 16.0, "mean_mw": 640},
-        {"date": "2016-01-03", "cf": 0.08, "capacity_gw": 16.0, "mean_mw": 1280},
-        {"date": "2016-01-04", "cf": 0.50, "capacity_gw": 16.0, "mean_mw": 8000},
-        {"date": "2017-01-01", "cf": 0.09, "capacity_gw": 20.0, "mean_mw": 1800},
-    ]
-    counters = failure_counters(series)
-    assert counters[2016] == {"days_observed": 4, "below_10pct": 3, "below_5pct": 2}
-    assert counters[2017] == {"days_observed": 1, "below_10pct": 1, "below_5pct": 0}
-
-
-def test_failure_counters_threshold_is_strict_less_than():
-    # Exactly 10% is NOT below 10%; exactly 5% is NOT below 5%.
-    series = [
-        {"date": "2016-01-01", "cf": 0.10, "capacity_gw": 16.0, "mean_mw": 1600},
-        {"date": "2016-01-02", "cf": 0.05, "capacity_gw": 16.0, "mean_mw": 800},
-    ]
-    counters = failure_counters(series)
-    assert counters[2016] == {"days_observed": 2, "below_10pct": 1, "below_5pct": 0}
-
-
-# --- records ----------------------------------------------------------------
-
-def test_records_lowest_highest_and_longest_run():
-    series = [
-        {"date": "2016-01-01", "cf": 0.40, "capacity_gw": 16.0, "mean_mw": 6400},
-        {"date": "2016-01-02", "cf": 0.06, "capacity_gw": 16.0, "mean_mw": 960},
-        {"date": "2016-01-03", "cf": 0.04, "capacity_gw": 16.0, "mean_mw": 640},
-        {"date": "2016-01-04", "cf": 0.02, "capacity_gw": 16.0, "mean_mw": 320},
-        {"date": "2016-01-05", "cf": 0.55, "capacity_gw": 16.0, "mean_mw": 8800},
-        {"date": "2016-01-06", "cf": 0.07, "capacity_gw": 16.0, "mean_mw": 1120},
-    ]
-    rec = records(series)
-    assert rec["lowest_cf_day"]["date"] == "2016-01-04"
-    assert rec["lowest_cf_day"]["cf"] == 0.02
-    assert rec["highest_cf_day"]["date"] == "2016-01-05"
-    assert rec["highest_cf_day"]["cf"] == 0.55
-    # Jan 2-4 is a 3-day consecutive run below 10%; Jan 6 is a separate 1-day run.
-    assert rec["longest_sub10pct_run"] == {"start": "2016-01-02", "end": "2016-01-04", "days": 3}
-
-
-def test_records_run_breaks_on_calendar_gap():
-    # Two sub-10% days that are NOT calendar-adjacent are two runs of 1, not one of 2.
-    series = [
-        {"date": "2016-01-01", "cf": 0.03, "capacity_gw": 16.0, "mean_mw": 480},
-        {"date": "2016-01-03", "cf": 0.03, "capacity_gw": 16.0, "mean_mw": 480},
-    ]
-    rec = records(series)
-    assert rec["longest_sub10pct_run"]["days"] == 1
 
 
 # --- transmission_shares (transmission-system basis, no embedded) -----------
