@@ -196,11 +196,13 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
 
     # --- LIVE ---
     firm = latest["firm_pct"]
+    unreliable = round(100 - firm)
     cards.append({
         "slug": "firm-now", "kind": "live", "theme": "ink", "template": "instrument",
-        "figure": f"{round(firm)}% firm",
-        "label": "of Britain's grid is firm power right now — gas, nuclear, biomass. "
-                 "The rest is weather & imports.",
+        "figure": f"{unreliable}% unreliable",
+        "label": "of Britain's grid is weather-dependent or imported right now — wind, "
+                 "solar and interconnectors that fall away together. The rest is firm: "
+                 "gas, nuclear, biomass.",
         "stamp": live_stamp, "caveat": None, "svg": gauge_svg(firm)})
 
     built_gw = nameplate["wind_plus_solar_gw"]

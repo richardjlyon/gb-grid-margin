@@ -204,6 +204,8 @@ main { padding-bottom: 40px; }
   letter-spacing: -0.02em; line-height: 1; display: block;
 }
 .stamp-val.red { color: var(--red); }
+.stamp-val.lead { font-size: clamp(2.2rem, 5.75vw, 3.2rem); }
+.stamp-val.muted { color: var(--slate); }
 .stamp-label {
   font-family: var(--display); font-size: 0.68rem; letter-spacing: 0.11em;
   text-transform: uppercase; color: var(--slate); margin-top: 6px; display: block;

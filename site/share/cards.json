@@ -3,10 +3,10 @@
   "cards": [
     {
       "slug": "firm-now",
-      "figure": "75% firm",
-      "label": "of Britain's grid is firm power right now \u2014 gas, nuclear, biomass. The rest is weather & imports.",
+      "figure": "25% unreliable",
+      "label": "of Britain's grid is weather-dependent or imported right now \u2014 wind, solar and interconnectors that fall away together. The rest is firm: gas, nuclear, biomass.",
       "kind": "live",
-      "png": "/share/firm-now.png?v=0c6c3b2bb8"
+      "png": "/share/firm-now.png?v=2abff105d4"
     },
     {
       "slug": "capacity-trap",
@@ -27,35 +27,35 @@
       "figure": "22% mean",
       "label": "Each column is one day's wind since 2016. The wind rarely blows above a fraction of its capacity.",
       "kind": "settled",
-      "png": "/share/wind-stripe.png?v=439a986720"
+      "png": "/share/wind-stripe.png?v=3c6f21185e"
     },
     {
       "slug": "days-below-10",
       "figure": "13 days",
       "label": "in 2026 (so far), Britain's wind ran below a tenth of its installed capacity.",
       "kind": "settled",
-      "png": "/share/days-below-10.png?v=31fc9f01a2"
+      "png": "/share/days-below-10.png?v=804188704c"
     },
     {
       "slug": "lowest-day",
       "figure": "0.9%",
       "label": "of capacity \u2014 the wind fleet's worst day on record, 2016-01-19.",
       "kind": "settled",
-      "png": "/share/lowest-day.png?v=5a660e69c4"
+      "png": "/share/lowest-day.png?v=7994c5fda1"
     },
     {
       "slug": "longest-calm",
       "figure": "17 days",
       "label": "the longest run wind stayed below 10% of capacity \u2014 2016-06-03 to 2016-06-19.",
       "kind": "settled",
-      "png": "/share/longest-calm.png?v=c5f23fe444"
+      "png": "/share/longest-calm.png?v=43474020f1"
     },
     {
       "slug": "warning",
       "figure": "Margin notice",
-      "label": "An Electricity Margin Notice is in force in Britain covering 19:00\u201322:00, 26/06/2026.",
+      "label": "An Electricity Margin Notice is in force in Britain.",
       "kind": "warning",
-      "png": "/share/warning.png?v=33fa95c2b1"
+      "png": "/share/warning.png?v=4246a4d915"
     }
   ]
 }

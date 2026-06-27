@@ -63,7 +63,7 @@ def test_load_cards_builds_the_catalogue(tmp_path):
     by = {c["slug"]: c for c in cards}
     assert set(by) == {"firm-now", "capacity-trap", "gas-vs-wind",
                        "wind-stripe", "days-below-10", "lowest-day", "longest-calm"}
-    assert by["firm-now"]["figure"] == "75% firm"          # rounded firm_pct
+    assert by["firm-now"]["figure"] == "25% unreliable"    # round(100 - firm_pct)
     assert by["firm-now"]["template"] == "instrument" and by["firm-now"]["svg"].startswith("<svg")
     assert by["wind-stripe"]["template"] == "instrument"
     assert by["days-below-10"]["figure"] == "13 days"

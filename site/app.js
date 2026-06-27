@@ -211,10 +211,10 @@ function renderVerdict(state) {
           <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
         </div>
         <div class="stamp-pair">
-          <div class="stamp"><span class="stamp-val">${firmStamp}</span>
-            <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
-          <div class="stamp"><span class="stamp-val ${status.armed ? 'red' : ''}">${weatherStamp}</span>
+          <div class="stamp"><span class="stamp-val lead ${status.armed ? 'red' : ''}">${weatherStamp}</span>
             <span class="stamp-label">${weatherLabel}</span></div>
+          <div class="stamp"><span class="stamp-val muted">${firmStamp}</span>
+            <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
         </div>
         <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
         ${ssline}
@@ -238,8 +238,8 @@ function renderVerdict(state) {
 
   // share the live firm-power card
   $('verdict-body').insertAdjacentHTML('beforeend', shareButtons(
-    { slug: 'firm-now', figure: `${Math.round(m.firmPct)}% firm`,
-      label: "of Britain's grid is firm power right now" }));
+    { slug: 'firm-now', figure: `${100 - Math.round(m.firmPct)}% unreliable`,
+      label: "of Britain's grid is weather-dependent or imported right now — wind, solar and interconnectors that fall away together" }));
 
   $('verdict-body').querySelectorAll('.gauge-toggle button').forEach((b) =>
     b.addEventListener('click', () => { setGaugeView(b.dataset.view); renderVerdict(LAST_STATE); }));
