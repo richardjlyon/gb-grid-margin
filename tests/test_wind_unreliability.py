@@ -86,6 +86,10 @@ def test_summary_counts_and_record():
     assert s["record_lull"]["days"] == 7
     assert s["lowest_day"]["cf"] == 0.05
     assert s["worst_lull_by_year"] == {"2020": 7}
+    # new fields required by share cards
+    assert s["mean_cf"] == round(0.05, 4)
+    assert s["below_10pct_days"] == 7   # 0.05 < 0.10 for all 7 days
+    assert s["below_5pct_days"] == 0    # 0.05 is not strictly < 0.05
 
 
 def test_build_payload_has_provenance_and_passes_guard():

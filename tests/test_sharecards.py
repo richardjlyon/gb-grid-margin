@@ -40,14 +40,18 @@ def _write_data(tmp_path):
         "verdict": {"snapshot": "2026-06-25T23:35:00Z", "firm_pct": 74.7,
                     "wind_mw": 11413, "solar_mw": 0, "gas_mw": 14294}}))
     (d / "nameplate.json").write_text(json.dumps({"wind_plus_solar_gw": 50.362}))
-    (d / "counters.json").write_text(json.dumps({
-        "latest_year": 2026, "partial_years": [2026],
-        "years": {"2026": {"below_10pct": 13, "below_5pct": 1}}}))
-    (d / "records.json").write_text(json.dumps({
-        "lowest_cf_day": {"date": "2016-01-19", "cf": 0.0087},
-        "longest_sub10pct_run": {"start": "2016-06-03", "end": "2016-06-19", "days": 17}}))
-    (d / "stripe.json").write_text(json.dumps({
-        "mean_cf": 0.2231, "days": [{"cf": 0.1}, {"cf": 0.3}]}))
+    (d / "wind_unreliability.json").write_text(json.dumps({
+        "generated_utc": "2026-06-25T21:39:53.7+00:00",
+        "summary": {
+            "counts": {"ge_1d": 1, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+            "record_lull": {"start": "2016-06-03", "end": "2016-06-19", "days": 17,
+                            "min_cf": 0.05, "min_cf_date": "2016-06-10", "severe": False},
+            "lowest_day": {"date": "2016-01-19", "cf": 0.0087},
+            "worst_lull_by_year": {},
+            "mean_cf": 0.2231,
+            "below_10pct_days": 13,
+            "below_5pct_days": 1,
+        }}))
     (d / "reliability_year.json").write_text(json.dumps({"values": [0.55, 0.60, 0.45]}))
     return d
 
@@ -66,12 +70,12 @@ def test_load_cards_builds_the_catalogue(tmp_path):
                        "wind-stripe", "reliability-stripe", "days-below-10", "lowest-day", "longest-calm"}
     assert by["firm-now"]["figure"] == "25% unreliable"    # round(100 - firm_pct)
     assert by["firm-now"]["template"] == "instrument" and by["firm-now"]["svg"].startswith("<svg")
-    assert by["wind-stripe"]["template"] == "instrument"
+    assert by["wind-stripe"]["template"] == "stat"
     assert by["days-below-10"]["figure"] == "13 days"
     assert by["lowest-day"]["figure"] == "0.9%"            # cf 0.0087 → 0.9%
     assert by["longest-calm"]["figure"] == "17 days"
     # honesty foot-lines present where required
-    assert "lower bound" in (by["lowest-day"]["caveat"] or "").lower()
+    assert "combined" in (by["lowest-day"]["caveat"] or "").lower()
     assert "dukes" in (by["capacity-trap"]["caveat"] or "").lower()
     # all live cards carry a timestamp stamp; settled carry an as-of
     assert "UTC" in by["firm-now"]["stamp"]

@@ -25,20 +25,19 @@ def test_card_figures_trace_to_source():
     share = (v["wind_mw"] + v["solar_mw"]) / (np["wind_plus_solar_gw"] * 1000) * 100
     assert by["capacity-trap"]["figure"] == f"{share:.0f}% of capacity"
 
-    ctr = _load("counters.json")
-    yr = ctr["latest_year"]
-    assert by["days-below-10"]["figure"] == f"{ctr['years'][str(yr)]['below_10pct']} days"
+    wu = _load("wind_unreliability.json")
+    s = wu["summary"]
+    assert by["wind-stripe"]["figure"] == f"{s['mean_cf'] * 100:.0f}% mean"
+    assert by["days-below-10"]["figure"] == f"{s['below_10pct_days']} days"
+    assert by["lowest-day"]["figure"] == f"{s['lowest_day']['cf'] * 100:.1f}%"
+    assert by["longest-calm"]["figure"] == f"{s['record_lull']['days']} days"
 
-    rec = _load("records.json")
-    assert by["lowest-day"]["figure"] == f"{rec['lowest_cf_day']['cf'] * 100:.1f}%"
-    assert by["longest-calm"]["figure"] == f"{rec['longest_sub10pct_run']['days']} days"
 
-
-def test_settled_cards_carry_lower_bound_caveat():
+def test_settled_cards_carry_combined_basis_caveat():
     cards, _ = sharecards.load_cards(DATA)
     for slug in ("wind-stripe", "days-below-10", "lowest-day", "longest-calm"):
         c = next(c for c in cards if c["slug"] == slug)
-        assert "lower bound" in (c["caveat"] or "").lower()
+        assert "combined" in (c["caveat"] or "").lower()
 
 
 def test_reliability_stripe_figure_traces_to_source():

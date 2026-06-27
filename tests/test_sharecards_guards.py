@@ -24,20 +24,21 @@ def _write_data(tmp_path, **overrides):
     latest = {"verdict": {"snapshot": "2026-06-25T23:35:00Z", "firm_pct": 74.7,
                           "wind_mw": 11413, "solar_mw": 0, "gas_mw": 14294}}
     nameplate = {"wind_plus_solar_gw": 50.362}
-    counters = {"latest_year": 2026, "partial_years": [2026],
-                "generated_utc": "2026-06-25T21:39:53.7+00:00",
-                "years": {"2026": {"days_observed": 171, "below_10pct": 13, "below_5pct": 1}}}
-    records = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
-               "lowest_cf_day": {"date": "2016-01-19", "cf": 0.0087},
-               "longest_sub10pct_run": {"start": "2016-06-03", "end": "2016-06-19", "days": 17}}
-    stripe = {"mean_cf": 0.2231, "generated_utc": "2026-06-25T21:39:53.7+00:00",
-              "days": [{"cf": 0.1}, {"cf": 0.3}]}
+    wu = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
+          "summary": {
+              "counts": {"ge_1d": 1, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+              "record_lull": {"start": "2016-06-03", "end": "2016-06-19", "days": 17,
+                              "min_cf": 0.05, "min_cf_date": "2016-06-10", "severe": False},
+              "lowest_day": {"date": "2016-01-19", "cf": 0.0087},
+              "worst_lull_by_year": {},
+              "mean_cf": 0.2231,
+              "below_10pct_days": 13,
+              "below_5pct_days": 1,
+          }}
     reliability_year = {"values": [0.55, 0.60, 0.45]}
     blobs = {"latest.json": overrides.get("latest", latest),
              "nameplate.json": overrides.get("nameplate", nameplate),
-             "counters.json": overrides.get("counters", counters),
-             "records.json": overrides.get("records", records),
-             "stripe.json": overrides.get("stripe", stripe),
+             "wind_unreliability.json": overrides.get("wu", wu),
              "reliability_year.json": overrides.get("reliability_year", reliability_year)}
     for name, blob in blobs.items():
         (d / name).write_text(json.dumps(blob))
@@ -72,19 +73,35 @@ def test_load_cards_trips_on_negative_gas_mw(tmp_path):
 
 def test_load_cards_trips_on_broken_record_cf(tmp_path):
     bad = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
-           "lowest_cf_day": {"date": "2016-01-19", "cf": 9.9},
-           "longest_sub10pct_run": {"start": "a", "end": "b", "days": 17}}
+           "summary": {
+               "counts": {"ge_1d": 0, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+               "record_lull": {"start": "a", "end": "b", "days": 1,
+                               "min_cf": 0.05, "min_cf_date": "a", "severe": False},
+               "lowest_day": {"date": "2016-01-19", "cf": 9.9},  # bad cf
+               "worst_lull_by_year": {},
+               "mean_cf": 0.2231,
+               "below_10pct_days": 0,
+               "below_5pct_days": 0,
+           }}
     with pytest.raises(GuardError, match="2016-01-19"):
-        sharecards.load_cards(_write_data(tmp_path, records=bad))
+        sharecards.load_cards(_write_data(tmp_path, wu=bad))
 
 
 def test_load_cards_trips_cleanly_on_null_lowest_cf_day(tmp_path):
-    # records() emits lowest_cf_day=None for an empty store — must be a clean GuardError,
+    # summary emits lowest_day=None for an empty store — must be a clean GuardError,
     # never a raw TypeError from dereferencing None.
-    bad = {"generated_utc": "2026-06-25T21:39:53.7+00:00", "lowest_cf_day": None,
-           "longest_sub10pct_run": {"start": None, "end": None, "days": 0}}
-    with pytest.raises(GuardError, match="lowest_cf_day"):
-        sharecards.load_cards(_write_data(tmp_path, records=bad))
+    bad = {"generated_utc": "2026-06-25T21:39:53.7+00:00",
+           "summary": {
+               "counts": {"ge_1d": 0, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+               "record_lull": None,
+               "lowest_day": None,
+               "worst_lull_by_year": {},
+               "mean_cf": 0.0,
+               "below_10pct_days": 0,
+               "below_5pct_days": 0,
+           }}
+    with pytest.raises(GuardError, match="lowest_day"):
+        sharecards.load_cards(_write_data(tmp_path, wu=bad))
 
 
 def test_load_cards_trips_cleanly_on_corrupt_snapshot(tmp_path):
@@ -105,11 +122,11 @@ def test_build_returns_1_cleanly_on_corrupt_snapshot(tmp_path, capsys):
 
 def test_build_fails_loudly_when_a_source_file_is_missing(tmp_path, capsys):
     d = _write_data(tmp_path)
-    (d / "stripe.json").unlink()  # corrupt the inputs
+    (d / "wind_unreliability.json").unlink()  # corrupt the inputs
     rc = sharecards.build(data_dir=d, site_dir=tmp_path / "site")
     assert rc == 1
     err = capsys.readouterr().err
-    assert "card build failed" in err.lower() or "stripe" in err.lower()
+    assert "card build failed" in err.lower() or "wind_unreliability" in err.lower()
 
 
 # --- provenance: stamps carry real timestamps -------------------------------
@@ -125,8 +142,17 @@ def test_settled_cards_thread_rebuilt_timestamp(tmp_path):
 
 
 def test_settled_stamp_falls_back_gracefully_without_generated_utc(tmp_path):
-    stripe = {"mean_cf": 0.2231, "days": [{"cf": 0.1}]}  # no generated_utc
-    cards, _ = sharecards.load_cards(_write_data(tmp_path, stripe=stripe))
+    wu_no_ts = {"summary": {  # no generated_utc
+        "counts": {"ge_1d": 0, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+        "record_lull": {"start": "2016-06-03", "end": "2016-06-19", "days": 17,
+                        "min_cf": 0.05, "min_cf_date": "2016-06-10", "severe": False},
+        "lowest_day": {"date": "2016-01-19", "cf": 0.0087},
+        "worst_lull_by_year": {},
+        "mean_cf": 0.2231,
+        "below_10pct_days": 13,
+        "below_5pct_days": 1,
+    }}
+    cards, _ = sharecards.load_cards(_write_data(tmp_path, wu=wu_no_ts))
     by = {c["slug"]: c for c in cards}
     assert "Elexon FUELHH" in by["wind-stripe"]["stamp"]  # still has a source line
 

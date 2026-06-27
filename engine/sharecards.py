@@ -75,7 +75,7 @@ def stripe_svg(days: list[dict], width: int = 1040, height: int = 300) -> str:
     return "".join(parts)
 
 
-LOWER_BOUND = "Conservative lower bound — transmission-metered wind ÷ total installed (DUKES 6.2)."
+COMBINED_BASIS = "Combined transmission + embedded wind ÷ DUKES 6.2 installed capacity — a true load factor."
 DUKES_BASIS = "Wind+solar output ÷ DUKES 6.2 installed capacity (UK, end-2024)."
 
 # --- reliability stripe ramp (parity-locked to site/render.js) ---------------
@@ -150,14 +150,13 @@ def _issued(issued_at: str | None) -> str:
 _CAPACITY_MIN_GW, _CAPACITY_MAX_GW = 1.0, 500.0
 
 
-def guard_card_inputs(latest: dict, nameplate: dict, counters: dict,
-                      records: dict, stripe: dict) -> None:
+def guard_card_inputs(latest: dict, nameplate: dict, wu: dict) -> None:
     """Stage 9: fail loudly before a card figure is built from the source JSON.
 
     The cards are screenshotted into shareable images, so a corrupt or out-of-range
     figure must abort the build rather than become a wrong card. Validates the live
-    verdict figures, the capacity denominator, the counters' nesting, the record CF
-    and the stripe mean. Raises GuardError on any breach.
+    verdict figures, the capacity denominator, and the wind_unreliability summary.
+    Raises GuardError on any breach.
     """
     snap = latest.get("snapshot")
     require(isinstance(snap, str) and snap, "verdict snapshot missing or not a string")
@@ -179,19 +178,17 @@ def guard_card_inputs(latest: dict, nameplate: dict, counters: dict,
             f"nameplate wind_plus_solar_gw {cap} GW outside sane envelope "
             f"[{_CAPACITY_MIN_GW}, {_CAPACITY_MAX_GW}]")
 
-    yc = counters["years"][str(counters["latest_year"])]
-    b10, b5 = yc["below_10pct"], yc["below_5pct"]
-    require(0 <= b5 <= b10, f"counters: below_5pct {b5} not within [0, below_10pct {b10}]")
-
-    low = records["lowest_cf_day"]
-    require(low is not None, "records: missing lowest_cf_day (empty store?)")
+    s = wu["summary"]
+    require(s["record_lull"] is None or s["record_lull"]["days"] >= 0,
+            "wu: negative record_lull days")
+    low = s["lowest_day"]
+    require(low is not None, "wu: missing lowest_day (empty store?)")
     check_cf_range(low["date"], low["cf"])
-    require(records["longest_sub10pct_run"]["days"] >= 0,
-            "records: negative longest sub-10% run length")
-
-    check_finite("stripe mean_cf", stripe["mean_cf"])
-    require(0.0 <= stripe["mean_cf"] <= 1.0, f"stripe mean_cf out of range: {stripe['mean_cf']}")
-    require(len(stripe["days"]) > 0, "stripe has no days")
+    check_finite("wu mean_cf", s["mean_cf"])
+    require(0.0 <= s["mean_cf"] <= 1.0, f"wu mean_cf out of range: {s['mean_cf']}")
+    require(0 <= s["below_5pct_days"] <= s["below_10pct_days"],
+            f"wu: below_5pct_days {s['below_5pct_days']} not within "
+            f"[0, below_10pct_days {s['below_10pct_days']}]")
 
 
 def gas_vs_wind_headline(gas_mw: float, wind_mw: float) -> tuple[str, str]:
@@ -213,17 +210,13 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
     data = Path(data_dir)
     latest = json.loads((data / "latest.json").read_text())["verdict"]
     nameplate = json.loads((data / "nameplate.json").read_text())
-    counters = json.loads((data / "counters.json").read_text())
-    records = json.loads((data / "records.json").read_text())
-    stripe = json.loads((data / "stripe.json").read_text())
+    wu = json.loads((data / "wind_unreliability.json").read_text())
 
-    guard_card_inputs(latest, nameplate, counters, records, stripe)
+    guard_card_inputs(latest, nameplate, wu)
 
     snap = latest["snapshot"]
     live_stamp = _stamp_live(snap)
-    settled_rebuilt = _rebuilt(stripe.get("generated_utc"))
-    records_rebuilt = _rebuilt(records.get("generated_utc"))
-    counters_rebuilt = _rebuilt(counters.get("generated_utc"))
+    settled_rebuilt = _rebuilt(wu.get("generated_utc"))
     cards: list[dict] = []
 
     # --- LIVE ---
@@ -253,13 +246,14 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
         "figure": fig, "label": lab, "stamp": live_stamp, "caveat": None, "svg": None})
 
     # --- SETTLED ---
+    s = wu["summary"]
     cards.append({
-        "slug": "wind-stripe", "kind": "settled", "theme": "ink", "template": "instrument",
-        "figure": f"{stripe['mean_cf'] * 100:.0f}% mean",
-        "label": "Each column is one day's wind since 2016. The wind rarely blows above "
-                 "a fraction of its capacity.",
-        "stamp": f"Elexon FUELHH · since 2016{settled_rebuilt}", "caveat": LOWER_BOUND,
-        "svg": stripe_svg(stripe["days"])})
+        "slug": "wind-stripe", "kind": "settled", "theme": "ink", "template": "stat",
+        "figure": f"{s['mean_cf'] * 100:.0f}% mean",
+        "label": "Britain's wind has averaged that share of its installed capacity since 2016 — "
+                 "combined transmission and embedded output.",
+        "stamp": f"Elexon FUELHH + NESO embedded · since 2016{settled_rebuilt}",
+        "caveat": COMBINED_BASIS, "svg": None})
 
     rel = json.loads((data / "reliability_year.json").read_text())
     rel_nn = [v for v in rel["values"] if v is not None]
@@ -273,28 +267,27 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
         "caveat": "Reliable share can exceed 100% on net-export half-hours; the scale saturates at 40% firm.",
         "svg": reliability_stripe_svg(rel["values"])})
 
-    yr = counters["latest_year"]
-    yc = counters["years"][str(yr)]
-    part = " (so far)" if yr in counters.get("partial_years", []) else ""
     cards.append({
         "slug": "days-below-10", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{yc['below_10pct']} days",
-        "label": f"in {yr}{part}, Britain's wind ran below a tenth of its installed capacity.",
-        "stamp": f"Elexon FUELHH · {yr}{counters_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
+        "figure": f"{s['below_10pct_days']} days",
+        "label": "since 2016, Britain's wind ran below a tenth of its installed capacity.",
+        "stamp": f"Elexon FUELHH + NESO embedded · since 2016{settled_rebuilt}",
+        "caveat": COMBINED_BASIS, "svg": None})
 
-    low = records["lowest_cf_day"]
     cards.append({
         "slug": "lowest-day", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{low['cf'] * 100:.1f}%",
-        "label": f"of capacity — the wind fleet's worst day on record, {low['date']}.",
-        "stamp": f"Elexon FUELHH · all-time{records_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
+        "figure": f"{s['lowest_day']['cf'] * 100:.1f}%",
+        "label": f"of capacity — the wind fleet's worst day on record, {s['lowest_day']['date']}.",
+        "stamp": f"Elexon FUELHH + NESO embedded · all-time{settled_rebuilt}",
+        "caveat": COMBINED_BASIS, "svg": None})
 
-    run = records["longest_sub10pct_run"]
     cards.append({
         "slug": "longest-calm", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{run['days']} days",
-        "label": f"the longest run wind stayed below 10% of capacity — {run['start']} to {run['end']}.",
-        "stamp": f"Elexon FUELHH · all-time{records_rebuilt}", "caveat": LOWER_BOUND, "svg": None})
+        "figure": f"{s['record_lull']['days']} days",
+        "label": f"the longest run wind stayed below a tenth of capacity — "
+                 f"{s['record_lull']['start']} to {s['record_lull']['end']}.",
+        "stamp": f"Elexon FUELHH + NESO embedded · all-time{settled_rebuilt}",
+        "caveat": COMBINED_BASIS, "svg": None})
 
     asof = datetime.fromisoformat(snap.replace("Z", "+00:00")).strftime("%d %B %Y")
     return cards, asof

@@ -139,11 +139,17 @@ def summary(daily_series: list[dict], lulls: list[dict]) -> dict:
         for k in ("mean_mw", "capacity_gw"):
             if k in lowest:
                 lowest_day[k] = lowest[k]
+    mean_cf = round(sum(s["cf"] for s in daily_series) / len(daily_series), 4) if daily_series else 0.0
+    below_10 = sum(1 for s in daily_series if s["cf"] < BELOW_10PCT)
+    below_5 = sum(1 for s in daily_series if s["cf"] < BELOW_5PCT)
     return {
         "counts": counts,
         "record_lull": record,
         "lowest_day": lowest_day,
         "worst_lull_by_year": worst,
+        "mean_cf": mean_cf,
+        "below_10pct_days": below_10,
+        "below_5pct_days": below_5,
     }
 
 
