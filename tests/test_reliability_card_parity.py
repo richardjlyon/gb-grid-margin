@@ -10,7 +10,7 @@ import pytest
 from engine.sharecards import reliable_share_to_color
 
 REPO = Path(__file__).resolve().parents[1]
-SAMPLES = [0.0, 0.30, 0.40, 0.50, 0.65, 0.70, 1.0, 1.30]
+SAMPLES = [0.0, 0.30, 0.40, 0.45, 0.475, 0.50, 0.525, 0.65, 0.70, 1.0, 1.30]
 
 
 def _js_colors(samples):

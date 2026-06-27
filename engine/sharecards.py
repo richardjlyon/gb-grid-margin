@@ -84,11 +84,17 @@ _REL_PAPER, _REL_RED, _REL_GAP = (251, 251, 249), (214, 18, 31), (232, 232, 230)
 
 
 def reliable_share_to_color(s: float | None) -> tuple[int, int, int]:
-    """Firm share -> RGB, identical to site/render.js reliableShareToColor (parity-locked)."""
+    """Firm share -> RGB, identical to site/render.js reliableShareToColor (parity-locked).
+
+    Uses int(x + 0.5) rather than round(x) to match JS Math.round half-up semantics
+    (Python round() uses banker's rounding; JS Math.round() always rounds half-up).
+    Channel values are always non-negative here so int(x + 0.5) == Math.round(x).
+    """
     if s is None:
         return _REL_GAP
     t = max(0.0, min(1.0, (RELIABILITY_RAMP_HI - s) / (RELIABILITY_RAMP_HI - RELIABILITY_RAMP_LO)))
-    return tuple(round(_REL_PAPER[k] + (_REL_RED[k] - _REL_PAPER[k]) * t) for k in range(3))
+    r, g, b = (int(_REL_PAPER[k] + (_REL_RED[k] - _REL_PAPER[k]) * t + 0.5) for k in range(3))
+    return (r, g, b)
 
 
 def reliability_stripe_svg(values: list[float | None], width: int = 1040, height: int = 300) -> str:
