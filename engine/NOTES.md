@@ -536,7 +536,7 @@ each `engine.derived build` run as the embedded store edge extends.
 | --- | --- |
 | `wind.days`, `solar.days` | list of `{"date": "YYYY-MM-DD", "cf": [48 floats-or-nulls]}` |
 | `gauge.nameplate_mw` | DUKES wind+solar combined nameplate in MW; calibrates the live gauge |
-| `sat` | `{"wind": 0.55, "solar": 0.60}` — cf at/above which a cell maps to the palest colour |
+| `sat` | `{"wind": 1.0, "solar": 1.0}` — cf at/above which a cell maps to the deepest colour (full nameplate) |
 | `basis_wind`, `basis_solar` | prose provenance strings (the formulas above, as text) |
 | `seam_note` | forecast-vs-outturn disclosure |
 | `source_wind`, `source_solar` | citable source strings |

@@ -146,7 +146,7 @@ main { padding-bottom: 40px; }
 }
 .headline.ink { color: var(--ink); }
 .def {
-  font-family: var(--read); font-style: italic; color: #3f464d; font-size: 1.15rem;
+  font-family: var(--read); font-style: italic; color: #2a2f35; font-size: 1.3rem;
   margin: 0 0 18px;
 }
 .src {
@@ -208,7 +208,7 @@ main { padding-bottom: 40px; }
 .receipt .export-row td { color: var(--slate); font-style: italic; border-top: 1px dashed #cfd4d8; }
 
 /* ---------- the receipt table ---------- */
-.receipt { width: 100%; border-collapse: collapse; margin: 12px 0 0; font-family: var(--mono); }
+.receipt { width: 100%; border-collapse: collapse; margin: 12px 0 0; font-family: var(--display); font-variant-numeric: tabular-nums lining-nums; }
 .receipt caption {
   font-family: var(--display); font-size: 0.7rem; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--slate); text-align: left;
@@ -222,7 +222,7 @@ main { padding-bottom: 40px; }
 }
 .receipt thead th:first-child { text-align: left; }
 .receipt td { border-bottom: 1px solid var(--rule-soft); }
-.receipt td.fuel { text-align: left; font-family: var(--read); font-style: normal; }
+.receipt td.fuel { text-align: left; font-family: var(--display); font-style: normal; }
 .receipt td.n, .receipt thead th:not(:first-child) { text-align: right; white-space: nowrap; }
 .receipt .bar-cell { width: 24%; }
 .bar { height: 9px; background: var(--ink); border-radius: 1px; }
