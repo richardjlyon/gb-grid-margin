@@ -127,3 +127,69 @@ def build_payload(packed: dict, generated_utc: str) -> dict:
         "generated_utc": generated_utc,
         **packed,
     }
+
+
+from engine.capacity import PERIODS, rolling_days  # noqa: E402  (grouped near use)
+from engine.guards import require  # noqa: E402
+
+
+def build_carpet_days(fuelhh_rows: list[dict], embedded_rows: list[dict]) -> list[dict]:
+    """Per-day SP1..SP48 grid of UNRELIABLE share (= 1 − reliable share), date-sorted.
+
+    Joins FUELHH to the embedded store on (settlement_date, settlement_period). Each cell is
+    clamp(1 − reliable_share, 0, 1): a net-export half-hour (reliable_share > 1) reads 0%
+    unreliable, matching the live caret's clamp. DST 50-period days drop SP49/50 (clamped to the
+    48 grid). Days with no joined periods are omitted; a missing/None cell stays None (a gap).
+    """
+    emb_by_key = {(r["settlement_date"], r["settlement_period"]): r for r in embedded_rows}
+    by_day: dict[str, list[float | None]] = {}
+    for fh in fuelhh_rows:
+        sp = fh["settlement_period"]
+        if not (1 <= sp <= PERIODS):
+            continue
+        emb = emb_by_key.get((fh["settlement_date"], sp))
+        if emb is None:
+            continue
+        r = reliable_share(fh, emb)
+        row = by_day.setdefault(fh["settlement_date"], [None] * PERIODS)
+        row[sp - 1] = round(max(0.0, min(1.0, 1 - r)), 4) if r is not None else None
+    return [{"date": d, "cf": by_day[d]} for d in sorted(by_day)]
+
+
+_CARPET_BASIS = (
+    "Unreliable share of demand per half-hour = 1 − reliable (firm) share, where the reliable "
+    "share is computed by the same parity-locked formula as the live gauge "
+    "(engine.grid_engine.compute_verdict). Indexed by settlement period (local half-hour). "
+    "Net-export half-hours read 0% (clamped). Settled, ~3 weeks behind live."
+)
+_CARPET_METRIC = "National unreliable share of demand, per half-hour (1 − firm)"
+_CARPET_CAVEATS = [
+    _CAVEATS[0],  # mixed metered FUELHH + NESO-estimated embedded layer
+    _CAVEATS[1],  # forecast-vs-settlement seam; the carpet ends ~21 days behind today
+]
+
+
+def build_carpet_payload(days: list[dict], generated_utc: str) -> dict:
+    rng = ({"from": days[0]["date"], "to": days[-1]["date"]} if days
+           else {"from": None, "to": None})
+    return {
+        "basis": _CARPET_BASIS, "source": _SOURCE, "metric": _CARPET_METRIC,
+        "caveats": _CARPET_CAVEATS, "generated_utc": generated_utc,
+        "window": "rolling_365d", "range": rng, "sat": 1.0, "days": days,
+    }
+
+
+def guard_carpet_payload(payload: dict) -> None:
+    """Stage 9-style build-time gate: fail loudly before reliability_carpet.json is written."""
+    days = payload["days"]
+    require(len(days) > 0, "reliability carpet: no days")
+    ds = [d["date"] for d in days]
+    require(ds == sorted(ds) and len(ds) == len(set(ds)),
+            "reliability carpet: days not sorted/unique")
+    for d in days:
+        require(len(d["cf"]) == PERIODS,
+                f"reliability carpet {d['date']}: {len(d['cf'])} periods, expected {PERIODS}")
+        for v in d["cf"]:
+            require(v is None or 0.0 <= v <= 1.0,
+                    f"reliability carpet {d['date']}: cf {v} out of [0,1]")
+    require(0.0 < payload["sat"] <= 1.0, f"reliability carpet sat {payload['sat']} out of (0,1]")

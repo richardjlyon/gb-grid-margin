@@ -9,12 +9,16 @@ import pytest
 from engine import derived, embedded_history
 from engine.grid_engine import compute_verdict
 from engine.reliability import (
+    build_carpet_days,
+    build_carpet_payload,
+    guard_carpet_payload,
     build_payload,
     build_series,
     pack,
     reliable_share,
     rolling_year,
 )
+from engine.guards import GuardError
 
 
 def _fuelhh(**cols):
@@ -156,3 +160,71 @@ def test_derived_build_emits_reliability_when_embedded_present(tmp_path):
         assert payload["step_minutes"] == 30
         assert payload["values"]              # non-empty
         assert payload["source"]
+
+
+# ---------------------------------------------------------------------------
+# Carpet day-grid tests (Task 1)
+# Note: helpers renamed _cfh/_ceb to avoid shadowing the existing _fh/_eb helpers above.
+# ---------------------------------------------------------------------------
+
+def _cfh(date, sp, **cols):
+    base = {"settlement_date": date, "settlement_period": sp,
+            "period_start_utc": f"{date}T00:00:00Z", **cols}
+    return base
+
+
+def _ceb(date, sp, wind=None, solar=None):
+    return {"settlement_date": date, "settlement_period": sp,
+            "period_start_utc": f"{date}T00:00:00Z",
+            "embedded_wind_mw": wind, "embedded_solar_mw": solar}
+
+
+def test_carpet_cell_is_one_minus_reliable_share():
+    fh = _cfh("2024-06-01", 24, CCGT=12000, NUCLEAR=5000, WIND=8000, INTFR=2000)
+    eb = _ceb("2024-06-01", 24, wind=1500, solar=3000)
+    days = build_carpet_days([fh], [eb])
+    cell = days[0]["cf"][23]                      # SP24 -> index 23
+    r = reliable_share(fh, eb)
+    assert cell == round(max(0.0, min(1.0, 1 - r)), 4)
+
+
+def test_carpet_export_halfhour_clamps_to_zero():
+    # firm > demand -> reliable_share > 1 -> unreliable < 0 -> clamped to 0.
+    fh = _cfh("2024-06-01", 1, CCGT=30000, NUCLEAR=5000, WIND=100, INTFR=-8000)
+    eb = _ceb("2024-06-01", 1, wind=0, solar=0)
+    assert reliable_share(fh, eb) > 1.0
+    days = build_carpet_days([fh], [eb])
+    assert days[0]["cf"][0] == 0.0
+
+
+def test_carpet_missing_join_is_none_gap():
+    fh = _cfh("2024-06-01", 5, CCGT=12000, NUCLEAR=5000)
+    days = build_carpet_days([fh], [])            # no embedded row to join
+    assert days == []                              # day with no joined periods is omitted
+
+
+def test_carpet_periods_clamped_to_48_and_sorted():
+    rows_fh = [_cfh("2024-06-02", 1, CCGT=10000), _cfh("2024-06-01", 49, CCGT=10000),
+               _cfh("2024-06-01", 1, CCGT=10000)]
+    rows_eb = [_ceb("2024-06-02", 1, wind=0, solar=0), _ceb("2024-06-01", 49, wind=0, solar=0),
+               _ceb("2024-06-01", 1, wind=0, solar=0)]
+    days = build_carpet_days(rows_fh, rows_eb)
+    assert [d["date"] for d in days] == ["2024-06-01", "2024-06-02"]   # sorted
+    assert all(len(d["cf"]) == 48 for d in days)                        # SP49 dropped
+
+
+def test_carpet_payload_shape_and_guard():
+    fh = [_cfh("2024-06-01", sp, CCGT=12000, NUCLEAR=5000, WIND=4000) for sp in range(1, 49)]
+    eb = [_ceb("2024-06-01", sp, wind=1000, solar=0) for sp in range(1, 49)]
+    days = build_carpet_days(fh, eb)
+    payload = build_carpet_payload(days, "2026-06-27T00:00:00+00:00")
+    assert payload["sat"] == 1.0
+    assert payload["window"] == "rolling_365d"
+    assert payload["range"] == {"from": "2024-06-01", "to": "2024-06-01"}
+    guard_carpet_payload(payload)                  # must not raise
+
+
+def test_carpet_guard_rejects_bad_grid():
+    bad = build_carpet_payload([{"date": "2024-06-01", "cf": [0.5] * 47}], "x")  # 47 != 48
+    with pytest.raises(GuardError):
+        guard_carpet_payload(bad)
