@@ -275,7 +275,7 @@ function renderTrap(v) {
   const gauge = buildGauge(t.share_pct, 100, {
     label: 'Wind and solar output as a share of installed capacity',
     typical: band ? [band.lo, band.hi] : null,
-    meanMark: band ? band.mean : null,
+    meanMark: stats ? stats.median_pct : null,
   });
 
   // Punch line: now + typical, drawn from the same measure.
@@ -320,6 +320,7 @@ function renderTrap(v) {
       <div class="trap-gauge">
         <div class="gauge-block">${gauge}</div>
         ${punch}
+        ${srcLine('Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 nameplate', 'capacity-trap')}
       </div>
       ${curveCol}
     </div>`;

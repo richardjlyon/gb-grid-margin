@@ -114,7 +114,7 @@ def summary_stats(series: list[dict]) -> dict:
     }
 
 
-from engine.guards import GuardError, require  # noqa: E402  (keep grouped near use)
+from engine.guards import require  # noqa: E402
 
 CURVE_CEILING_PCT = 120.0   # allow a small >100% overshoot from metering/estimate quirks; documented
 
