@@ -112,3 +112,70 @@ def summary_stats(series: list[dict]) -> dict:
         "below_10pct_frac": frac(lambda c: c < 0.10),
         "below_5pct_frac": frac(lambda c: c < 0.05),
     }
+
+
+from engine.guards import GuardError, require  # noqa: E402  (keep grouped near use)
+
+CURVE_CEILING_PCT = 120.0   # allow a small >100% overshoot from metering/estimate quirks; documented
+
+_BASIS = (
+    "Renewables capacity factor per half-hour = (transmission wind [Elexon FUELHH, settled] "
+    "+ embedded wind + embedded solar [NESO outturn estimate]) / DUKES 6.2 wind+solar nameplate "
+    "(annual-step). Embedded output is IN the numerator, so this is a TRUE load factor — NOT the "
+    "transmission-only lower bound the wind stripe carries, and the engine/NOTES.md §8 cross-year "
+    "caveat does not apply to this figure."
+)
+_SOURCE = "Elexon FUELHH (settled) + NESO embedded outturn / DUKES 6.2 nameplate (annual-step)"
+_SEAM_NOTE = (
+    "The live needle reads NESO's embedded FORECAST; this settled curve reads NESO's embedded "
+    "OUTTURN estimate — the same measure, a slight forecast-vs-settlement seam, and the curve "
+    "lags ~3 weeks behind live."
+)
+
+
+def build_payload(curve: list[float], stats: dict, window: list[dict],
+                  generated_utc: str, ns: NameplateSeries) -> dict:
+    """Wrap the curve + stats with provenance for the dashboard."""
+    rng = ({"from": window[0]["t"][:10], "to": window[-1]["t"][:10]}
+           if window else {"from": None, "to": None})
+    end_year = int(window[-1]["t"][:4]) if window else None
+    cap = ns.capacity_for(end_year) if end_year is not None else None
+    nameplate = {
+        "wind": round(cap.wind_gw, 3) if cap else None,
+        "solar": round(cap.solar_gw, 3) if cap else None,
+        "total": round(cap.wind_gw + cap.solar_gw, 3) if cap else None,
+        "as_of_note": "DUKES annual-step; window-end year",
+    }
+    return {
+        "basis": _BASIS,
+        "metric": ("Renewables capacity factor = (transmission wind + embedded wind + "
+                   "embedded solar) / DUKES wind+solar nameplate"),
+        "source": _SOURCE,
+        "seam_note": _SEAM_NOTE,
+        "generated_utc": generated_utc,
+        "window": "rolling_365d",
+        "range": rng,
+        "n_periods": len(window),
+        "nameplate_gw": nameplate,
+        "curve": curve,
+        "stats": stats,
+    }
+
+
+def guard_payload(payload: dict) -> None:
+    """Stage 9 build-time gate: fail loudly before capacity_curve.json is written."""
+    curve = payload["curve"]
+    stats = payload["stats"]
+    require(len(curve) == CURVE_POINTS,
+            f"capacity curve has {len(curve)} points, expected {CURVE_POINTS}")
+    require(payload["n_periods"] > 0, "capacity curve: no periods in the rolling window")
+    for i, y in enumerate(curve):
+        require(0.0 <= y <= CURVE_CEILING_PCT,
+                f"capacity curve[{i}]={y} out of [0,{CURVE_CEILING_PCT}]")
+    for a, b in zip(curve, curve[1:]):
+        require(a >= b - 1e-9, f"capacity curve not non-increasing: {a} then {b}")
+    require(stats["p25_pct"] <= stats["median_pct"] <= stats["p75_pct"],
+            f"capacity stats out of order: p25 {stats['p25_pct']} "
+            f"median {stats['median_pct']} p75 {stats['p75_pct']}")
+    for k in ("above_50pct_frac", "above_25pct_frac", "below_10pct_frac", "below_5pct_frac"):
+        require(0.0 <= stats[k] <= 1.0, f"capacity stat {k}={stats[k]} out of [0,1]")

@@ -67,3 +67,46 @@ def test_summary_stats_ordering_and_fracs():
     assert st["above_50pct_frac"] == 0.2             # only 0.60
     assert st["below_10pct_frac"] == 0.2             # only 0.05
     assert 0.0 <= st["below_5pct_frac"] <= 1.0
+
+
+import pytest
+from engine.guards import GuardError
+
+
+def _good_payload():
+    series = [{"t": "2025-06-01T00:00:00Z", "cf": c}
+              for c in [0.6, 0.3, 0.2, 0.1, 0.05]]
+    curve = capacity.load_duration_curve(series, points=capacity.CURVE_POINTS)
+    stats = capacity.summary_stats(series)
+    return capacity.build_payload(curve, stats, series, "2026-06-26T00:00:00+00:00", _ns())
+
+
+def test_build_payload_shape():
+    p = _good_payload()
+    assert p["window"] == "rolling_365d"
+    assert len(p["curve"]) == capacity.CURVE_POINTS
+    assert p["n_periods"] == 5
+    assert p["nameplate_gw"]["total"] == 50.0
+    assert "forecast" in p["seam_note"].lower()
+    capacity.guard_payload(p)                       # the good payload passes its guard
+
+
+def test_guard_rejects_increasing_curve():
+    p = _good_payload()
+    p["curve"] = list(reversed(p["curve"]))         # now ascending → not a valid LDC
+    with pytest.raises(GuardError, match="non-increasing"):
+        capacity.guard_payload(p)
+
+
+def test_guard_rejects_stat_out_of_order():
+    p = _good_payload()
+    p["stats"]["median_pct"] = p["stats"]["p75_pct"] + 5
+    with pytest.raises(GuardError, match="order"):
+        capacity.guard_payload(p)
+
+
+def test_guard_rejects_frac_above_one():
+    p = _good_payload()
+    p["stats"]["below_10pct_frac"] = 1.5
+    with pytest.raises(GuardError, match="below_10pct_frac"):
+        capacity.guard_payload(p)

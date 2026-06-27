@@ -39,7 +39,7 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from engine import embedded_history, reliability
+from engine import capacity, embedded_history, reliability
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import (
@@ -412,8 +412,21 @@ def build(out_dir: Path = SITE_DATA) -> int:
             ("reliability_year",
              reliability.build_payload(reliability.pack(reliability.rolling_year(full)), generated)),
         ]
+
+        cf_full = capacity.build_cf_series(rows, embedded_rows, ns)
+        cf_window = capacity.rolling_year(cf_full)
+        cap_payload = capacity.build_payload(
+            capacity.load_duration_curve(cf_window),
+            capacity.summary_stats(cf_window), cf_window, generated, ns)
+        try:
+            capacity.guard_payload(cap_payload)
+        except GuardError as e:
+            print(f"capacity build failed (GuardError): {e}", file=sys.stderr)
+            return 1
+        reliability_files.append(("capacity_curve", cap_payload))
     else:
-        print("embedded store empty — skipping reliability_*.json (run embedded_history backfill)")
+        print("embedded store empty — skipping reliability_*.json + capacity_curve.json "
+              "(run embedded_history backfill)")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("stripe", stripe), ("counters", counters_out),
