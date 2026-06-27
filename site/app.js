@@ -13,7 +13,7 @@ import {
   capacityTrapStatic, fmtPct, fmtGW, fmtMW,
   reliableShareToColor, rgbCss, unreliableNowPct,
   binSeriesToColumns, reliabilityAxisTicks,
-  loadDurationPaths, capacityThresholdSentences, capacityTypicalBand,
+  carpetCellColor, gaugeCalibration,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);

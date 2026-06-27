@@ -6,7 +6,7 @@ import {
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   binSeriesToColumns, reliabilityAxisTicks,
-  loadDurationPaths, capacityThresholdSentences, capacityTypicalBand,
+  carpetCellColor, gaugeCalibration,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -191,26 +191,26 @@ test('reliabilityAxisTicks — empty series yields no ticks', () => {
   assert.equal(years.length, 0);
 });
 
-test('loadDurationPaths — line is monotonic-down in screen space, area closes to baseline', () => {
-  const { line, area } = loadDurationPaths([100, 50, 0], 200, 100);
-  // y(100)=0 (top), y(50)=50, y(0)=100 (bottom) → y increases across the line
-  assert.match(line, /^M 0.0 0.0 L 100.0 50.0 L 200.0 100.0$/);
-  assert.ok(area.startsWith(line));
-  assert.match(area, /L 200.0 100.0 L 0 100.0 Z$/);   // down to baseline and closed
+test('carpetCellColor — cf=0 deep red, cf>=satFull pale, null grey, monotonic', () => {
+  const red = carpetCellColor(0, 0.55);
+  const pale = carpetCellColor(0.55, 0.55);
+  const over = carpetCellColor(0.9, 0.55);     // clamps to pale
+  assert.deepEqual(red, [214, 18, 31]);
+  assert.deepEqual(pale, [251, 251, 249]);
+  assert.deepEqual(over, pale);
+  assert.deepEqual(carpetCellColor(null, 0.55), [232, 232, 230]);   // gap grey
+  const mid = carpetCellColor(0.275, 0.55);    // halfway → between red and pale on each channel
+  assert.ok(mid[0] > red[0] && mid[0] < pale[0]);
 });
 
-test('loadDurationPaths — empty curve yields empty paths', () => {
-  assert.deepEqual(loadDurationPaths([], 200, 100), { line: '', area: '' });
-});
-
-test('capacityThresholdSentences — rounds fracs to whole percents', () => {
-  const s = capacityThresholdSentences({ above_50pct_frac: 0.082, below_10pct_frac: 0.31, median_pct: 23.4 });
-  assert.equal(s.aboveHalf, 'beats half its nameplate just 8% of the year');
-  assert.equal(s.belowTenth, 'runs below a tenth of nameplate 31% of the year');
-  assert.equal(s.median, '23%');
-});
-
-test('capacityTypicalBand — passes p25/p75/mean through', () => {
-  assert.deepEqual(capacityTypicalBand({ p25_pct: 11, p75_pct: 38, mean_pct: 25 }),
-    { lo: 11, hi: 38, mean: 25 });
+test('gaugeCalibration — five ticks, 0% and 100% present, MW ends 0 and nameplate', () => {
+  const t = gaugeCalibration(50362);
+  assert.equal(t.length, 5);
+  assert.deepEqual(t.map((x) => x.pct), [0, 25, 50, 75, 100]);
+  assert.equal(t[0].label_pct, '0%');
+  assert.equal(t[4].label_pct, '100%');
+  assert.equal(t[0].label_mw, '0');
+  assert.equal(t[4].label_mw, '50,362');
+  assert.equal(t[2].label_mw, '25,181');       // 50% of 50,362
+  assert.ok(Math.abs(t[2].frac - 0.5) < 1e-9);
 });
