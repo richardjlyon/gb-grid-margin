@@ -183,3 +183,9 @@ test('reliabilityAxisTicks — all: years only, marked on each January', () => {
   assert.equal(months.length, 0);
   assert.deepEqual(years.map((y) => y.label), ['2024', '2025']);  // start + the Jan-2025 boundary
 });
+
+test('reliabilityAxisTicks — empty series yields no ticks', () => {
+  const { months, years } = reliabilityAxisTicks(Date.parse('2025-01-01T00:00:00Z'), 30 * 60000, 0, 'rolling');
+  assert.equal(months.length, 0);
+  assert.equal(years.length, 0);
+});

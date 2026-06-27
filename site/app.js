@@ -366,6 +366,7 @@ function renderStripe() {
 // Identical formula to the dial by construction (engine.reliability reuses compute_verdict), so the
 // stripe and the gauge above it can never disagree. Canvas, re-binned to its container on resize.
 let RELIABILITY = null;
+let REL_ROLLING = null, REL_ALL = null, REL_MODE = 'rolling';
 // (ramp constants live in render.js — RELIABILITY_RAMP, reliableShareToColor, rgbCss)
 function relColour(s) { return rgbCss(reliableShareToColor(s)); }
 
@@ -414,16 +415,20 @@ function drawReliabilityStripe() {
     ctx.fillStyle = relColour(cols[sx]);
     ctx.fillRect(sx, 0, 1, cssH);
   }
-  layoutReliabilityAxis(cssW);
+  layoutReliabilityAxis(cssW, REL_MODE);
 }
 
 function renderReliabilityStripe() {
   if (!RELIABILITY) return;
   const r = RELIABILITY;
-  $('reliability-body').innerHTML = `
+  $(‘reliability-body’).innerHTML = `
     <div class="rel-strip">
       <div class="rel-head">
         <p class="rel-cap">The same measure, every half-hour of the last year — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
+        <div class="rel-toggle" role="group" aria-label="Stripe range">
+          <button type="button" data-range="rolling" aria-pressed="${REL_MODE === ‘rolling’}"${REL_MODE === ‘rolling’ ? ‘ class="on"’ : ‘’}>Rolling year</button>
+          <button type="button" data-range="all" aria-pressed="${REL_MODE === ‘all’}"${REL_MODE === ‘all’ ? ‘ class="on"’ : ‘’}>Since 2016</button>
+        </div>
         <div class="rel-key">
           <span class="rel-key-lab">unreliable share of demand</span>
           <div class="rel-key-wrap">
@@ -436,11 +441,24 @@ function renderReliabilityStripe() {
       <canvas id="reliability-canvas" role="img"
         aria-label="Reliable (firm) share of GB demand, every half-hour from ${esc(r.range.from)} to ${esc(r.range.to)}: pale where firm power carried demand, red where it leaned on weather and imports."></canvas>
       <div class="rel-axis"><div class="rel-months" id="reliability-months"></div><div class="rel-years" id="reliability-years"></div></div>
-      <p class="caveat"><strong>Settled history, about three weeks behind live.</strong> The stripe is settled Elexon FUELHH with NESO's embedded outturn estimates; the live gauge and the ‘now’ marker read NESO's embedded <em>forecast</em> — the same measure, a slight forecast-vs-settlement seam, so read ‘now’ as indicative.</p>
-      ${srcLine(r.source, 'reliability')}
+      <p class="caveat"><strong>Settled history, about three weeks behind live.</strong> The stripe is settled Elexon FUELHH with NESO’s embedded outturn estimates; the live gauge and the ‘now’ marker read NESO’s embedded <em>forecast</em> — the same measure, a slight forecast-vs-settlement seam, so read ‘now’ as indicative.</p>
+      ${srcLine(r.source, ‘reliability’)}
     </div>`;
   drawReliabilityKey();
   drawReliabilityStripe();
+  $(‘reliability-body’).querySelectorAll(‘.rel-toggle button’).forEach((b) =>
+    b.addEventListener(‘click’, () => switchReliabilityRange(b.dataset.range)));
+}
+
+async function switchReliabilityRange(range) {
+  if (range === ‘all’ && !REL_ALL) {
+    try { REL_ALL = await getJSON(‘data/reliability_all.json’); }
+    catch (e) { return; }                       // keep current view if the big file is unavailable
+  }
+  REL_MODE = range;
+  RELIABILITY = range === ‘all’ ? REL_ALL : REL_ROLLING;
+  renderReliabilityStripe();
+  updateReliabilityNow(LAST_STATE);             // re-place the caret (live value unchanged)
 }
 
 // Place the "now" caret on the key at the live reading's position. The stripe is always the
@@ -571,7 +589,8 @@ async function main() {
   // The reliability stripe (Entry 01, under the gauge) is independent: its own fetch so a missing
   // file omits only the stripe, never the live gauge above it.
   try {
-    RELIABILITY = await getJSON('data/reliability_year.json');
+    REL_ROLLING = await getJSON('data/reliability_year.json');
+    RELIABILITY = REL_ROLLING;
     renderReliabilityStripe();
   } catch (e) {
     $('reliability-body').innerHTML = '';
