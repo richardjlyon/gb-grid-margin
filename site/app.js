@@ -394,10 +394,15 @@ function drawCarpet(canvasId, days, satFull) {
   const nDays = days.length, P = 48;
   const colW = cssW / P;                       // a column per half-hour (time of day)
   for (let sy = 0; sy < cssH; sy++) {          // a screen row per pixel; map to a day (newest at top)
-    const di = Math.min(nDays - 1, Math.floor((sy / cssH) * nDays));
-    const row = days[nDays - 1 - di].cf;       // newest (last) day at the top
+    const d0 = Math.floor((sy / cssH) * nDays);
+    const d1 = Math.max(d0 + 1, Math.floor(((sy + 1) / cssH) * nDays));
     for (let p = 0; p < P; p++) {
-      const [r, g, b] = carpetCellColor(row[p], satFull);
+      let minCf = Infinity, saw = false;
+      for (let d = d0; d < d1 && d < nDays; d++) {
+        const v = days[nDays - 1 - d].cf[p];   // newest (last) day at the top
+        if (v != null) { saw = true; if (v < minCf) minCf = v; }
+      }
+      const [r, g, b] = carpetCellColor(saw ? minCf : null, satFull);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       ctx.fillRect(p * colW, sy, Math.ceil(colW), 1);
     }

@@ -472,7 +472,7 @@ arming threshold (`firmStatus` in `render.js`), not by the stamp order.
 ## 14. Capacity-factor carpets *(Entry 02, 2026-06-27)*
 
 `engine/capacity.py` computes two per-source capacity-factor day-grids — one for wind, one for
-solar — over the rolling last 12 months of settled half-hourly data. The output is
+solar — over the rolling last 365 days of settled half-hourly data. The output is
 `site/data/capacity_carpets.json`, emitted by `engine.derived.build` (inside the
 `if embedded_rows:` block, alongside the reliability series from §12). The load-duration curve
 this supersedes was removed as illegible to a general audience: ranking half-hours by CF is not a
