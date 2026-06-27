@@ -17,7 +17,6 @@ import {
 const $ = (id) => document.getElementById(id);
 const POLL_MS = 5 * 60 * 1000;
 
-let LAST_STATE = null;   // last live state, so the reliability caret can re-place without a refetch
 
 async function getJSON(url) {
   const r = await fetch(url, { cache: 'no-store' });
@@ -176,7 +175,6 @@ function buildSourceArc(model, { armed = false } = {}) {
 let NAMEPLATE = null; // DUKES anchor (sound capacity-trap denominator)
 
 function renderVerdict(state) {
-  LAST_STATE = state;   // cached so the reliability caret can re-place without a refetch
   const badge = state.mode === 'live' ? ''   // live is the normal state — no label, only flag the abnormal
     : `<span class="modebadge ${state.mode}">${state.mode}</span>`;
   $('verdict-mode').innerHTML = badge;
@@ -376,7 +374,7 @@ function renderMetricBlock(cfg) {
   const pal = cfg.palette;
   const hasCarpet = !!(cfg.days && cfg.days.length);
   const gauge = buildGauge((cfg.liveCf ?? 0) * 100, 100, {
-    label: `${cfg.label} output as a share of installed capacity`,
+    label: cfg.gaugeLabel ?? `${cfg.label} output as a share of installed capacity`,
     calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
   });
   const avgNote = cfg.avgNote ? `<span class="trap-avg">${cfg.avgNote}</span>` : '';
@@ -387,7 +385,7 @@ function renderMetricBlock(cfg) {
         <div class="carpet-stage">
           <div class="carpet-yaxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
           <canvas id="carpet-${cfg.kind}" class="carpet" role="img"
-            aria-label="${esc(cfg.label)} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity."></canvas>
+            aria-label="${esc(cfg.carpetAria ?? `${cfg.label} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity.`)}"></canvas>
         </div>
         <div class="carpet-xaxis" id="carpet-${cfg.kind}-x"></div>
       </div>
@@ -463,6 +461,8 @@ function renderReliabilityBlock(v) {
         keyNote: has ? KEY_NOTE_HTML : '',
         gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (1 - firm share)',
         carpetSrc: src, methodAnchor: 'reliability',
+        gaugeLabel: 'Unreliable share of national demand',
+        carpetAria: 'Unreliable share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = demand fully met by firm power, deepening red = increasing unreliable share.',
       })}
     </div>`;
   if (has) {
