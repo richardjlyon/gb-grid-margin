@@ -14,6 +14,29 @@ export function gaugeNeedleAngle(value, max) {
   return -90 + t * 180;
 }
 
+// --- the reliability-stripe colour ramp ------------------------------------
+
+// Reliability-stripe ramp. Firm-share domain, anchored to the gauge's 50% arming line: pale at the
+// firm margin (>=hi), saturating to full red at/below the floor (<=lo). Single red ink, no green.
+export const RELIABILITY_RAMP = { lo: 0.40, hi: 0.65 };
+const _REL_PAPER = [251, 251, 249], _REL_RED = [214, 18, 31], _REL_GAP = [232, 232, 230];
+
+// firm share s -> [r,g,b]. null -> gap grey (distinct from 0). s can exceed 1 on net-export
+// half-hours -> clamps to the palest (most-reliable) end. The scale saturates at lo.
+export function reliableShareToColor(s) {
+  if (s == null) return _REL_GAP.slice();
+  const { lo, hi } = RELIABILITY_RAMP;
+  const t = Math.max(0, Math.min(1, (hi - s) / (hi - lo)));
+  return [0, 1, 2].map((k) => Math.round(_REL_PAPER[k] + (_REL_RED[k] - _REL_PAPER[k]) * t));
+}
+
+export const rgbCss = ([r, g, b]) => `rgb(${r},${g},${b})`;
+
+// Live "now" position on the unreliable-share key: 100 − firm, clamped to [0,100].
+export function unreliableNowPct(firmPct) {
+  return Number.isFinite(firmPct) ? Math.max(0, Math.min(100, 100 - firmPct)) : null;
+}
+
 // --- the wind stripe colour ramp -------------------------------------------
 
 const _INK = [0x15, 0x18, 0x1c];      // calm day: the dark band

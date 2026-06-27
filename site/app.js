@@ -11,6 +11,7 @@ import { shareButtons } from './share.js';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, sourceArcModel, COL_EXPORT,
   capacityTrapStatic, fmtPct, fmtGW, fmtMW,
+  reliableShareToColor, rgbCss, unreliableNowPct,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -364,21 +365,8 @@ function renderStripe() {
 // Identical formula to the dial by construction (engine.reliability reuses compute_verdict), so the
 // stripe and the gauge above it can never disagree. Canvas, re-binned to its container on resize.
 let RELIABILITY = null;
-// Firm-share ramp, anchored to the gauge's own 50% arming line: pale only with a clear firm margin
-// (>=65%), saturating to full red at/below 40% — so red means "at or past the level where the dial
-// itself declares the grid unreliable". Linear, so the key reads as the true transfer function.
-const _REL = { LO: 0.40, HI: 0.65, GAMMA: 1.0 };
-
-// firm share s -> colour. Pale at s>=HI (firm carries demand), red at s<=LO. Gaps in grey (distinct
-// from 0). s can exceed 1 on net-export half-hours — clamped to the palest (most-reliable) end.
-function relColour(s) {
-  if (s == null) return '#e8e8e6';
-  let t = Math.max(0, Math.min(1, (_REL.HI - s) / (_REL.HI - _REL.LO)));
-  t = Math.pow(t, _REL.GAMMA);
-  const paper = [251, 251, 249], red = [214, 18, 31];
-  const c = [0, 1, 2].map((k) => Math.round(paper[k] + (red[k] - paper[k]) * t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
+// (ramp constants live in render.js — RELIABILITY_RAMP, reliableShareToColor, rgbCss)
+function relColour(s) { return rgbCss(reliableShareToColor(s)); }
 
 function drawReliabilityKey() {
   const cv = $('reliability-key');
@@ -474,8 +462,9 @@ function updateReliabilityNow(state) {
   if (!el) return;
   const v = state && state.verdict;
   const m = v ? sourceArcModel(v, 'using') : null;
-  if (!m || !Number.isFinite(m.firmPct)) { el.hidden = true; return; }
-  const unreliable = Math.max(0, Math.min(100, 100 - m.firmPct));
+  if (!m) { el.hidden = true; return; }
+  const unreliable = unreliableNowPct(m.firmPct);
+  if (unreliable == null) { el.hidden = true; return; }
   el.style.left = `${unreliable}%`;
   el.setAttribute('aria-label', `Now: ${Math.round(unreliable)}% unreliable`);
   el.hidden = false;

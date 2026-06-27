@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
+  reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -122,4 +123,32 @@ test('fmtPct0 rounds to a whole percent (the gauge stamps), em-dash for non-fini
   assert.equal(fmtPct0(76.5), '77%');   // round-half-up at .5
   assert.equal(fmtPct0(23.4), '23%');
   assert.equal(fmtPct0(NaN), '—');
+});
+
+test('reliableShareToColor — pale above the firm margin, full red below the arming floor', () => {
+  const paper = [251, 251, 249], red = [214, 18, 31];
+  assert.deepEqual(reliableShareToColor(0.70), paper);   // >= hi (0.65) → paper
+  assert.deepEqual(reliableShareToColor(0.30), red);      // <= lo (0.40) → full red
+  assert.deepEqual(reliableShareToColor(1.30), paper);    // net-export (>1) clamps to palest
+});
+
+test('reliableShareToColor — monotonic: a less-firm half-hour is never paler', () => {
+  const redness = (s) => 251 - reliableShareToColor(s)[0];   // distance of R-channel from paper
+  assert.ok(redness(0.40) >= redness(0.50));
+  assert.ok(redness(0.50) >= redness(0.60));
+});
+
+test('reliableShareToColor — a gap (null) is grey, distinct from 0', () => {
+  assert.deepEqual(reliableShareToColor(null), [232, 232, 230]);
+  assert.notDeepEqual(reliableShareToColor(0), reliableShareToColor(null));
+});
+
+test('unreliableNowPct — 100 − firm, clamped, null when not finite', () => {
+  assert.equal(unreliableNowPct(74), 26);
+  assert.equal(unreliableNowPct(120), 0);      // net export → firm>100 → 0% unreliable
+  assert.equal(unreliableNowPct(NaN), null);
+});
+
+test('rgbCss formats a triple', () => {
+  assert.equal(rgbCss([1, 2, 3]), 'rgb(1,2,3)');
 });
