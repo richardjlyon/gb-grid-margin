@@ -469,72 +469,93 @@ art and source-mix convention (green = reliable, left-to-right) are unchanged; o
 flips. This is an instrument reading, not an alarm — the needle colour is governed solely by the 50%
 arming threshold (`firmStatus` in `render.js`), not by the stamp order.
 
-## 14. Capacity-factor load-duration curve *(Entry 02, 2026-06-26)*
+## 14. Capacity-factor carpets *(Entry 02, 2026-06-27)*
 
-`engine/capacity.py` computes a per-half-hour renewables capacity factor on the **same basis as the
-live capacity-trap gauge**, then derives a load-duration curve from the rolling last 12 months.
-The output is `site/data/capacity_curve.json`, emitted by `engine.derived.build` (inside the
-`if embedded_rows:` block, alongside the reliability series from §12).
+`engine/capacity.py` computes two per-source capacity-factor day-grids — one for wind, one for
+solar — over the rolling last 12 months of settled half-hourly data. The output is
+`site/data/capacity_carpets.json`, emitted by `engine.derived.build` (inside the
+`if embedded_rows:` block, alongside the reliability series from §12). The load-duration curve
+this supersedes was removed as illegible to a general audience: ranking half-hours by CF is not a
+natural axis for most readers, whereas a settlement-period (local time-of-day) grid is immediately
+interpretable.
 
-**Basis formula.**
+**Per-source basis formulas.**
 
 ```
-CF = (transmission WIND [Elexon FUELHH, settled]
-      + embedded wind [NESO outturn estimate]
-      + embedded solar [NESO outturn estimate])
-     / DUKES 6.2 wind+solar nameplate (annual-step, MW)
+Wind CF (per SP) = (transmission WIND [Elexon FUELHH WIND column, settled]
+                    + embedded wind [NESO outturn estimate, §11])
+                   / DUKES total UK wind nameplate (annual-step, MW)
+
+Solar CF (per SP) = embedded solar [NESO outturn estimate, §11]
+                    / NESO embedded-solar capacity (contemporaneous, GB, DC/MWp)
 ```
 
-Embedded output is **in the numerator** — this is therefore a **true load factor**, not the
-transmission-only lower bound the wind stripe (§8) carries. The §8 cross-year artifact arises
-because transmission wind grew as a share of total wind capacity over the history; with embedded
-wind added back to the numerator that confound does not apply here. The numerator and denominator
-are on the same total-capacity basis for each half-hour's year (annual-step DUKES), so year-on-year
-movement in the load-duration curve is not an artifact of an expanding transmission share.
+The wind formula includes embedded wind in the numerator over the full DUKES installed total,
+making it a **true load factor** — not the transmission-only lower bound the wind stripe (§8)
+carries. The cross-year artifact documented in §8 (apparent CF rising as the offshore transmission
+share grew) does not apply here; the numerator and denominator share the same total-capacity basis
+for each half-hour's settlement year. Missing or blank FUELHH `WIND` values coerce to 0.
 
-**The one remaining seam: live forecast vs settled outturn.** The live gauge needle reads NESO's
-embedded *forecast* (`EMBEDDED_*_FORECAST`, `engine/grid_engine.py`); the historical curve reads
-NESO's embedded *outturn estimate* (`EMBEDDED_*_GENERATION`, the §11 store). These are sibling
-products from the same methodology owner — the outturn estimate is the corrected/settled version,
-the forecast is the forward tick. A small step at the join is expected and disclosed, not a basis
-difference. The settled curve lags live by about three weeks (the §11 embedded-store edge).
+The solar formula uses **NESO embedded-solar capacity as the denominator, not DUKES**. Both
+the numerator (embedded solar outturn, `EMBEDDED_SOLAR_GENERATION`) and the denominator
+(`EMBEDDED_SOLAR_CAPACITY`) are from the same NESO embedded-history series (§11), on the same
+scope (GB) and basis (DC/MWp, contemporaneous). A DUKES solar capacity figure would be
+UK-wide, AC-equivalent and end-2024 vintage — a 4–5 GW mismatch that would artificially
+depress the solar CF (see §2 for the full accounting of the scope and basis differences). Night
+cells store `0.0` (genuine zero output, not gaps); `None` only when the capacity field is absent
+or zero.
 
-**Join.** `build_cf_series` (in `engine/capacity.py`) joins the settled FUELHH store (§6) to the
-embedded store (§11) on `(settlement_date, settlement_period)`. Half-hours absent from either store
-are silently dropped rather than imputed.
+**Join and time-of-day axis.** `build_carpet_days` joins the settled FUELHH store (§6) to the
+embedded store (§11) on `(settlement_date, settlement_period)`. A half-hour present in both stores
+fills array slot `SP − 1` (0-indexed into the 48-element `cf` array). Settlement periods follow
+the local clock (SP1 = 00:00 local, BST/GMT handled for free by the settlement-period convention).
+DST 50-period autumn days produce 50 joined periods; **SP49 and SP50 fall outside the 48-column
+grid and are dropped** (`if not (1 <= sp <= PERIODS): continue`). 46-period spring-forward days
+produce naturally short rows. Days absent from either store are omitted from both carpets, keeping
+the two grids aligned on the same day set.
 
-**Rolling 365-day window.** `rolling_year` retains the sub-series within 365 days of the latest
-half-hour (the most recent complete calendar year of settled data). The window moves with each
-`engine.derived build` run as the embedded store is extended.
+**Rolling 365-day window.** `rolling_days(days, span_days=365)` retains day-grids within 365
+calendar days of the latest day (date-filtered, not count-filtered). The window advances with
+each `engine.derived build` run as the embedded store edge extends.
 
-**200-point load-duration downsample.** The rolling-window series typically contains ~17,500
-half-hours. `load_duration_curve` sorts these descending and uniformly samples `CURVE_POINTS = 200`
-index-positions across the sorted list, emitting each as a percentage of nameplate. `curve[0]` is
-the maximum CF attained (the peak of the duration curve); the curve is non-increasing by
-construction. 200 points is sufficient resolution for the dashboard SVG without blowing the JSON
-payload; the full per-half-hour series is never emitted.
+**`capacity_carpets.json` shape.** Top-level keys:
 
-**`CURVE_CEILING_PCT = 120`.** The guard allows values up to 120% of nameplate before failing the
-build. CF can legitimately exceed 100% from two sources: (a) NESO's embedded outturn estimates are
-modelled, not metered, and can carry a small upward revision relative to the annual-step DUKES
-denominator; (b) mid-year, the annual-step nameplate (held from the prior year-end) understates
-actual installed capacity, so real output can transiently read above the denominator. A ceiling of
-120% admits these minor metering and timing quirks while still catching a gross feed error (a
-doubled or wrong-unit series would push the curve far above 120%). Values above 100% are real,
-not errors; the ceiling is a sanity bound, not a physical limit.
+| Key | Contents |
+| --- | --- |
+| `wind.days`, `solar.days` | list of `{"date": "YYYY-MM-DD", "cf": [48 floats-or-nulls]}` |
+| `gauge.nameplate_mw` | DUKES wind+solar combined nameplate in MW; calibrates the live gauge |
+| `sat` | `{"wind": 0.55, "solar": 0.60}` — cf at/above which a cell maps to the palest colour |
+| `basis_wind`, `basis_solar` | prose provenance strings (the formulas above, as text) |
+| `seam_note` | forecast-vs-outturn disclosure |
+| `source_wind`, `source_solar` | citable source strings |
+| `generated_utc`, `window`, `range` | build timestamp, `"rolling_365d"`, date bounds |
 
-**Guard set (`guard_payload` in `engine/capacity.py`).** All checks run before `capacity_curve.json`
-is written; any breach raises `GuardError` and the build writes nothing (see §10):
+`gauge.nameplate_mw` = `round(nameplate["wind_plus_solar_gw"] × 1000)` from `derived.py`, where
+`nameplate` is the anchor from `data/nameplate.json` (DUKES 6.2 wind + solar, end-2024).
 
-- *Curve length*: exactly `CURVE_POINTS` (200) values.
-- *Window non-empty*: `n_periods > 0`.
-- *Value range*: every curve value in `[0, CURVE_CEILING_PCT]` (i.e. 0–120%).
-- *Non-increasing*: `curve[i] >= curve[i+1]` for all consecutive pairs (load-duration property).
-- *Quartile order*: `p25_pct ≤ median_pct ≤ p75_pct` (a reversed quartile flags a bug in the
-  percentile calculation, not a data anomaly).
-- *Threshold fractions*: `above_50pct_frac`, `above_25pct_frac`, `below_10pct_frac`, and
-  `below_5pct_frac` all in `[0, 1]`.
+**`guard_payload` gate (§10).** All checks run before `capacity_carpets.json` is written; any
+breach raises `GuardError` and writes nothing:
+
+- *Days non-empty*: each source must have at least one day.
+- *Window in range*: 360 ≤ `len(days)` ≤ 367 for each source (rolling 365-day window, with
+  a ±5-day tolerance for partial store edges and leap-year boundary effects).
+- *Days sorted and unique*: the `date` list is sorted ascending with no repeats.
+- *Exactly 48 periods per day*: every `cf` array has length `PERIODS = 48`.
+- *CF value range*: each value is `None` or in `[0, 2.0]`. The 2.0 ceiling (in contrast to the
+  physical limit of 1.0 for metered data) admits NESO's modelled outturn estimates, which are not
+  metered and can carry upward revisions, and the annual-step timing bias for wind (mid-year, the
+  prior year-end nameplate understates installed capacity). A gross feed error would push values
+  far above 2.0 and is caught.
+- *Gauge and saturation*: `nameplate_mw > 0`; each `sat` value in `(0, 1]`.
+
+**The forecast-vs-settled seam.** The live gauge reads NESO's embedded *forecast*
+(`EMBEDDED_*_FORECAST`, `engine/grid_engine.py`); the carpets read NESO's embedded *outturn
+estimate* (`EMBEDDED_*_GENERATION`, the §11 store). These are sibling products from the same
+methodology owner — the outturn estimate is the corrected/settled version, the forecast is the
+forward tick. A small step at the join is expected and disclosed (see `_SEAM` in
+`engine/capacity.py`). The carpets lag live by approximately three weeks (the §11
+embedded-store edge).
 
 **Cross-references.** §8 documents the wind stripe's transmission-only lower bound and the
-cross-year artifact that does not apply here. §11 documents the embedded store, its forecast-vs-outturn
-seam, GB scope confirmation, and the ~21-day lag.
+cross-year artifact that does *not* apply to the carpet wind. §11 documents the embedded store,
+its GB scope confirmation, the `SETTLEMENT_DATE` normalisation, and the ~21-day lag.
