@@ -70,3 +70,56 @@ def rolling_days(days: list[dict], span_days: int = 365) -> list[dict]:
         return []
     cutoff = date.fromisoformat(days[-1]["date"]) - timedelta(days=span_days)
     return [d for d in days if date.fromisoformat(d["date"]) >= cutoff]
+
+
+from engine.guards import require  # noqa: E402  (grouped near use)
+
+SAT = {"wind": 0.55, "solar": 0.60}   # cf at/above which a cell is the palest (full-output) end
+
+_BASIS_WIND = (
+    "Wind capacity factor per half-hour = (transmission WIND [Elexon FUELHH, settled] + embedded "
+    "wind [NESO outturn]) / DUKES total wind nameplate (annual-step). Indexed by settlement period "
+    "(local half-hour). Settled, ~3 weeks behind live."
+)
+_BASIS_SOLAR = (
+    "Solar capacity factor per half-hour = embedded solar (NESO outturn) / NESO embedded-solar "
+    "capacity (contemporaneous, GB/DC) — the methodology-correct denominator for the embedded-solar "
+    "numerator. Night cells are genuine 0, not gaps. Settled, ~3 weeks behind live."
+)
+_SEAM = ("The live gauge reads NESO's embedded FORECAST; the carpets read settled OUTTURN, ~3 weeks "
+         "behind — the same measures, a forecast-vs-settlement seam.")
+_SRC_WIND = "Elexon FUELHH (settled) + NESO embedded wind / DUKES 6.2 wind nameplate (annual-step)"
+_SRC_SOLAR = "NESO embedded solar / NESO embedded-solar capacity (settled outturn)"
+
+
+def build_payload(wind_days: list[dict], solar_days: list[dict],
+                  nameplate_mw: int, generated_utc: str) -> dict:
+    ref = wind_days or solar_days
+    rng = ({"from": ref[0]["date"], "to": ref[-1]["date"]} if ref else {"from": None, "to": None})
+    return {
+        "basis_wind": _BASIS_WIND, "basis_solar": _BASIS_SOLAR, "seam_note": _SEAM,
+        "source_wind": _SRC_WIND, "source_solar": _SRC_SOLAR,
+        "generated_utc": generated_utc, "window": "rolling_365d", "range": rng,
+        "gauge": {"nameplate_mw": nameplate_mw}, "sat": SAT,
+        "wind": {"days": wind_days}, "solar": {"days": solar_days},
+    }
+
+
+def guard_payload(payload: dict) -> None:
+    """Stage 9 build-time gate: fail loudly before capacity_carpets.json is written."""
+    for kind in ("wind", "solar"):
+        days = payload[kind]["days"]
+        require(len(days) > 0, f"capacity carpet {kind}: no days")
+        require(360 <= len(days) <= 367, f"capacity carpet {kind}: {len(days)} days, expected ~365")
+        ds = [d["date"] for d in days]
+        require(ds == sorted(ds) and len(ds) == len(set(ds)),
+                f"capacity carpet {kind}: days not sorted/unique")
+        for d in days:
+            require(len(d["cf"]) == PERIODS,
+                    f"capacity carpet {kind} {d['date']}: {len(d['cf'])} periods, expected {PERIODS}")
+            for v in d["cf"]:
+                require(v is None or 0.0 <= v <= 2.0,
+                        f"capacity carpet {kind} {d['date']}: cf {v} out of [0,2]")
+    require(payload["gauge"]["nameplate_mw"] > 0, "capacity gauge nameplate_mw must be > 0")
+    for k, v in payload["sat"].items():
+        require(0.0 < v <= 1.0, f"capacity sat {k}={v} out of (0,1]")

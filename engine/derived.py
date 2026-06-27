@@ -413,19 +413,18 @@ def build(out_dir: Path = SITE_DATA) -> int:
              reliability.build_payload(reliability.pack(reliability.rolling_year(full)), generated)),
         ]
 
-        cf_full = capacity.build_cf_series(rows, embedded_rows, ns)
-        cf_window = capacity.rolling_year(cf_full)
-        cap_payload = capacity.build_payload(
-            capacity.load_duration_curve(cf_window),
-            capacity.summary_stats(cf_window), cf_window, generated, ns)
+        nameplate_mw = round(nameplate["wind_plus_solar_gw"] * 1000)
+        wind_days = capacity.rolling_days(capacity.build_carpet_days(rows, embedded_rows, ns, "wind"))
+        solar_days = capacity.rolling_days(capacity.build_carpet_days(rows, embedded_rows, ns, "solar"))
+        cap_payload = capacity.build_payload(wind_days, solar_days, nameplate_mw, generated)
         try:
             capacity.guard_payload(cap_payload)
         except GuardError as e:
-            print(f"capacity build failed (GuardError): {e}", file=sys.stderr)
+            print(f"capacity carpets build failed (GuardError): {e}", file=sys.stderr)
             return 1
-        reliability_files.append(("capacity_curve", cap_payload))
+        reliability_files.append(("capacity_carpets", cap_payload))
     else:
-        print("embedded store empty — skipping reliability_*.json + capacity_curve.json "
+        print("embedded store empty — skipping reliability_*.json + capacity_carpets.json "
               "(run embedded_history backfill)")
 
     out_dir.mkdir(parents=True, exist_ok=True)

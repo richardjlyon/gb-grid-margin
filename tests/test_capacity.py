@@ -68,3 +68,57 @@ def test_rolling_days_keeps_last_365():
     kept = capacity.rolling_days(days, span_days=365)
     assert kept[-1]["date"] == "2026-05-15"
     assert all(d["date"] >= "2025-05-15" for d in kept)
+
+
+import pytest
+from datetime import date as _date, timedelta as _td
+from engine.guards import GuardError
+
+
+def _carpet(date_, cf0):
+    return {"date": date_, "cf": [cf0] + [None] * 47}
+
+
+def _good_payload():
+    # 366 unique sequential dates (2025-06-01 … 2026-06-01)
+    _start = _date(2025, 6, 1)
+    wind = [_carpet((_start + _td(days=i)).isoformat(), 0.2) for i in range(366)]
+    solar = [dict(d) for d in wind]
+    return capacity.build_payload(wind, solar, 50362, "2026-06-27T00:00:00+00:00")
+
+
+def test_build_payload_shape():
+    p = _good_payload()
+    assert p["window"] == "rolling_365d"
+    assert p["gauge"]["nameplate_mw"] == 50362
+    assert p["sat"] == {"wind": 0.55, "solar": 0.60}
+    assert len(p["wind"]["days"]) == 366 and len(p["solar"]["days"]) == 366
+    capacity.guard_payload(p)
+
+
+def test_guard_rejects_empty_days():
+    p = _good_payload()
+    p["wind"]["days"] = []
+    with pytest.raises(GuardError, match="no days"):
+        capacity.guard_payload(p)
+
+
+def test_guard_rejects_bad_period_count():
+    p = _good_payload()
+    p["solar"]["days"][0]["cf"] = [0.1] * 47       # 47, not 48
+    with pytest.raises(GuardError, match="periods"):
+        capacity.guard_payload(p)
+
+
+def test_guard_rejects_cf_out_of_range():
+    p = _good_payload()
+    p["wind"]["days"][5]["cf"][0] = 3.0
+    with pytest.raises(GuardError, match="cf"):
+        capacity.guard_payload(p)
+
+
+def test_guard_rejects_zero_nameplate():
+    p = _good_payload()
+    p["gauge"]["nameplate_mw"] = 0
+    with pytest.raises(GuardError, match="nameplate"):
+        capacity.guard_payload(p)
