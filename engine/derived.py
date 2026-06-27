@@ -408,10 +408,17 @@ def build(out_dir: Path = SITE_DATA) -> int:
     if embedded_rows:
         full = reliability.build_series(rows, embedded_rows)
         reliability_files = [
-            ("reliability_all", reliability.build_payload(reliability.pack(full), generated)),
             ("reliability_year",
              reliability.build_payload(reliability.pack(reliability.rolling_year(full)), generated)),
         ]
+        rel_carpet_days = capacity.rolling_days(reliability.build_carpet_days(rows, embedded_rows))
+        rel_carpet = reliability.build_carpet_payload(rel_carpet_days, generated)
+        try:
+            reliability.guard_carpet_payload(rel_carpet)
+        except GuardError as e:
+            print(f"reliability carpet build failed (GuardError): {e}", file=sys.stderr)
+            return 1
+        reliability_files.append(("reliability_carpet", rel_carpet))
 
         # Per-source gauge nameplates. Wind = DUKES total wind (annual anchor). Solar = the latest
         # NESO embedded-solar capacity in the store, so the solar gauge matches its NESO-based carpet.

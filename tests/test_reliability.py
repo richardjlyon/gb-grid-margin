@@ -155,11 +155,14 @@ def test_derived_build_emits_reliability_when_embedded_present(tmp_path):
         pytest.skip("embedded store not built in this checkout")
     rc = derived.build(out_dir=tmp_path)
     assert rc == 0
-    for name in ("reliability_year", "reliability_all"):
+    for name in ("reliability_year", "reliability_carpet"):
         payload = json.loads((tmp_path / f"{name}.json").read_text())
-        assert payload["step_minutes"] == 30
-        assert payload["values"]              # non-empty
         assert payload["source"]
+    year_payload = json.loads((tmp_path / "reliability_year.json").read_text())
+    assert year_payload["step_minutes"] == 30
+    assert year_payload["values"]              # non-empty
+    carpet_payload = json.loads((tmp_path / "reliability_carpet.json").read_text())
+    assert carpet_payload["days"]              # non-empty
 
 
 # ---------------------------------------------------------------------------

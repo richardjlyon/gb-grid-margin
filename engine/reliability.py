@@ -129,7 +129,7 @@ def build_payload(packed: dict, generated_utc: str) -> dict:
     }
 
 
-from engine.capacity import PERIODS, rolling_days  # noqa: E402  (grouped near use)
+from engine.capacity import PERIODS  # noqa: E402  (grouped near use)
 from engine.guards import require  # noqa: E402
 
 
