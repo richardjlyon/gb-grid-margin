@@ -211,10 +211,10 @@ function renderVerdict(state) {
           <div class="gauge-zonelabels"><span>Reliable</span><span>Unreliable</span></div>
         </div>
         <div class="stamp-pair">
-          <div class="stamp"><span class="stamp-val lead ${status.armed ? 'red' : ''}">${weatherStamp}</span>
-            <span class="stamp-label">${weatherLabel}</span></div>
           <div class="stamp"><span class="stamp-val muted">${firmStamp}</span>
             <span class="stamp-label">gas/nuclear/biofuel/hydro</span></div>
+          <div class="stamp"><span class="stamp-val lead ${status.armed ? 'red' : ''}">${weatherStamp}</span>
+            <span class="stamp-label">${weatherLabel}</span></div>
         </div>
         <p class="status-line ${status.armed ? 'armed' : ''}">Status: ${status.label}</p>
         ${ssline}
