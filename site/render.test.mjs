@@ -199,7 +199,7 @@ test('carpetCellColor — cf=0 deep red, cf>=satFull pale, null grey, monotonic'
   assert.deepEqual(pale, [251, 251, 249]);
   assert.deepEqual(over, pale);
   assert.deepEqual(carpetCellColor(null, 0.55), [232, 232, 230]);   // gap grey
-  const mid = carpetCellColor(0.275, 0.55);    // halfway → between red and pale on each channel
+  const mid = carpetCellColor(0.275, 0.55);    // halfway -> between red and pale on each channel
   assert.ok(mid[0] > red[0] && mid[0] < pale[0]);
 });
 

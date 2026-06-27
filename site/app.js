@@ -84,7 +84,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
       cal += `<text x="${ix.toFixed(1)}" y="${(iy + 3).toFixed(1)}" class="g-pct" text-anchor="middle">${t.label_pct}</text>`;
       if (t.pct === 0 || t.pct === 50 || t.pct === 100) {
         const [ox, oy] = arcPoint(cx, cy, R + 15, v, max);
-        cal += `<text x="${ox.toFixed(1)}" y="${(oy + 3).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
+        cal += `<text x="${ox.toFixed(1)}" y="${(oy + 11).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
       }
     }
   }
@@ -282,7 +282,7 @@ function renderTrap(v) {
       <div class="carpet-cell">
         <p class="carpet-title">${esc(title)}</p>
         <canvas id="carpet-${kind}" class="carpet" role="img" aria-label="${esc(title)}: ${esc(caption)}"></canvas>
-        <div class="carpet-axis"><span>00</span><span>06</span><span>12</span><span>18</span></div>
+        <div class="carpet-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
         <p class="carpet-cap">${esc(caption)}</p>
         ${srcLine(src, 'capacity-trap')}
       </div>`;
@@ -290,7 +290,7 @@ function renderTrap(v) {
 
   const windCap = 'Wind keeps no timetable. The red bands are stretches — hours to days — when it simply stopped. There is no time of day you can count on it.';
   const solarCap = 'Solar runs to a timetable: strong at midday, nothing at night, far less in winter. The dark is when it gives nothing.';
-  const hasCarpets = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar);
+  const hasCarpets = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
 
   $('trap-body').innerHTML = `
     <div class="trap-row${hasCarpets ? '' : ' gauge-only'}">
@@ -312,7 +312,7 @@ function renderTrap(v) {
 
 // ============================================================ the wind stripe
 let STRIPE = null;
-let CAPACITY = null;   // site/data/capacity_curve.json (load-duration curve + stats)
+let CAPACITY = null;   // site/data/capacity_carpets.json (wind + solar half-hourly CF grids)
 function drawStripe() {
   if (!STRIPE) return;
   const canvas = $('stripe-canvas');
@@ -687,8 +687,8 @@ async function main() {
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
     drawStripe(); drawReliabilityStripe(); drawReliabilityKey();
-    if (CAPACITY && CAPACITY.wind) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
-    if (CAPACITY && CAPACITY.solar) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
+    if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpet('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind);
+    if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpet('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar);
   }, 150); });
 }
 

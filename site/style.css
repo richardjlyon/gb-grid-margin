@@ -410,5 +410,5 @@ main { padding-bottom: 40px; }
 .carpet-key .ck.pale { background: #fbfbf9; }
 .carpet-key .ck.red { background: #d6121f; }
 .gauge .g-pct { font: 600 9px 'Spline Sans Mono', monospace; fill: #15181c; }
-.gauge .g-mw { font: 500 8px 'Spline Sans Mono', monospace; fill: #565e66; }
+.gauge .g-mw { font: 500 7px 'Spline Sans Mono', monospace; fill: #565e66; }
 @media (max-width: 900px) { .trap-row { grid-template-columns: 1fr; gap: 16px; } .carpet { height: 280px; } }
