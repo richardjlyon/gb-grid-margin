@@ -105,3 +105,15 @@ def test_guard_rejects_out_of_range_cf():
         assert False, "expected GuardError"
     except GuardError:
         pass
+
+
+def test_guard_rejects_cf_above_1_0():
+    # CF 1.2 is above the [0,1] envelope (now correctly rejected; was 1.5 before fix)
+    series = [{"date": "2020-01-01", "cf": 0.30, "mean_mw": 3000.0, "capacity_gw": 10.0}]
+    p = wu.build_payload(series, "2026-06-27T00:00:00+00:00")
+    p["carpet"]["rows"]["2020"][0] = 1.2  # above 1.0, below old 1.5 — should now fail
+    try:
+        wu.guard_payload(p)
+        assert False, "expected GuardError"
+    except GuardError:
+        pass

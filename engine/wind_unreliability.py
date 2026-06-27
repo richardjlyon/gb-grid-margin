@@ -171,7 +171,7 @@ def guard_payload(payload: dict) -> None:
     for y, cells in carpet["rows"].items():
         require(len(cells) == 366, f"carpet row {y}: {len(cells)} cells, expected 366")
         for v in cells:
-            require(v is None or 0.0 <= v <= 1.5, f"carpet {y}: cf {v} out of [0,1.5]")
+            require(v is None or 0.0 <= v <= 1.0 + 1e-6, f"carpet {y}: cf {v} out of [0,1]")
     for l in payload["lulls"]:
         require(l["days"] >= 1, f"lull {l['start']}: non-positive length {l['days']}")
         require(l["start"] <= l["end"], f"lull {l['start']}: start after end")
