@@ -261,3 +261,18 @@ export function gaugeCalibration(nameplateMw) {
     label_mw: nameplateMw == null ? null : Math.round((nameplateMw * pct) / 100).toLocaleString('en-GB'),
   }));
 }
+
+// --- the drought-spike geometry helper (Entry 03) ----------------------------
+
+// Entry 03 drought-spike geometry: each lull -> a vertical spike. x = its start date mapped onto
+// the time axis; height ∝ duration; minor flags the frequent 1-day dips (drawn thin/pale so the
+// multi-day towers dominate). Pure: the canvas shell paints these.
+export function droughtSpikes(lulls, { x0ms, x1ms, w, h, maxDays }) {
+  const span = Math.max(1, x1ms - x0ms);
+  return lulls.map((l) => ({
+    x: ((Date.parse(l.start) - x0ms) / span) * w,
+    h: Math.max(0, Math.min(1, l.days / maxDays)) * h,
+    minor: l.days < 2,
+    severe: !!l.severe,
+  }));
+}

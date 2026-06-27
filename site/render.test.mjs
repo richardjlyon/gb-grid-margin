@@ -5,7 +5,7 @@ import {
   gaugeNeedleAngle, cfToInk, tallyGroups, firmStatus, firmShares,
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
-  carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor,
+  carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor, droughtSpikes,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -212,4 +212,19 @@ test('windDroughtColor — windy is pale, calm is deep red, null is grey, monoto
   // redness rises monotonically as CF falls (R stays high, G/B fall).
   const g = (cf) => windDroughtColor(cf)[1];
   assert.ok(g(0.05) < g(0.20) && g(0.20) < g(0.40));
+});
+
+test('droughtSpikes — maps start date to x, days to height, flags minor (<2d)', () => {
+  const x0 = Date.parse('2020-01-01'), x1 = Date.parse('2020-12-31');
+  const lulls = [
+    { start: '2020-01-01', days: 1, min_cf: 0.07, severe: false },
+    { start: '2020-07-01', days: 10, min_cf: 0.03, severe: true },
+  ];
+  const s = droughtSpikes(lulls, { x0ms: x0, x1ms: x1, w: 1000, h: 200, maxDays: 20 });
+  assert.equal(s[0].x, 0);            // first day -> left edge
+  assert.ok(s[0].minor === true);     // 1-day -> minor
+  assert.equal(s[0].h, 200 / 20);     // 1/20 of height
+  assert.ok(s[1].x > 480 && s[1].x < 520);  // ~midyear -> ~middle
+  assert.equal(s[1].h, 100);          // 10/20 -> half height
+  assert.ok(s[1].severe === true && s[1].minor === false);
 });
