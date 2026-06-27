@@ -79,20 +79,6 @@ def partial_years(dates: list[str]) -> list[int]:
     return out
 
 
-# --- wind capacity factor ---------------------------------------------------
-
-def day_mean_mw(day_rows: list[dict], series: str = "WIND") -> float | None:
-    """Mean MW for a series over a day's present (non-blank) periods, or None if all blank."""
-    vals = [r[series] for r in day_rows if r.get(series) is not None]
-    return sum(vals) / len(vals) if vals else None
-
-
-def wind_cf_for_day(day_rows: list[dict], capacity_gw: float) -> float:
-    """Mean-power wind capacity factor for one day against a total-nameplate denominator."""
-    mean_mw = day_mean_mw(day_rows, "WIND")
-    return (mean_mw or 0.0) / (capacity_gw * 1000)
-
-
 # --- transmission-system shares ---------------------------------------------
 
 def _sum_mwh(rows: list[dict], series: str) -> float:

@@ -1,10 +1,6 @@
 """Stage 5 — derived series from the settled history store.
 
 The load-bearing tests here pin the methodology decisions (2026-06-25):
-- the wind capacity factor is a mean-power figure (mean MW / nameplate MW), so a
-  short clock-change or a known-gap day is normalised, not penalised;
-- the denominator is annual-step DUKES TOTAL wind nameplate — the CF is therefore a
-  CONSERVATIVE LOWER BOUND (transmission-only numerator, total-capacity denominator);
 - YTD shares are a transmission-system mix (no embedded), distinct from the live
   national-demand verdict.
 """
@@ -12,11 +8,9 @@ The load-bearing tests here pin the methodology decisions (2026-06-25):
 from __future__ import annotations
 
 from engine.derived import (
-    day_mean_mw,
     group_by_day,
     partial_years,
     transmission_shares,
-    wind_cf_for_day,
 )
 
 
@@ -31,38 +25,6 @@ def _row(day, period, **series):
 def _wind_day(day, mw, n_periods=48):
     """A day of `n_periods` rows, every one carrying WIND = mw."""
     return [_row(day, p, WIND=mw) for p in range(1, n_periods + 1)]
-
-
-# --- day_mean_mw ------------------------------------------------------------
-
-def test_day_mean_mw_averages_present_periods():
-    rows = [_row("2024-01-01", 1, WIND=1000),
-            _row("2024-01-01", 2, WIND=3000)]
-    assert day_mean_mw(rows, "WIND") == 2000.0
-
-
-def test_day_mean_mw_skips_blank_cells():
-    rows = [_row("2024-01-01", 1, WIND=1000),
-            _row("2024-01-01", 2, WIND=None),
-            _row("2024-01-01", 3, WIND=2000)]
-    # mean over the two present periods, not three.
-    assert day_mean_mw(rows, "WIND") == 1500.0
-
-
-# --- wind_cf_for_day (mean-power basis) -------------------------------------
-
-def test_wind_cf_is_mean_power_over_total_nameplate():
-    # 3200 MW mean against 16 GW total nameplate = 0.20.
-    rows = _wind_day("2024-01-01", 3200)
-    assert wind_cf_for_day(rows, capacity_gw=16.0) == 0.2
-
-
-def test_wind_cf_short_day_not_penalised():
-    # A 46-period clock-change day at the same mean MW yields the same CF as a full day —
-    # mean-power normalises, an energy/24h basis would understate it.
-    full = wind_cf_for_day(_wind_day("2024-03-31", 3200, n_periods=48), capacity_gw=16.0)
-    short = wind_cf_for_day(_wind_day("2024-03-31", 3200, n_periods=46), capacity_gw=16.0)
-    assert full == short == 0.2
 
 
 # --- transmission_shares (transmission-system basis, no embedded) -----------
