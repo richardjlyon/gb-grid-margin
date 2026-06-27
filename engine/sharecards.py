@@ -78,6 +78,32 @@ def stripe_svg(days: list[dict], width: int = 1040, height: int = 300) -> str:
 LOWER_BOUND = "Conservative lower bound — transmission-metered wind ÷ total installed (DUKES 6.2)."
 DUKES_BASIS = "Wind+solar output ÷ DUKES 6.2 installed capacity (UK, end-2024)."
 
+# --- reliability stripe ramp (parity-locked to site/render.js) ---------------
+RELIABILITY_RAMP_LO, RELIABILITY_RAMP_HI = 0.40, 0.65   # mirror site/render.js RELIABILITY_RAMP
+_REL_PAPER, _REL_RED, _REL_GAP = (251, 251, 249), (214, 18, 31), (232, 232, 230)
+
+
+def reliable_share_to_color(s: float | None) -> tuple[int, int, int]:
+    """Firm share -> RGB, identical to site/render.js reliableShareToColor (parity-locked)."""
+    if s is None:
+        return _REL_GAP
+    t = max(0.0, min(1.0, (RELIABILITY_RAMP_HI - s) / (RELIABILITY_RAMP_HI - RELIABILITY_RAMP_LO)))
+    return tuple(round(_REL_PAPER[k] + (_REL_RED[k] - _REL_PAPER[k]) * t) for k in range(3))
+
+
+def reliability_stripe_svg(values: list[float | None], width: int = 1040, height: int = 300) -> str:
+    """Pack the half-hourly firm-share series into `width` columns (mean each), one rect per column."""
+    n = len(values)
+    rects = []
+    for c in range(width):
+        i0 = (c * n) // width
+        i1 = max(i0 + 1, ((c + 1) * n) // width)
+        vs = [values[i] for i in range(i0, min(i1, n)) if values[i] is not None]
+        r, g, b = reliable_share_to_color(sum(vs) / len(vs) if vs else None)
+        rects.append(f'<rect x="{c}" y="0" width="1" height="{height}" fill="rgb({r},{g},{b})"/>')
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
+            f'preserveAspectRatio="none">{"".join(rects)}</svg>')
+
 
 def _fmt_gw(mw: float) -> str:
     return f"{mw / 1000:.1f} GW"
@@ -228,6 +254,18 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
                  "a fraction of its capacity.",
         "stamp": f"Elexon FUELHH · since 2016{settled_rebuilt}", "caveat": LOWER_BOUND,
         "svg": stripe_svg(stripe["days"])})
+
+    rel = json.loads((data / "reliability_year.json").read_text())
+    rel_nn = [v for v in rel["values"] if v is not None]
+    rel_mean_unreliable = round((1 - sum(rel_nn) / len(rel_nn)) * 100)
+    cards.append({
+        "slug": "reliability-stripe", "kind": "settled", "theme": "ink", "template": "instrument",
+        "figure": f"{rel_mean_unreliable}% mean unreliable",
+        "label": "Every half-hour of the last year: red where Britain leaned on weather and "
+                 "imports, pale where firm power carried demand.",
+        "stamp": f"Elexon FUELHH + NESO embedded · last 12 months{settled_rebuilt}",
+        "caveat": "Reliable share can exceed 100% on net-export half-hours; the scale saturates at 40% firm.",
+        "svg": reliability_stripe_svg(rel["values"])})
 
     yr = counters["latest_year"]
     yc = counters["years"][str(yr)]

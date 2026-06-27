@@ -30,6 +30,13 @@
       "png": "/share/wind-stripe.png?v=3c6f21185e"
     },
     {
+      "slug": "reliability-stripe",
+      "figure": "51% mean unreliable",
+      "label": "Every half-hour of the last year: red where Britain leaned on weather and imports, pale where firm power carried demand.",
+      "kind": "settled",
+      "png": "/share/reliability-stripe.png?v=a3a47ee3be"
+    },
+    {
       "slug": "days-below-10",
       "figure": "13 days",
       "label": "in 2026 (so far), Britain's wind ran below a tenth of its installed capacity.",

@@ -48,6 +48,7 @@ def _write_data(tmp_path):
         "longest_sub10pct_run": {"start": "2016-06-03", "end": "2016-06-19", "days": 17}}))
     (d / "stripe.json").write_text(json.dumps({
         "mean_cf": 0.2231, "days": [{"cf": 0.1}, {"cf": 0.3}]}))
+    (d / "reliability_year.json").write_text(json.dumps({"values": [0.55, 0.60, 0.45]}))
     return d
 
 
@@ -62,7 +63,7 @@ def test_load_cards_builds_the_catalogue(tmp_path):
     cards, asof = sharecards.load_cards(_write_data(tmp_path))
     by = {c["slug"]: c for c in cards}
     assert set(by) == {"firm-now", "capacity-trap", "gas-vs-wind",
-                       "wind-stripe", "days-below-10", "lowest-day", "longest-calm"}
+                       "wind-stripe", "reliability-stripe", "days-below-10", "lowest-day", "longest-calm"}
     assert by["firm-now"]["figure"] == "25% unreliable"    # round(100 - firm_pct)
     assert by["firm-now"]["template"] == "instrument" and by["firm-now"]["svg"].startswith("<svg")
     assert by["wind-stripe"]["template"] == "instrument"

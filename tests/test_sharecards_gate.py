@@ -39,3 +39,15 @@ def test_settled_cards_carry_lower_bound_caveat():
     for slug in ("wind-stripe", "days-below-10", "lowest-day", "longest-calm"):
         c = next(c for c in cards if c["slug"] == slug)
         assert "lower bound" in (c["caveat"] or "").lower()
+
+
+def test_reliability_stripe_figure_traces_to_source():
+    """Recompute 'N% mean unreliable' independently from reliability_year.json and
+    assert it matches what load_cards produces. Catches any drift in the card figure."""
+    cards, _ = sharecards.load_cards(DATA)
+    by = {c["slug"]: c for c in cards}
+
+    rel = _load("reliability_year.json")
+    nn = [v for v in rel["values"] if v is not None]
+    expected = f"{round((1 - sum(nn) / len(nn)) * 100)}% mean unreliable"
+    assert by["reliability-stripe"]["figure"] == expected

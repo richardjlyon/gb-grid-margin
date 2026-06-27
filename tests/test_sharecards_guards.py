@@ -32,11 +32,13 @@ def _write_data(tmp_path, **overrides):
                "longest_sub10pct_run": {"start": "2016-06-03", "end": "2016-06-19", "days": 17}}
     stripe = {"mean_cf": 0.2231, "generated_utc": "2026-06-25T21:39:53.7+00:00",
               "days": [{"cf": 0.1}, {"cf": 0.3}]}
+    reliability_year = {"values": [0.55, 0.60, 0.45]}
     blobs = {"latest.json": overrides.get("latest", latest),
              "nameplate.json": overrides.get("nameplate", nameplate),
              "counters.json": overrides.get("counters", counters),
              "records.json": overrides.get("records", records),
-             "stripe.json": overrides.get("stripe", stripe)}
+             "stripe.json": overrides.get("stripe", stripe),
+             "reliability_year.json": overrides.get("reliability_year", reliability_year)}
     for name, blob in blobs.items():
         (d / name).write_text(json.dumps(blob))
     return d
