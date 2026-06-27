@@ -3,7 +3,7 @@
   "cross_year_caveat": "Cross-year comparison is confounded: the lower-bound understatement is largest in early years (more wind was embedded/off-FUELHH then) and shrinks as transmission-metered offshore grows, so the year-on-year rise is largely a denominator-mix artifact \u2014 not a real improvement in wind output \u2014 and all-time records skew to the earliest years. Read within-year variability, not the cross-year level. See engine/NOTES.md \u00a78.",
   "metric": "Daily wind capacity factor (conservative lower bound)",
   "source": "Elexon FUELHH (settled) / DUKES 6.2 nameplate (annual-step)",
-  "generated_utc": "2026-06-27T02:40:46.902356+00:00",
+  "generated_utc": "2026-06-27T08:45:16.747618+00:00",
   "range": {
     "from": "2016-01-01",
     "to": "2026-06-20"
