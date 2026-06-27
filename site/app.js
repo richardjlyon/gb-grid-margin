@@ -303,7 +303,8 @@ function numsRow(marks) {
 // the same width as the stripe below it) and carrying a live "now" caret at the instantaneous
 // capacity-factor reading — the same value the dial needle points to. `satFull` is the carpet's
 // saturation anchor (CAPACITY.sat[kind] for Entry 02), passed in so the legend closes over nothing.
-function legendFor(kind, cf, pal, dist, satFull) {
+function legendFor(kind, cf, pal, dist, satFull, unitNoun) {
+  const noun = unitNoun || 'capacity';
   const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
   const pos = L(cf);
   // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
@@ -317,7 +318,7 @@ function legendFor(kind, cf, pal, dist, satFull) {
     const [p25, p75] = [dist.p25, dist.p75].map(Math.round);
     const avg = Math.round(dist.mean);
     box = `
-        <span class="cl-box" aria-hidden="true" title="last year: average ${avg}%, usual half ${p25}–${p75}%, 9-in-10 ${p10}–${p90}% of capacity">
+        <span class="cl-box" aria-hidden="true" title="last year: average ${avg}%, usual half ${p25}-${p75}%, 9-in-10 ${p10}-${p90}% of ${noun}">
           <span class="cl-box-line" style="left:${x(dist.p10).toFixed(1)}%; width:${(x(dist.p90) - x(dist.p10)).toFixed(1)}%; background:${pal.band}"></span>
           <span class="cl-box-iqr" style="left:${x(dist.p25).toFixed(1)}%; width:${(x(dist.p75) - x(dist.p25)).toFixed(1)}%; background:${pal.core}"></span>
           <span class="cl-box-avg" style="left:${x(dist.mean).toFixed(1)}%"></span>
@@ -333,7 +334,7 @@ function legendFor(kind, cf, pal, dist, satFull) {
       <span class="cl-lab">No output</span>
       <span class="cl-bar-wrap">
         <span class="cl-bar" style="background:linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})" aria-hidden="true"></span>
-        <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${Math.round(cf * 100)}% of capacity">now</span>
+        <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${Math.round(cf * 100)}% of ${noun}">now</span>
         ${box}
       </span>
       <span class="cl-lab">Full output</span>
@@ -394,7 +395,7 @@ function renderMetricBlock(cfg) {
     : srcP('trap-src-gauge', cfg.gaugeSrc);
   return `
       <p class="trap-label">${esc(cfg.label)}${avgNote}</p>
-      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat) : ''}
+      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun) : ''}
       <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
       ${strip}
       ${cfg.keyNote}`;
@@ -459,6 +460,7 @@ function renderReliabilityBlock(v) {
         liveCf: nowPct == null ? null : nowPct / 100,
         avgNote: avg == null ? '' : `averaged ${avg}% of demand over the year`,
         keyNote: has ? KEY_NOTE_HTML : '',
+        unitNoun: 'demand',
         gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (1 - firm share)',
         carpetSrc: src, methodAnchor: 'reliability',
         gaugeLabel: 'Unreliable share of national demand',
