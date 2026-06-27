@@ -6,6 +6,7 @@ import {
   capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   carpetCellColor, gaugeCalibration, unreliabilityColor, windDroughtColor, droughtSpikes,
+  droughtCaption, carpetMonthTicks,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -227,4 +228,20 @@ test('droughtSpikes — maps start date to x, days to height, flags minor (<2d)'
   assert.ok(s[1].x > 480 && s[1].x < 520);  // ~midyear -> ~middle
   assert.equal(s[1].h, 100);          // 10/20 -> half height
   assert.ok(s[1].severe === true && s[1].minor === false);
+});
+
+test('droughtCaption — neutral sentence from counts and the record lull', () => {
+  const s = { counts: { ge_3d: 42 }, record_lull: { days: 12, start: '2021-07-03' } };
+  const txt = droughtCaption(s);
+  assert.ok(txt.includes('42'));
+  assert.ok(txt.includes('12 days'));
+  assert.ok(/July 2021/.test(txt));
+});
+
+test('carpetMonthTicks — 12 months, Jan at 0, ascending fractions', () => {
+  const t = carpetMonthTicks();
+  assert.equal(t.length, 12);
+  assert.equal(t[0].label, 'J');
+  assert.equal(t[0].frac, 0);
+  for (let i = 1; i < 12; i++) assert.ok(t[i].frac > t[i - 1].frac && t[i].frac < 1);
 });

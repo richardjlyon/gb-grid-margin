@@ -276,3 +276,24 @@ export function droughtSpikes(lulls, { x0ms, x1ms, w, h, maxDays }) {
     severe: !!l.severe,
   }));
 }
+
+// --- the drought caption and carpet month helpers ----------------------------
+
+const _MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Neutral plain-language caption for the drought plot (sceptic's voice, no catastrophising).
+export function droughtCaption(summary) {
+  const n = summary?.counts?.ge_3d ?? 0;
+  const r = summary?.record_lull;
+  if (!r) return 'No sustained calms on record.';
+  const [y, m] = r.start.split('-');
+  return `Since 2016 the wind has stayed below a tenth of capacity for three days or more on `
+    + `${n} occasions — the longest ${r.days} days, ${_MONTHS[+m - 1]} ${y}.`;
+}
+
+// 12 month labels positioned by their first-of-month day-of-year fraction across a 366-day axis.
+export function carpetMonthTicks() {
+  const cum = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];  // leap-year DOY of the 1st
+  return cum.map((doy, i) => ({ label: _MONTHS[i][0], frac: doy / 366 }));
+}
