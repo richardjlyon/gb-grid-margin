@@ -358,6 +358,129 @@ function renderStripe() {
   drawStripe();
 }
 
+// ============================================================ the reliability stripe (Entry 01, under the gauge)
+// The same firm-share measure as the live gauge, every half-hour of the last year. Single red ink,
+// inverted: pale (paper) = firm carried demand, deep red = the grid leaned on weather + imports.
+// Identical formula to the dial by construction (engine.reliability reuses compute_verdict), so the
+// stripe and the gauge above it can never disagree. Canvas, re-binned to its container on resize.
+let RELIABILITY = null;
+// Firm-share ramp, anchored to the gauge's own 50% arming line: pale only with a clear firm margin
+// (>=65%), saturating to full red at/below 40% — so red means "at or past the level where the dial
+// itself declares the grid unreliable". Linear, so the key reads as the true transfer function.
+const _REL = { LO: 0.40, HI: 0.65, GAMMA: 1.0 };
+
+// firm share s -> colour. Pale at s>=HI (firm carries demand), red at s<=LO. Gaps in grey (distinct
+// from 0). s can exceed 1 on net-export half-hours — clamped to the palest (most-reliable) end.
+function relColour(s) {
+  if (s == null) return '#e8e8e6';
+  let t = Math.max(0, Math.min(1, (_REL.HI - s) / (_REL.HI - _REL.LO)));
+  t = Math.pow(t, _REL.GAMMA);
+  const paper = [251, 251, 249], red = [214, 18, 31];
+  const c = [0, 1, 2].map((k) => Math.round(paper[k] + (red[k] - paper[k]) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function drawReliabilityKey() {
+  const cv = $('reliability-key');
+  if (!cv) return;
+  const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  // left = 0% unreliable (firm = 1, pale) … right = 100% unreliable (firm = 0, red)
+  for (let i = 0; i < W; i++) { ctx.fillStyle = relColour(1 - i / (W - 1)); ctx.fillRect(i, 0, 1, H); }
+}
+
+function layoutReliabilityAxis(cssW) {
+  const months = $('reliability-months'), years = $('reliability-years');
+  if (!months || !years) return;
+  months.innerHTML = ''; years.innerHTML = '';
+  const start = Date.parse(RELIABILITY.start_utc), step = RELIABILITY.step_minutes * 60000, n = RELIABILITY.values.length;
+  let lastX = -999, lastYr = null;
+  for (let i = 0; i < n; i++) {
+    const d = new Date(start + i * step);
+    if (i === 0 || (d.getUTCDate() === 1 && d.getUTCHours() === 0 && d.getUTCMinutes() === 0)) {
+      const x = (i / n) * cssW;
+      if (x - lastX >= 30) {                              // responsive thinning so labels never collide
+        lastX = x;
+        const m = document.createElement('span');
+        m.textContent = _MONTHS[d.getUTCMonth()].toLowerCase();
+        m.style.left = `${x}px`;
+        months.appendChild(m);
+      }
+      if (d.getUTCFullYear() !== lastYr) {                // year marker on every year change
+        lastYr = d.getUTCFullYear();
+        const y = document.createElement('span');
+        y.textContent = lastYr;
+        y.style.left = `${x}px`;
+        years.appendChild(y);
+      }
+    }
+  }
+}
+
+function drawReliabilityStripe() {
+  if (!RELIABILITY) return;
+  const canvas = $('reliability-canvas');
+  if (!canvas) return;
+  const vals = RELIABILITY.values, n = vals.length;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  // one column per CSS pixel; mean of the half-hours that fall in it (null where all-blank → gap grey).
+  for (let sx = 0; sx < cssW; sx++) {
+    const i0 = Math.floor((sx / cssW) * n);
+    const i1 = Math.max(i0 + 1, Math.floor(((sx + 1) / cssW) * n));
+    let sum = 0, cnt = 0;
+    for (let i = i0; i < i1 && i < n; i++) { if (vals[i] != null) { sum += vals[i]; cnt++; } }
+    ctx.fillStyle = relColour(cnt ? sum / cnt : null);
+    ctx.fillRect(sx, 0, 1, cssH);
+  }
+  layoutReliabilityAxis(cssW);
+}
+
+function renderReliabilityStripe() {
+  if (!RELIABILITY) return;
+  const r = RELIABILITY;
+  $('reliability-body').innerHTML = `
+    <div class="rel-strip">
+      <div class="rel-head">
+        <p class="rel-cap">The same measure, every half-hour of the last year — <strong>pale</strong> where firm power carried demand, <strong>red</strong> where the grid leaned on weather and imports.</p>
+        <div class="rel-key">
+          <span class="rel-key-lab">unreliable share of demand</span>
+          <div class="rel-key-wrap">
+            <canvas id="reliability-key" width="300" height="18"></canvas>
+            <span class="rel-now" id="reliability-now" hidden>now</span>
+          </div>
+          <div class="rel-key-ticks"><span>0%</span><span>100%</span></div>
+        </div>
+      </div>
+      <canvas id="reliability-canvas" role="img"
+        aria-label="Reliable (firm) share of GB demand, every half-hour from ${esc(r.range.from)} to ${esc(r.range.to)}: pale where firm power carried demand, red where it leaned on weather and imports."></canvas>
+      <div class="rel-axis"><div class="rel-months" id="reliability-months"></div><div class="rel-years" id="reliability-years"></div></div>
+      <p class="caveat"><strong>Settled history, about three weeks behind live.</strong> The stripe is settled Elexon FUELHH with NESO's embedded outturn estimates; the live gauge and the ‘now’ marker read NESO's embedded <em>forecast</em> — the same measure, a slight forecast-vs-settlement seam, so read ‘now’ as indicative.</p>
+      ${srcLine(r.source, 'reliability')}
+    </div>`;
+  drawReliabilityKey();
+  drawReliabilityStripe();
+}
+
+// Place the "now" caret on the key at the live reading's position. The stripe is always the
+// share-of-demand (Using) basis, so we read firmPct on that basis regardless of the gauge toggle.
+// unreliable = 100 − firm; the key runs 0%→100% unreliable left→right, so left% IS that value.
+function updateReliabilityNow(state) {
+  const el = $('reliability-now');
+  if (!el) return;
+  const v = state && state.verdict;
+  const m = v ? sourceArcModel(v, 'using') : null;
+  if (!m || !Number.isFinite(m.firmPct)) { el.hidden = true; return; }
+  const unreliable = Math.max(0, Math.min(100, 100 - m.firmPct));
+  el.style.left = `${unreliable}%`;
+  el.setAttribute('aria-label', `Now: ${Math.round(unreliable)}% unreliable`);
+  el.hidden = false;
+}
+
 // ============================================================ the tally + records
 function renderTally(counters, records) {
   const years = Object.keys(counters.years);
@@ -438,6 +561,7 @@ async function refreshLive() {
   try {
     const state = await resolveState({}, () => Date.now());
     renderVerdict(state);
+    updateReliabilityNow(state);
     $('clockstrip').textContent =
       `${state.lastUpdated}`;
     $('freshness').textContent =
@@ -466,12 +590,20 @@ async function main() {
     $('stripe-body').innerHTML = msg;
     $('tally-body').innerHTML = msg;
   }
+  // The reliability stripe (Entry 01, under the gauge) is independent: its own fetch so a missing
+  // file omits only the stripe, never the live gauge above it.
+  try {
+    RELIABILITY = await getJSON('data/reliability_year.json');
+    renderReliabilityStripe();
+  } catch (e) {
+    $('reliability-body').innerHTML = '';
+  }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   refreshWarnings();
   setInterval(refreshWarnings, POLL_MS);
   let t;
-  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(drawStripe, 150); });
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => { drawStripe(); drawReliabilityStripe(); }, 150); });
 }
 
 main();
