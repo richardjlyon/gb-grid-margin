@@ -39,7 +39,7 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from engine import capacity, embedded_history, reliability
+from engine import capacity, embedded_history, reliability, wind_unreliability
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import (
@@ -436,6 +436,17 @@ def build(out_dir: Path = SITE_DATA) -> int:
             print(f"capacity carpets build failed (GuardError): {e}", file=sys.stderr)
             return 1
         reliability_files.append(("capacity_carpets", cap_payload))
+
+        # Whole-record wind unreliability (Entry 03): combined-basis daily CF, lull episodes,
+        # years×day-of-year carpet. Built over the WHOLE store (not rolling), combined edge.
+        wu_series = wind_unreliability.combined_daily_cf_series(rows, embedded_rows, ns)
+        wu_payload = wind_unreliability.build_payload(wu_series, generated)
+        try:
+            wind_unreliability.guard_payload(wu_payload)
+        except GuardError as e:
+            print(f"wind unreliability build failed (GuardError): {e}", file=sys.stderr)
+            return 1
+        reliability_files.append(("wind_unreliability", wu_payload))
     else:
         print("embedded store empty — skipping reliability_*.json + capacity_carpets.json "
               "(run embedded_history backfill)")

@@ -112,7 +112,6 @@ def carpet_matrix(daily_series: list[dict]) -> dict:
     return {"years": years, "doy": labels, "rows": rows}
 
 
-from engine.derived import partial_years  # noqa: E402  (grouped near use)
 from engine.guards import require  # noqa: E402
 
 _BASIS = (
@@ -149,6 +148,7 @@ def summary(daily_series: list[dict], lulls: list[dict]) -> dict:
 
 
 def build_payload(daily_series: list[dict], generated_utc: str) -> dict:
+    from engine.derived import partial_years  # deferred to break circular import
     lulls = lull_episodes(daily_series)
     dates = [s["date"] for s in daily_series]
     return {
