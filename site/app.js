@@ -787,11 +787,12 @@ function drawWindCarpet(data) {
   const cols = doy.length, nRows = years.length;
   const cssW = cv.clientWidth || 960, cellH = 22, cssH = nRows * cellH;
   const dpr = window.devicePixelRatio || 1;
-  cv.width = cssW * dpr; cv.height = cssH * dpr; cv.style.height = cssH + 'px';
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
   const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
   const cw = cssW / cols;
   years.forEach((y, r) => {
     const row = rows[String(y)];
+    if (!row) return;
     for (let c = 0; c < cols; c++) {
       const [rr, gg, bb] = windDroughtColor(row[c], data.windy_anchor_cf);
       ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
@@ -834,7 +835,7 @@ function drawDroughtPlot(data) {
     const rx = ((Date.parse(rec.start) - x0ms) / Math.max(1, x1ms - x0ms)) * cssW;
     ctx.fillStyle = '#15181c';
     ctx.fillText(`${rec.days} days`, Math.min(cssW - 48, rx + 4),
-      plotH - (rec.days / maxDays) * plotH - 4);
+      Math.max(12, plotH - (rec.days / maxDays) * plotH - 4));
   }
 }
 
