@@ -1,9 +1,8 @@
-# tests/test_capacity_gate.py
-"""Independent recompute gate for capacity_curve.json (mirrors test_derived_gate.py).
+"""Independent recompute gate for capacity_carpets.json (mirrors test_derived_gate.py).
 
-Recomputes the load-duration curve + stats straight from the committed CSVs with a
-separate code path (raw readers, inline arithmetic, no engine.capacity import) and asserts
-the shipped JSON agrees. Skips cleanly if the stores or the artefact are absent.
+Recomputes a sample of wind + solar carpet cells straight from the committed CSVs with a separate
+code path (no engine.capacity import) and asserts the shipped JSON agrees. Skips cleanly if stores
+or the artefact are absent.
 """
 from __future__ import annotations
 
@@ -19,55 +18,56 @@ from engine.models import NameplateSeries
 
 REPO = Path(__file__).resolve().parent.parent
 FUELHH_GLOB = str(REPO / "data" / "history" / "fuelhh_*.csv")
-CURVE_JSON = REPO / "site" / "data" / "capacity_curve.json"
+EMB_GLOB = str(REPO / "data" / "history" / "embedded_*.csv")
+NS_PATH = REPO / "data" / "nameplate_series.json"
+CARPETS = REPO / "site" / "data" / "capacity_carpets.json"
 
 pytestmark = pytest.mark.skipif(
-    not glob.glob(FUELHH_GLOB) or not CURVE_JSON.exists(),
-    reason="history store or capacity_curve.json not present in this checkout",
+    not glob.glob(FUELHH_GLOB) or not glob.glob(EMB_GLOB) or not NS_PATH.exists()
+    or not CARPETS.exists(),
+    reason="stores or capacity_carpets.json not present in this checkout",
 )
 
-from datetime import datetime, timedelta, timezone
+
+def _cell(days, the_date, sp):
+    for d in days:
+        if d["date"] == the_date:
+            return d["cf"][sp - 1]
+    return "MISSING-DAY"
 
 
-def _parse(t):
-    return datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-
-
-def _recompute():
-    ns = NameplateSeries.model_validate_json((REPO / "data" / "nameplate_series.json").read_text())
-    fh = read_fuelhh()
+def test_carpet_cells_match_store():
+    ns = NameplateSeries.model_validate_json(NS_PATH.read_text())
     emb = {(r["settlement_date"], r["settlement_period"]): r for r in read_embedded()}
-    series = []
-    for r in fh:
-        e = emb.get((r["settlement_date"], r["settlement_period"]))
+    shipped = json.loads(CARPETS.read_text())
+
+    # Recompute every joined cell independently; spot-check a sample against the shipped grids.
+    wind_grid, solar_grid = {}, {}
+    for fh in read_fuelhh():
+        sp = fh["settlement_period"]
+        if not (1 <= sp <= 48):
+            continue
+        e = emb.get((fh["settlement_date"], sp))
         if e is None:
             continue
-        cap = ns.capacity_for(int(r["settlement_date"][:4]))
-        denom = (cap.wind_gw + cap.solar_gw) * 1000
-        if denom <= 0:
-            continue
-        num = (r.get("WIND") or 0) + (e.get("embedded_wind_mw") or 0) + (e.get("embedded_solar_mw") or 0)
-        series.append((r["period_start_utc"], num / denom))
-    series.sort()
-    cutoff = _parse(series[-1][0]) - timedelta(days=365)
-    win = [cf for t, cf in series if _parse(t) >= cutoff]
-    return win
+        wcap = ns.capacity_for(int(fh["settlement_date"][:4])).wind_gw * 1000
+        if wcap > 0:
+            wnum = (fh.get("WIND") or 0) + (e.get("embedded_wind_mw") or 0)
+            wind_grid[(fh["settlement_date"], sp)] = round(wnum / wcap, 4)
+        scap = e.get("embedded_solar_capacity_mw")
+        if scap and scap > 0:
+            solar_grid[(fh["settlement_date"], sp)] = round((e.get("embedded_solar_mw") or 0) / scap, 4)
 
-
-def test_capacity_curve_matches_store():
-    win = _recompute()
-    shipped = json.loads(CURVE_JSON.read_text())
-    assert shipped["n_periods"] == len(win)
-
-    # curve: descending sample at i/200 of the time, as % of nameplate
-    desc = sorted(win, reverse=True)
-    n = len(desc)
-    expect = [round(desc[min(n - 1, int((i / 200) * n))] * 100, 2) for i in range(200)]
-    assert shipped["curve"] == expect
-
-    # a couple of stats
-    asc = sorted(win)
-    median = round(asc[min(n - 1, round(0.5 * (n - 1)))] * 100, 2)
-    assert shipped["stats"]["median_pct"] == median
-    below10 = round(sum(1 for c in win if c < 0.10) / n, 4)
-    assert shipped["stats"]["below_10pct_frac"] == below10
+    # sample cells that exist in the shipped (rolling-window) grids
+    for kind, recomputed in (("wind", wind_grid), ("solar", solar_grid)):
+        days = shipped[kind]["days"]
+        assert 360 <= len(days) <= 367
+        assert [d["date"] for d in days] == sorted(d["date"] for d in days)
+        checked = 0
+        for d in days[:: max(1, len(days) // 20)]:        # ~20 days spread across the window
+            for sp in (1, 20, 24, 40):                     # night, morning, midday-ish, evening
+                key = (d["date"], sp)
+                if key in recomputed:
+                    assert _cell(days, d["date"], sp) == recomputed[key], f"{kind} {key}"
+                    checked += 1
+        assert checked > 0, f"{kind}: no overlapping cells sampled"
