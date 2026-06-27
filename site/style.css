@@ -455,3 +455,12 @@ main { padding-bottom: 40px; }
   .trap-grid, .trap-grid.gauge-only { grid-template-columns: 1fr; }
   .trap-label, .carpet-legend, .trap-gauge-cell, .carpet-cell, .trap-src-gauge, .trap-src-strip { grid-column: 1; }
 }
+
+/* ---------- Entry 03 — wind unreliability carpet ---------- */
+.wind-carpet-cell { display: grid; grid-template-columns: 2.4rem 1fr; align-items: stretch; }
+.wind-yaxis { display: flex; flex-direction: column; justify-content: space-between;
+  font: 500 11px var(--mono); color: var(--ink); padding-right: 6px; text-align: right; }
+.wind-carpet { width: 100%; display: block; image-rendering: pixelated; }
+.wind-carpet-x { position: relative; height: 1.2em; margin-left: 2.4rem;
+  font: 500 11px var(--mono); color: var(--ink); }
+.wind-carpet-x span { position: absolute; transform: translateX(-50%); }

@@ -780,7 +780,29 @@ async function refreshWarnings() {
 
 // ============================================================ wind unreliability (Entry 03)
 // Tasks 10–11 replace these stubs with real canvas drawing.
-function drawWindCarpet(data) { window.__windData = data; }
+function drawWindCarpet(data) {
+  window.__windData = data;
+  const cv = $('wind-carpet'); if (!cv) return;
+  const { years, doy, rows } = data.carpet;
+  const cols = doy.length, nRows = years.length;
+  const cssW = cv.clientWidth || 960, cellH = 22, cssH = nRows * cellH;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = cssW * dpr; cv.height = cssH * dpr; cv.style.height = cssH + 'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const cw = cssW / cols;
+  years.forEach((y, r) => {
+    const row = rows[String(y)];
+    for (let c = 0; c < cols; c++) {
+      const [rr, gg, bb] = windDroughtColor(row[c], data.windy_anchor_cf);
+      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+      ctx.fillRect(c * cw, r * cellH, Math.ceil(cw) + 0.5, cellH - 1);
+    }
+  });
+  $('wind-carpet-y').innerHTML = years.map((_, i) =>
+    `<span>${years[i]}</span>`).join('');
+  $('wind-carpet-x').innerHTML = carpetMonthTicks().map((t) =>
+    `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
+}
 function drawDroughtPlot(data) {}
 
 function renderWindUnreliability(data) {
