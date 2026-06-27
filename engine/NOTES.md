@@ -422,7 +422,9 @@ pipeline so both stores share one tested append-only/idempotent implementation).
 `engine/reliability.py` joins the FUELHH store (§6) to the embedded store (§11) on
 `(settlement_date, settlement_period)` and emits a half-hourly **national reliable (firm) share
 of demand** series via `engine.derived.build` → `site/data/reliability_year.json` (rolling 12
-months) and `reliability_all.json` (full history). The formula is `reliable_share` in
+months); `reliability_all.json` (full history) is **no longer emitted** — the all-time toggle was
+removed when the carpet block (§15) replaced the dashboard 1-D stripe. `reliability_year.json` is
+retained solely as the share-card source (§13). The formula is `reliable_share` in
 `engine/reliability.py`, which reuses `compute_verdict` (the gauge's parity-locked formula), so
 the historical series is identical, by construction, to the live dial.
 
@@ -430,9 +432,10 @@ the historical series is identical, by construction, to the live dial.
 exporter, `notfirm = wind + solar + net_imports < 0`, so `national_demand = firm + notfirm <
 firm`, and `firm / demand > 1.0`. This is faithful to the live dial and is the same accepted
 property as the Stage 9 `check_shares_sum_100` rule that allows a negative net-import share on
-an export year (§10). The real emitted `reliability_all.json` contains ≈1,186 such half-hours
-(max ≈1.235); `reliability_year.json` has ≈5 (max ≈1.024). Do NOT clamp these — the contract
-is documented in the `reliable_share` docstring and disclosed in the JSON `caveats` field.
+an export year (§10). The real emitted `reliability_year.json` has ≈5 such half-hours (max
+≈1.024). Do NOT clamp these — the contract is documented in the `reliable_share` docstring and
+disclosed in the JSON `caveats` field. (The **carpet** in §15 uses the inverse metric
+`1 − reliable_share` and **does** clamp to `[0, 1]`; its contract is documented separately.)
 
 **All-time head-row timestamp quirk.** The 2016-01-01 SP48 row carries a `period_start_utc` of
 `2015-12-31T23:30Z` in the FUELHH store — a pre-existing Stage 4 boundary quirk (settlement
@@ -440,6 +443,14 @@ period 48 of 2016-01-01 starts at 23:30 on the calendar-previous UTC day). It pa
 contiguously at the grid head and the rolling-year file is unaffected.
 
 ## 13. Reliability stripe — Stage C *(2026-06-26)*
+
+**⚠ Dashboard 1-D stripe superseded by the carpet block (§15).** The rolling-year stripe and the
+all-time toggle described below were removed from the live dashboard when the Entry-01 carpet block
+(§15) shipped. `reliability_year.json` is no longer loaded at startup by the dashboard and
+`reliability_all.json` is no longer fetched on toggle — those consumers were deleted. Stage C now
+covers only the **share-card** path: `reliability_year.json` (flat, rolling 12 months) feeds
+`engine/sharecards.py` only. The colour ramp, JS↔Python parity lock, and gauge-flip stamp below
+remain accurate for the share card.
 
 Stage C adds the stripe to the live dashboard (Entry 01, under the gauge) and a Python share-card
 sibling (`engine/sharecards.py` `reliability-stripe` card).
@@ -456,10 +467,11 @@ below that maps to the same full red. Disclosed in the key note and in `methodol
 against a set of sample shares spanning 0–1.3, including the half-integer boundary cases, and
 asserts exact RGB match with the JS formula evaluated in Node.
 
-**Lazy all-time toggle.** `site/data/reliability_year.json` (~25 kB) is loaded at startup;
-`reliability_all.json` (~2.2 MB) is fetched only on first click of "Since 2016", then cached in
-`REL_ALL`. A `REL_ALL_PROMISE` guard prevents double-fetch on rapid clicks. A failed fetch leaves
-the current view unchanged.
+**Lazy all-time toggle (removed).** The dashboard no longer loads `reliability_year.json` at
+startup and `reliability_all.json` is not fetched on toggle — both consumers were removed when the
+carpet block (§15) replaced the 1-D stripe. `reliability_year.json` is still read by
+`engine/sharecards.py` (the `reliability-stripe` card). `reliability_all.json` is no longer
+emitted.
 
 **Gauge flip (lead unreliable, instrument-not-alarm).** The stamp pair in Entry 01 leads with the
 unreliable (weather & imports) share in the larger `.stamp-val.lead` slot and places the firm share
@@ -559,3 +571,47 @@ embedded-store edge).
 **Cross-references.** §8 documents the wind stripe's transmission-only lower bound and the
 cross-year artifact that does *not* apply to the carpet wind. §11 documents the embedded store,
 its GB scope confirmation, the `SETTLEMENT_DATE` normalisation, and the ~21-day lag.
+
+## 15. Entry-01 reliability carpet block *(2026-06-27)*
+
+The dashboard's 1-D reliability stripe (§13) was replaced by an Entry-02-style metric block: a
+half-hourly carpet + live dial + box-plot legend, using the **unreliable share** (`1 − firm`) as
+the metric. The source is `site/data/reliability_carpet.json`, emitted by `engine.derived.build`
+alongside the capacity carpets (§14).
+
+**Metric and clamping.** Each cell = `clamp(1 − reliable_share, 0, 1)`, computed by
+`reliability.build_carpet_days`. Net-export half-hours — where `reliable_share > 1` — read 0%
+unreliable. This **differs from the flat `reliability_year.json` series (§12)**, where the
+reliable share is intentionally NOT clamped so the above-100% property is preserved for the
+share-card ramp. The two files have different contracts; do not mix them.
+
+**Carpet shape.** Days × 48, date left→right (oldest→newest), settlement period top→bottom
+(SP1 = 00:00 local). Rolling 365-day window (`capacity.rolling_days`). Colour: white (0%
+unreliable, demand fully met) → full red (100% unreliable), OKLab-interpolated. `sat = 1.0` means
+100% unreliable maps to the full-red colour (unlike the capacity carpets where `sat` is a CF
+fraction below 1.0).
+
+**`reliability_carpet.json` shape.** `{basis, source, metric, caveats, generated_utc,
+window:"rolling_365d", range, sat:1.0, days:[{date, cf:[48]}]}`. `cf` values are floats in
+`[0, 1]` (clamped unreliable share) or `null` (missing half-hour).
+
+**Dial.** `renderReliabilityBlock` in `site/app.js` renders a plain 0–100% arc (no nameplate / MW
+labels — it is a share, not a capacity factor). The needle reads `unreliableNowPct(firmPct)` =
+`max(0, min(100, 100 − firmPct))` (clamped). Behind the needle: faint 9-in-10 band (p10–p90),
+darker usual-half arc (p25–p75), ink mean tick — the same distribution scheme as Entry-02's dials.
+
+**Legend.** &#8220;now&#8221; caret + box-plot (thin whisker = 9-in-10 / p10–p90, thick bar =
+usual half / p25–p75, tick = mean), identical scheme to Entry-02 (§14). Numbers label the
+9-in-10 ends and the mean.
+
+**Build guard.** `reliability.guard_carpet_payload` (a §10-style gate, called in `derived.build`)
+asserts: days non-empty, sorted and unique; every `cf` array exactly 48 periods; every non-null
+value in `[0, 1]`; `sat` in `(0, 1]`. Any breach raises `GuardError` and writes nothing.
+
+**Recompute gate.** `tests/test_reliability_carpet_gate.py` independently re-derives a sample of
+carpet cells from the committed CSVs (no `engine.reliability` import) and asserts the published
+file agrees.
+
+**`reliability_all.json` removed.** The all-time toggle was removed with the 1-D stripe.
+`reliability_all.json` is no longer emitted by `engine.derived.build`. `reliability_year.json`
+(flat, rolling 12 months) is retained solely as the share-card source (§13).
