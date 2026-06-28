@@ -188,7 +188,7 @@ def live_balance_card(latest: dict) -> dict:
                  "biomass that answer on demand.")
     elif band == "red":
         figure = f"{int(100 - firm + 0.5)}%"
-        label = ("of Britain's grid leaned on weather and imports — wind, "
+        label = ("of Britain's grid depended on weather and imports — wind, "
                  "solar and interconnectors that fall away together.")
     else:  # amber
         figure = f"{int(firm + 0.5)}%"
@@ -237,7 +237,7 @@ def hero_card() -> dict:
     return {
         "slug": "hero", "kind": "hero", "band": "charcoal", "template": "hero",
         "headline": "What's powering your hospital today?",
-        "tagline": ("A live, sourced gauge of how much of Britain's grid is leaning on "
+        "tagline": ("A live, sourced gauge of how much of Britain's grid is depending on "
                     "weather and imports."),
         "svg": gauge_svg(HERO_FIRM, "charcoal")}
 
@@ -309,7 +309,7 @@ STUB_TEMPLATE = """<!DOCTYPE html>
 
 
 def _compose_hero(card: dict) -> str:
-    # red-accent the trailing "today?" so the headline pays off the brand
+    # white headline, red-accent the trailing "today?" (lightened for contrast on charcoal)
     headline = _html.escape(card["headline"]).replace(
         "today?", '<span class="r">today?</span>')
     html = (TEMPLATES / "sharecard-hero.html").read_text()

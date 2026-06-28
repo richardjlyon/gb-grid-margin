@@ -46,7 +46,7 @@ def test_live_balance_red_leads_with_unreliable():
     c = sharecards.live_balance_card(_mk(35.4))
     assert c["band"] == "red"
     assert c["figure"] == "65%"                       # round(100-35.4) = red-arc length
-    assert "leaned on weather and imports" in c["label"]
+    assert "depended on weather and imports" in c["label"]
     assert c["svg"]                                    # has a gauge
     assert c["stamp"] == "live snapshot · 27 Jun 2026, 15:10"
 

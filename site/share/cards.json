@@ -2,60 +2,18 @@
   "asof": "27 June 2026",
   "cards": [
     {
-      "slug": "firm-now",
-      "figure": "65% unreliable",
-      "label": "of Britain's grid is weather-dependent or imported right now \u2014 wind, solar and interconnectors that fall away together. The rest is firm: gas, nuclear, biomass.",
+      "slug": "live-balance",
+      "figure": "65%",
+      "label": "of Britain's grid depended on weather and imports \u2014 wind, solar and interconnectors that fall away together.",
       "kind": "live",
-      "png": "/share/firm-now.png?v=1fa3383422"
+      "png": "/share/live-balance.png?v=0a8ea9673c"
     },
     {
-      "slug": "capacity-trap",
-      "figure": "38% of capacity",
-      "label": "Britain has built 50.4 GW of wind & solar. Right now the whole fleet is delivering 19.4 GW.",
-      "kind": "live",
-      "png": "/share/capacity-trap.png?v=f1508020d5"
-    },
-    {
-      "slug": "gas-vs-wind",
-      "figure": "2.1\u00d7 more",
-      "label": "wind out-produces the whole gas fleet right now \u2014 10.9 GW of wind against 5.2 GW of gas.",
-      "kind": "live",
-      "png": "/share/gas-vs-wind.png?v=ca0f03a0f3"
-    },
-    {
-      "slug": "wind-stripe",
-      "figure": "29% mean",
-      "label": "Britain's wind has averaged that share of its installed capacity since 2016 \u2014 combined transmission and embedded output.",
+      "slug": "recent-lull",
+      "figure": "3 days",
+      "label": "the most recent wind lull \u2014 12\u201314 Oct 2025, when wind fell as low as 3.9% of capacity. Britain has had 45 such spells since 2016.",
       "kind": "settled",
-      "png": "/share/wind-stripe.png?v=d537b7c47d"
-    },
-    {
-      "slug": "reliability-stripe",
-      "figure": "51% mean unreliable",
-      "label": "Every half-hour of the last year: red where Britain leaned on weather and imports, pale where firm power carried demand.",
-      "kind": "settled",
-      "png": "/share/reliability-stripe.png?v=1f6c6e0c3a"
-    },
-    {
-      "slug": "days-below-10",
-      "figure": "423 days",
-      "label": "since 2016, Britain's wind ran below a tenth of its installed capacity.",
-      "kind": "settled",
-      "png": "/share/days-below-10.png?v=c007c2405e"
-    },
-    {
-      "slug": "lowest-day",
-      "figure": "2.1%",
-      "label": "of capacity \u2014 the wind fleet's worst day on record, 2016-01-19.",
-      "kind": "settled",
-      "png": "/share/lowest-day.png?v=e685cb1a42"
-    },
-    {
-      "slug": "longest-calm",
-      "figure": "10 days",
-      "label": "the longest run wind stayed below a tenth of capacity \u2014 2016-06-04 to 2016-06-13.",
-      "kind": "settled",
-      "png": "/share/longest-calm.png?v=b945963db4"
+      "png": "/share/recent-lull.png?v=2ebb1c99ad"
     }
   ]
 }

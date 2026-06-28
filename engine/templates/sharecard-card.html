@@ -14,21 +14,22 @@ body.amber{color:#1a1205;background:radial-gradient(125% 145% at 85% 0%,#ffd96b 
 .top{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:22px;letter-spacing:.13em;}
 .brand{display:flex;align-items:center;gap:14px;}
 .tick{width:18px;height:18px;border-radius:3px;background:#c20f1a;}
-body.amber .tick{background:#c20f1a;}
+body.green .tick,body.red .tick{background:#fff;}
 .url{font:500 19px "Spline Sans Mono",monospace;letter-spacing:.04em;opacity:.78;}
 .mid{flex:1;display:flex;align-items:center;gap:36px;}
 .txt{flex:1;}
-.figure{font-weight:700;font-size:184px;line-height:.9;letter-spacing:-.03em;font-feature-settings:"tnum";}
-.label{font:400 40px/1.25 "Newsreader",serif;margin-top:16px;max-width:18em;}
+.figure{font-weight:700;font-size:208px;line-height:.9;letter-spacing:-.03em;font-feature-settings:"tnum";}
+.label{font:400 46px/1.25 "Newsreader",serif;margin-top:30px;max-width:19em;}
 body.green .label,body.red .label{color:rgba(255,255,255,.92);}
 body.amber .label{color:rgba(26,18,5,.9);}
 .giz{flex:none;}
 .rule{height:1px;margin-bottom:22px;}
 body.green .rule,body.red .rule{background:rgba(255,255,255,.22);}
 body.amber .rule{background:rgba(26,18,5,.28);}
-.foot{display:flex;justify-content:space-between;align-items:baseline;
-  font:500 19px "Spline Sans Mono",monospace;letter-spacing:.03em;}
-.foot .r{letter-spacing:.06em;opacity:.82;}
+.foot{display:flex;justify-content:space-between;align-items:baseline;gap:24px;
+  font:500 18px "Spline Sans Mono",monospace;letter-spacing:.02em;}
+.foot span{white-space:nowrap;}
+.foot .r{letter-spacing:.04em;opacity:.82;}
 body.green .foot,body.red .foot{color:rgba(255,255,255,.85);}
 body.amber .foot{color:rgba(26,18,5,.74);}
 </style></head>
@@ -37,8 +38,8 @@ body.amber .foot{color:rgba(26,18,5,.74);}
   <div class="mid"><div class="txt"><p class="figure">{{FIGURE}}</p><p class="label">{{LABEL}}</p></div><div class="giz">{{SVG}}</div></div>
   <div><div class="rule"></div><div class="foot"><span>{{STAMP}}</span><span class="r">EVERY FIGURE TRACES TO ELEXON · NESO · DUKES</span></div></div>
   <script>
-    function fitLabel(){var l=document.querySelector('.label');var b=document.body;var max=630-62;var s=40;
-      l.style.fontSize=s+'px';while(s>26 && b.scrollHeight>max){s-=1;l.style.fontSize=s+'px';}}
+    function fitLabel(){var l=document.querySelector('.label');var b=document.body;var max=630-62;var s=46;
+      l.style.fontSize=s+'px';while(s>28 && b.scrollHeight>max){s-=1;l.style.fontSize=s+'px';}}
     window.__fitLabel=fitLabel;document.fonts.ready.then(fitLabel);
   </script>
 </body></html>
