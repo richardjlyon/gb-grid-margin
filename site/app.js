@@ -7,6 +7,7 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
+import { windLullLamp, firmMajorityLamp, heavyImportsLamp, scarcityLamp } from './conditions.js';
 import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
@@ -617,43 +618,77 @@ function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
   layoutCarpetAxis(canvasId.replace('carpet-', ''), days);
 }
 
-// ============================================================ the live warning light
-// Independent of the verdict layer: a warnings fetch failure never touches the verdict, and
-// vice versa. Lit only while a scarcity-class notice is in force; otherwise quietly dormant.
-// ?warn=force|clear|unavailable forces a state for previewing without waiting for a live notice.
-function warnOverride() {
-  const v = new URLSearchParams(window.location.search).get('warn');
-  if (v === 'force') return { status: 'in_force', type: 'EMN', typeLabel: 'Electricity Margin Notice',
-    issuedAt: new Date().toISOString(), window: { from: '19:00', to: '22:00', date: '26/06/2026' } };
-  if (v === 'clear') return { status: 'clear' };
-  if (v === 'unavailable') return { status: 'unavailable' };
-  return null;
+// ============================================================ the GRID CONDITIONS rail
+// Two independent update paths: the three computed lamps refresh on the live verdict poll
+// (updateComputedLamps, from refreshLive); the official scarcity lamp refreshes on the SYSWARN poll
+// (updateScarcityLamp). A failure on either path degrades only its own lamps — never a sibling, never
+// the verdict. ?cond=wind:5,firm,import,scarcity:emn forces states for previewing.
+let WIND_RUN = null;
+
+function condOverride() {
+  const v = new URLSearchParams(window.location.search).get('cond');
+  if (v == null) return null;
+  const set = new Set(v.split(',').map((s) => s.trim()));
+  const find = (k) => [...set].find((s) => s === k || s.startsWith(k + ':'));
+  const arg = (s) => (s && s.includes(':') ? s.split(':')[1] : null);
+  const out = {};
+  const w = find('wind'); if (w) out.wind = { state: 'active', days: Number(arg(w)) || 5, cfPct: 14, asOf: '—' };
+  if (find('firm')) out.firm = { state: 'active', firmPct: 38 };
+  if (find('import')) out.import = { state: 'active', pct: 29 };
+  const sc = find('scarcity'); if (sc) out.scarcity = { state: 'in_force', type: (arg(sc) || 'emn').toUpperCase(), label: 'Electricity Margin Notice' };
+  return out;
 }
 
-function renderWarningLight(w) {
-  const strip = $('warnstrip');
-  const el = $('warning-light');
-  strip.dataset.status = w.status;
-  if (w.status === 'in_force') {
-    const win = w.window ? ` covering ${esc(w.window.from)}–${esc(w.window.to)}, ${esc(w.window.date)}` : '';
-    const issued = w.issuedAt && fmtUTC(w.issuedAt) ? ` · issued ${fmtUTC(w.issuedAt)}` : '';
-    el.setAttribute('role', 'alert');
-    el.innerHTML = `<span class="wl-lamp" aria-hidden="true"></span>
-      <span class="wl-text"><strong>${esc(w.typeLabel)} in force</strong>${win}.
-        <span class="wl-src">Elexon SYSWARN${issued}</span></span>`;
-  } else {
-    el.removeAttribute('role');
-    const txt = w.status === 'unavailable' ? 'Grid warning status unavailable' : 'No active grid warnings';
-    el.innerHTML = `<span class="wl-lamp" aria-hidden="true"></span><span class="wl-text wl-muted">${txt}</span>`;
-  }
+const _round = (x) => (Number.isFinite(x) ? Math.round(x) : '—');
+
+function setLamp(id, state, statusHtml, aria) {
+  const el = $(id);
+  if (!el) return;
+  el.dataset.state = state;
+  el.querySelector('.cond-status').innerHTML = statusHtml;
+  if (aria) el.setAttribute('aria-label', aria);
 }
 
-async function refreshWarnings() {
+function _windStatus(l) {
+  if (l.state === 'active') return `Day <b>${l.days}</b> · <b>${_round(l.cfPct)}%</b> cap`;
+  if (l.state === 'nominal') return `Nominal · <b>${_round(l.cfPct)}%</b> cap`;
+  return 'unavailable';
+}
+function _firmStatus(l) {
+  if (l.state === 'unavailable') return 'unavailable';
+  return `${l.state === 'active' ? 'Active' : 'Nominal'} · firm <b>${_round(l.firmPct)}%</b>`;
+}
+function _importStatus(l) {
+  if (l.state === 'unavailable') return 'unavailable';
+  return `${l.state === 'active' ? 'Active' : 'Nominal'} · <b>${_round(l.pct)}%</b>`;
+}
+function _scarcityStatus(l) {
+  if (l.state === 'in_force') return `${esc(l.type)} in force · NESO`;
+  if (l.state === 'clear') return 'All clear · NESO';
+  return 'unavailable · NESO';
+}
+
+function updateComputedLamps(verdict) {
+  const ov = condOverride() || {};
+  const wind = ov.wind || windLullLamp(WIND_RUN);
+  const firm = ov.firm || firmMajorityLamp(verdict ? verdict.firm_pct : NaN);
+  const imp = ov.import || heavyImportsLamp(verdict ? verdict.net_import_mw : NaN,
+    verdict ? verdict.national_demand_mw : NaN);
+  setLamp('cond-wind', wind.state, _windStatus(wind), `Wind lull — ${_windStatus(wind).replace(/<[^>]+>/g, '')}`);
+  setLamp('cond-firm', firm.state, _firmStatus(firm), `Weather-dependent majority — ${_firmStatus(firm).replace(/<[^>]+>/g, '')}`);
+  setLamp('cond-import', imp.state, _importStatus(imp), `Heavy imports — ${_importStatus(imp).replace(/<[^>]+>/g, '')}`);
+  $('conditions').removeAttribute('data-loading');
+}
+
+async function updateScarcityLamp() {
+  const ov = condOverride();
+  let l;
   try {
-    renderWarningLight(warnOverride() || await resolveWarnings({}));
-  } catch (e) {
-    renderWarningLight({ status: 'unavailable' });
+    l = (ov && ov.scarcity) || scarcityLamp(await resolveWarnings({}));
+  } catch {
+    l = { state: 'unavailable' };
   }
+  setLamp('cond-scarcity', l.state, _scarcityStatus(l), `Scarcity notice — ${_scarcityStatus(l).replace(/<[^>]+>/g, '')}`);
 }
 
 // ============================================================ wind unreliability (Entry 03)
@@ -743,8 +778,8 @@ async function refreshLive() {
   try {
     const state = await resolveState({}, () => Date.now());
     renderVerdict(state);
-    $('clockstrip').textContent =
-      `${state.lastUpdated}`;
+    updateComputedLamps(state.verdict);
+    $('clockstrip').textContent = `${state.lastUpdated}`;
     $('freshness').textContent = state.lastUpdated;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
     dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
@@ -752,6 +787,7 @@ async function refreshLive() {
   } catch (e) {
     $('verdict-body').innerHTML = `<p class="warn">Live layer error — no current reading. ${esc(e.message || e)}</p>`;
     $('entry-trap').hidden = true;
+    updateComputedLamps(null);
   }
 }
 
@@ -776,10 +812,13 @@ async function main() {
   } catch (e) {
     $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
   }
+  // wind lull run series — non-fatal; WIND_RUN stays null on failure (lamp shows unavailable)
+  try { WIND_RUN = await getJSON('data/wind_live_run.json'); }
+  catch (e) { WIND_RUN = null; }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
-  refreshWarnings();
-  setInterval(refreshWarnings, POLL_MS);
+  updateScarcityLamp();
+  setInterval(updateScarcityLamp, POLL_MS);
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
