@@ -1,6 +1,5 @@
-"""Independent recompute: assert every card figure equals a value derived
-straight from site/data/*.json, by a code path that does NOT import the card
-builders' formatting. Catches any drift between a card and the dashboard."""
+"""Independent recompute: assert each card figure equals a value derived straight
+from site/data/*.json, by a path that does NOT reuse the builders' formatting."""
 import json
 from pathlib import Path
 
@@ -14,39 +13,24 @@ def _load(name):
     return json.loads((DATA / name).read_text())
 
 
-def test_card_figures_trace_to_source():
+def test_load_cards_is_the_v09_set():
     cards, _ = sharecards.load_cards(DATA)
-    by = {c["slug"]: c for c in cards}
+    assert [c["slug"] for c in cards] == ["live-balance", "recent-lull"]
 
-    v = _load("latest.json")["verdict"]
-    assert by["firm-now"]["figure"] == f"{int(100 - v['firm_pct'] + 0.5)}% unreliable"
 
-    np = _load("nameplate.json")
-    share = (v["wind_mw"] + v["solar_mw"]) / (np["wind_plus_solar_gw"] * 1000) * 100
-    assert by["capacity-trap"]["figure"] == f"{share:.0f}% of capacity"
+def test_live_balance_figure_traces_to_firm_pct():
+    cards, _ = sharecards.load_cards(DATA)
+    c = next(c for c in cards if c["slug"] == "live-balance")
+    firm = _load("latest.json")["verdict"]["firm_pct"]
+    expected = (f"{int(firm + 0.5)}%" if firm >= sharecards.RELIABILITY_RAMP_LO * 100
+                else f"{int(100 - firm + 0.5)}%")
+    assert c["figure"] == expected
 
+
+def test_recent_lull_figure_traces_to_source():
+    cards, _ = sharecards.load_cards(DATA)
+    c = next(c for c in cards if c["slug"] == "recent-lull")
     wu = _load("wind_unreliability.json")
-    s = wu["summary"]
-    assert by["wind-stripe"]["figure"] == f"{s['mean_cf'] * 100:.0f}% mean"
-    assert by["days-below-10"]["figure"] == f"{s['below_10pct_days']} days"
-    assert by["lowest-day"]["figure"] == f"{s['lowest_day']['cf'] * 100:.1f}%"
-    assert by["longest-calm"]["figure"] == f"{s['record_lull']['days']} days"
-
-
-def test_settled_cards_carry_combined_basis_caveat():
-    cards, _ = sharecards.load_cards(DATA)
-    for slug in ("wind-stripe", "days-below-10", "lowest-day", "longest-calm"):
-        c = next(c for c in cards if c["slug"] == slug)
-        assert "combined" in (c["caveat"] or "").lower()
-
-
-def test_reliability_stripe_figure_traces_to_source():
-    """Recompute 'N% mean unreliable' independently from reliability_year.json and
-    assert it matches what load_cards produces. Catches any drift in the card figure."""
-    cards, _ = sharecards.load_cards(DATA)
-    by = {c["slug"]: c for c in cards}
-
-    rel = _load("reliability_year.json")
-    nn = [v for v in rel["values"] if v is not None]
-    expected = f"{round((1 - sum(nn) / len(nn)) * 100)}% mean unreliable"
-    assert by["reliability-stripe"]["figure"] == expected
+    latest3 = [l for l in wu["lulls"] if l["days"] >= 3][-1]
+    assert c["figure"] == f"{latest3['days']} days"
+    assert c["caveat"] and "combined" in c["caveat"].lower()

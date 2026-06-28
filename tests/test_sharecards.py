@@ -24,11 +24,13 @@ def _write_data(tmp_path):
     (d / "latest.json").write_text(json.dumps({
         "verdict": {"snapshot": "2026-06-25T23:35:00Z", "firm_pct": 74.7,
                     "wind_mw": 11413, "solar_mw": 0, "gas_mw": 14294}}))
-    (d / "nameplate.json").write_text(json.dumps({"wind_plus_solar_gw": 50.362}))
     (d / "wind_unreliability.json").write_text(json.dumps({
         "generated_utc": "2026-06-25T21:39:53.7+00:00",
+        "lulls": [
+            {"start": "2025-10-12", "end": "2025-10-14", "days": 3, "min_cf": 0.0393},
+        ],
         "summary": {
-            "counts": {"ge_1d": 1, "ge_3d": 0, "ge_7d": 0, "ge_14d": 0},
+            "counts": {"ge_1d": 1, "ge_3d": 1, "ge_7d": 0, "ge_14d": 0},
             "record_lull": {"start": "2016-06-03", "end": "2016-06-19", "days": 17,
                             "min_cf": 0.05, "min_cf_date": "2016-06-10", "severe": False},
             "lowest_day": {"date": "2016-01-19", "cf": 0.0087},
@@ -37,7 +39,6 @@ def _write_data(tmp_path):
             "below_10pct_days": 13,
             "below_5pct_days": 1,
         }}))
-    (d / "reliability_year.json").write_text(json.dumps({"values": [0.55, 0.60, 0.45]}))
     return d
 
 
@@ -51,19 +52,12 @@ def test_gas_vs_wind_headline_adapts():
 def test_load_cards_builds_the_catalogue(tmp_path):
     cards, asof = sharecards.load_cards(_write_data(tmp_path))
     by = {c["slug"]: c for c in cards}
-    assert set(by) == {"firm-now", "capacity-trap", "gas-vs-wind",
-                       "wind-stripe", "reliability-stripe", "days-below-10", "lowest-day", "longest-calm"}
-    assert by["firm-now"]["figure"] == "25% unreliable"    # round(100 - firm_pct)
-    assert by["firm-now"]["template"] == "instrument" and by["firm-now"]["svg"].startswith("<svg")
-    assert by["wind-stripe"]["template"] == "stat"
-    assert by["days-below-10"]["figure"] == "13 days"
-    assert by["lowest-day"]["figure"] == "0.9%"            # cf 0.0087 → 0.9%
-    assert by["longest-calm"]["figure"] == "17 days"
-    # honesty foot-lines present where required
-    assert "combined" in (by["lowest-day"]["caveat"] or "").lower()
-    assert "dukes" in (by["capacity-trap"]["caveat"] or "").lower()
-    # all live cards carry a timestamp stamp; settled carry an as-of
-    assert "UTC" in by["firm-now"]["stamp"]
+    assert set(by) == {"live-balance", "recent-lull"}
+    # firm_pct=74.7 → green band → figure is firm share rounded
+    assert by["live-balance"]["figure"] == "75%"           # int(74.7 + 0.5) = 75
+    assert by["live-balance"]["svg"].startswith("<svg")
+    assert by["recent-lull"]["figure"] == "3 days"
+    assert "combined" in (by["recent-lull"]["caveat"] or "").lower()
 
 
 def test_warning_card_alarm_when_in_force():

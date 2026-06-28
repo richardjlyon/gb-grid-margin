@@ -15,7 +15,6 @@ from pathlib import Path
 
 from engine.guards import (
     GuardError,
-    check_cf_range,
     check_finite,
     require,
 )
@@ -148,49 +147,19 @@ def _stamp_snapshot(snapshot: str) -> str:
     return f"live snapshot · {d.strftime('%d %b %Y, %H:%M')}"
 
 
-# Sanity envelope for the card's published wind+solar capacity denominator (GW).
-_CAPACITY_MIN_GW, _CAPACITY_MAX_GW = 1.0, 500.0
-
-
-def guard_card_inputs(latest: dict, nameplate: dict, wu: dict) -> None:
-    """Stage 9: fail loudly before a card figure is built from the source JSON.
-
-    The cards are screenshotted into shareable images, so a corrupt or out-of-range
-    figure must abort the build rather than become a wrong card. Validates the live
-    verdict figures, the capacity denominator, and the wind_unreliability summary.
-    Raises GuardError on any breach.
-    """
+def guard_card_inputs(latest: dict, wu: dict) -> None:
+    """Fail loudly before a card figure is built from source JSON (cards become images)."""
     snap = latest.get("snapshot")
     require(isinstance(snap, str) and snap, "verdict snapshot missing or not a string")
     try:
         datetime.fromisoformat(snap.replace("Z", "+00:00"))
     except ValueError:
         raise GuardError(f"verdict snapshot is not a valid ISO timestamp: {snap!r}")
-
     firm = latest["firm_pct"]
     check_finite("firm_pct", firm)
     require(0.0 <= firm <= 100.0, f"firm_pct out of range: {firm}")
-    for k in ("wind_mw", "solar_mw", "gas_mw"):
-        check_finite(k, latest[k])
-        require(latest[k] >= 0, f"{k} is negative: {latest[k]}")
-
-    cap = nameplate["wind_plus_solar_gw"]
-    check_finite("wind_plus_solar_gw", cap)
-    require(_CAPACITY_MIN_GW <= cap <= _CAPACITY_MAX_GW,
-            f"nameplate wind_plus_solar_gw {cap} GW outside sane envelope "
-            f"[{_CAPACITY_MIN_GW}, {_CAPACITY_MAX_GW}]")
-
-    s = wu["summary"]
-    require(s["record_lull"] is not None and s["record_lull"]["days"] >= 0,
-            "wu: missing or invalid record_lull (empty store?)")
-    low = s["lowest_day"]
-    require(low is not None, "wu: missing lowest_day (empty store?)")
-    check_cf_range(low["date"], low["cf"])
-    check_finite("wu mean_cf", s["mean_cf"])
-    require(0.0 <= s["mean_cf"] <= 1.0, f"wu mean_cf out of range: {s['mean_cf']}")
-    require(0 <= s["below_5pct_days"] <= s["below_10pct_days"],
-            f"wu: below_5pct_days {s['below_5pct_days']} not within "
-            f"[0, below_10pct_days {s['below_10pct_days']}]")
+    require(any(l["days"] >= 3 for l in wu.get("lulls", [])),
+            "wu: no >=3-day wind lull in the store (empty/early?)")
 
 
 def gas_vs_wind_headline(gas_mw: float, wind_mw: float) -> tuple[str, str]:
@@ -276,87 +245,11 @@ def hero_card() -> dict:
 def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
     data = Path(data_dir)
     latest = json.loads((data / "latest.json").read_text())["verdict"]
-    nameplate = json.loads((data / "nameplate.json").read_text())
     wu = json.loads((data / "wind_unreliability.json").read_text())
-
-    guard_card_inputs(latest, nameplate, wu)
-
-    snap = latest["snapshot"]
-    live_stamp = _stamp_live(snap)
-    settled_rebuilt = _rebuilt(wu.get("generated_utc"))
-    cards: list[dict] = []
-
-    # --- LIVE ---
-    firm = latest["firm_pct"]
-    unreliable = int(100 - firm + 0.5)  # half-up to match JS Math.round; see §89–90 comment above
-    cards.append({
-        "slug": "firm-now", "kind": "live", "theme": "ink", "template": "instrument",
-        "figure": f"{unreliable}% unreliable",
-        "label": "of Britain's grid is weather-dependent or imported right now — wind, "
-                 "solar and interconnectors that fall away together. The rest is firm: "
-                 "gas, nuclear, biomass.",
-        "stamp": live_stamp, "caveat": None, "svg": gauge_svg(firm, firm_band(firm))})
-
-    built_gw = nameplate["wind_plus_solar_gw"]
-    delivering = latest["wind_mw"] + latest["solar_mw"]
-    share = delivering / (built_gw * 1000) * 100
-    cards.append({
-        "slug": "capacity-trap", "kind": "live", "theme": "ink", "template": "stat",
-        "figure": f"{share:.0f}% of capacity",
-        "label": f"Britain has built {built_gw:.1f} GW of wind & solar. Right now the "
-                 f"whole fleet is delivering {_fmt_gw(delivering)}.",
-        "stamp": live_stamp, "caveat": DUKES_BASIS, "svg": None})
-
-    fig, lab = gas_vs_wind_headline(latest["gas_mw"], latest["wind_mw"])
-    cards.append({
-        "slug": "gas-vs-wind", "kind": "live", "theme": "ink", "template": "stat",
-        "figure": fig, "label": lab, "stamp": live_stamp, "caveat": None, "svg": None})
-
-    # --- SETTLED ---
-    s = wu["summary"]
-    cards.append({
-        "slug": "wind-stripe", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{s['mean_cf'] * 100:.0f}% mean",
-        "label": "Britain's wind has averaged that share of its installed capacity since 2016 — "
-                 "combined transmission and embedded output.",
-        "stamp": f"Elexon FUELHH + NESO embedded · since 2016{settled_rebuilt}",
-        "caveat": COMBINED_BASIS, "svg": None})
-
-    rel = json.loads((data / "reliability_year.json").read_text())
-    rel_nn = [v for v in rel["values"] if v is not None]
-    rel_mean_unreliable = round((1 - sum(rel_nn) / len(rel_nn)) * 100)
-    cards.append({
-        "slug": "reliability-stripe", "kind": "settled", "theme": "ink", "template": "instrument",
-        "figure": f"{rel_mean_unreliable}% mean unreliable",
-        "label": "Every half-hour of the last year: red where Britain leaned on weather and "
-                 "imports, pale where firm power carried demand.",
-        "stamp": f"Elexon FUELHH + NESO embedded · last 12 months{settled_rebuilt}",
-        "caveat": "Reliable share can exceed 100% on net-export half-hours; the scale saturates at 40% firm.",
-        "svg": reliability_stripe_svg(rel["values"])})
-
-    cards.append({
-        "slug": "days-below-10", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{s['below_10pct_days']} days",
-        "label": "since 2016, Britain's wind ran below a tenth of its installed capacity.",
-        "stamp": f"Elexon FUELHH + NESO embedded · since 2016{settled_rebuilt}",
-        "caveat": COMBINED_BASIS, "svg": None})
-
-    cards.append({
-        "slug": "lowest-day", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{s['lowest_day']['cf'] * 100:.1f}%",
-        "label": f"of capacity — the wind fleet's worst day on record, {s['lowest_day']['date']}.",
-        "stamp": f"Elexon FUELHH + NESO embedded · all-time{settled_rebuilt}",
-        "caveat": COMBINED_BASIS, "svg": None})
-
-    cards.append({
-        "slug": "longest-calm", "kind": "settled", "theme": "ink", "template": "stat",
-        "figure": f"{s['record_lull']['days']} days",
-        "label": f"the longest run wind stayed below a tenth of capacity — "
-                 f"{s['record_lull']['start']} to {s['record_lull']['end']}.",
-        "stamp": f"Elexon FUELHH + NESO embedded · all-time{settled_rebuilt}",
-        "caveat": COMBINED_BASIS, "svg": None})
-
-    asof = datetime.fromisoformat(snap.replace("Z", "+00:00")).strftime("%d %B %Y")
+    guard_card_inputs(latest, wu)
+    cards = [live_balance_card(latest), recent_lull_card(wu)]
+    asof = datetime.fromisoformat(
+        latest["snapshot"].replace("Z", "+00:00")).strftime("%d %B %Y")
     return cards, asof
 
 
@@ -511,13 +404,13 @@ def render(cards: list[dict], out_dir: Path | str) -> None:
 
 
 def stamp_index_og(index_path: Path | str, version: str) -> None:
-    """Stamp the homepage og:image (firm-now hero) with the content-hash token."""
+    """Stamp the homepage og:image (the evergreen hero) with the content-hash token."""
     index = Path(index_path)
-    base = f"{SITE_URL}/share/firm-now.png"
+    base = f"{SITE_URL}/share/hero.png"
     pattern = re.compile(rf'(<meta property="og:image" content="){re.escape(base)}(?:\?[^"]*)?(">)')
     html, n = pattern.subn(rf'\g<1>{base}?v={version}\g<2>', index.read_text())
     if n != 1:
-        raise ValueError(f"expected exactly one firm-now og:image in {index}, found {n}")
+        raise ValueError(f"expected exactly one hero og:image in {index}, found {n}")
     index.write_text(html)
 
 
@@ -525,8 +418,6 @@ def build(data_dir: Path | str = REPO / "site" / "data",
           site_dir: Path | str = REPO / "site") -> int:
     """Build the full card set: render PNGs, write cards.json + /s/ stubs.
     A render failure leaves existing PNGs in place (warn, don't clobber)."""
-    from engine import warnings as wmod
-
     site = Path(site_dir)
     share_dir = site / "share"
     stub_dir = site / "s"
@@ -535,21 +426,17 @@ def build(data_dir: Path | str = REPO / "site" / "data",
     except (GuardError, FileNotFoundError, KeyError, ValueError) as e:
         print(f"card build failed ({type(e).__name__}): {e}", file=sys.stderr)
         return 1
-    # Only hit the live SYSWARN feed when the card is actually served (gate authority is
-    # warning_cards; the {} keeps the build offline-safe and fast while gated off).
-    state = (wmod.parse_active_warnings(wmod.fetch_active_warnings())
-             if SERVE_WARNING_CARD else {})
-    cards += warning_cards(state)
+    hero = hero_card()
     try:
-        render(cards, share_dir)
-    except Exception as e:  # keep last-good PNGs
+        render(cards + [hero], share_dir)        # hero rendered + hashed, not in the gallery
+    except Exception as e:                         # keep last-good PNGs
         print(f"::warning:: card render failed ({type(e).__name__}): {e}", file=sys.stderr)
     versions = content_hashes(share_dir)
     write_manifest(cards, share_dir, asof, versions)
     write_stubs(cards, stub_dir, asof, versions)
-    if "firm-now" in versions:
-        stamp_index_og(site / "index.html", versions["firm-now"])
-    print(f"built {len(cards)} cards → {share_dir}")
+    if "hero" in versions:
+        stamp_index_og(site / "index.html", versions["hero"])
+    print(f"built {len(cards) + 1} cards → {share_dir}")
     return 0
 
 
