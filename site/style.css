@@ -64,11 +64,12 @@ a:hover { color: var(--red); }
   letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink);
   display: flex; align-items: center;
 }
-.brand a { color: inherit; text-decoration: none; }
+.brand a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
 .brand-tick {
   width: 10px; height: 10px; border-radius: 2px; background: var(--red);
-  margin-right: 11px; display: inline-block;
+  margin-right: 11px; flex: none; animation: tick 2s steps(1) infinite;
 }
+@keyframes tick { 50% { opacity: 0.28; } }
 .brand-strap {
   font-family: var(--read); font-style: italic; font-size: 1rem;
   color: var(--slate); margin: 2px 0 0;
@@ -80,6 +81,7 @@ a:hover { color: var(--red); }
   text-decoration: none; padding-bottom: 2px; border-bottom: 1px solid transparent;
 }
 .masthead nav a:hover { color: var(--ink); border-bottom-color: var(--red); }
+.masthead nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--rule); }
 .live-dot {
   font-family: var(--display); font-size: 0.8125rem; font-weight: 500;
   letter-spacing: 0.12em; color: var(--red); display: inline-flex; align-items: center; gap: 6px;
@@ -150,8 +152,8 @@ main { padding-bottom: 40px; }
 }
 /* homepage orientation lede — tells arrivals what the site is, above Entry 01 */
 .site-lede {
-  font-family: var(--read); font-size: 1.18rem; line-height: 1.5; color: var(--ink);
-  max-width: 48em; margin: 8px 0 30px; padding-bottom: 22px; border-bottom: 1px solid var(--rule);
+  font-family: var(--read); font-size: 1.42rem; font-weight: 500; line-height: 1.5; color: var(--ink);
+  max-width: 46em; margin: 30px 0 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);
 }
 .src {
   font-family: var(--mono); font-size: 0.8125rem; color: var(--slate);
@@ -335,12 +337,12 @@ main { padding-bottom: 40px; }
 .records .rec b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
 
 /* ---------- footer ---------- */
-.footer { border-top: 2px solid var(--ink); background: var(--paper); padding: 22px 0 30px; margin-top: 8px; }
+.footer { border-top: 2px solid var(--ink); background: var(--paper); padding: 28px 0 44px; margin-top: 8px; }
 .footer .freshness { font-family: var(--mono); font-size: 0.78rem; color: var(--slate); }
-.footer .links { font-family: var(--display); font-size: 0.8125rem; letter-spacing: 0.04em; margin: 8px 0 0; }
-.footer .links a { color: var(--slate); text-decoration: none; }
-.footer .links a:hover { color: var(--red); }
-.footer .trace { font-family: var(--read); font-style: italic; color: var(--slate); margin: 8px 0 0; }
+.footer .links { font-family: var(--display); font-size: 0.875rem; letter-spacing: 0.01em; color: var(--ink); margin: 10px 0 0; }
+.footer .links a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 2px; }
+.footer .links a:hover { color: var(--red); text-decoration-color: var(--red); }
+.footer .trace { font-family: var(--read); font-style: normal; font-size: 0.9rem; color: var(--slate); margin: 10px 0 0; }
 
 /* ---------- mode badge / fallback states ---------- */
 .modebadge {
@@ -352,12 +354,12 @@ main { padding-bottom: 40px; }
 .warn { font-family: var(--read); font-style: italic; color: var(--red-deep); margin: 8px 0 0; }
 
 /* ---------- prose pages (methodology / about) ---------- */
-.prose { padding: 30px 0 50px; }
+.prose { padding: 30px 22px 50px; }
 .prose h1 { font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 4vw, 2.5rem); letter-spacing: -0.02em; margin: 0 0 6px; }
-.prose .lede { font-family: var(--read); font-size: 1.18rem; color: var(--ink); max-width: 38em; margin: 0 0 6px; }
-.prose h2 { font-family: var(--display); font-weight: 700; font-size: 1.3rem; margin: 30px 0 4px; padding-top: 22px; border-top: 1px solid var(--rule); }
+.prose .lede { font-family: var(--read); font-size: 1.42rem; font-weight: 500; line-height: 1.5; color: var(--ink); max-width: 40em; margin: 0 0 10px; }
+.prose h2 { font-family: var(--display); font-weight: 700; font-size: 1.5rem; margin: 34px 0 4px; padding-top: 22px; border-top: 1px solid var(--rule); }
 .prose h2:first-of-type { border-top: none; }
-.prose p { max-width: 40em; }
+.prose p, .prose li { max-width: 40em; font-size: 1.2rem; line-height: 1.6; }
 .prose .meta { font-family: var(--mono); font-size: 0.78rem; color: var(--slate); }
 .prose .formula { font-family: var(--mono); font-size: 0.84rem; background: var(--paper); border: 1px solid var(--rule); border-left: 3px solid var(--ink); padding: 12px 14px; white-space: pre-wrap; max-width: 40em; }
 .prose .index { font-family: var(--display); font-size: 0.8rem; letter-spacing: 0.04em; }
@@ -372,7 +374,7 @@ main { padding-bottom: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-dot::before { animation: none !important; }
+  .brand-tick, .live-dot::before { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }
 

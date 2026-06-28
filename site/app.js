@@ -745,7 +745,7 @@ async function refreshLive() {
     renderVerdict(state);
     $('clockstrip').textContent =
       `${state.lastUpdated}`;
-    $('freshness').textContent = `Live layer: ${state.lastUpdated}.`;
+    $('freshness').textContent = state.lastUpdated;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
     dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
     dot.hidden = state.mode === 'live';

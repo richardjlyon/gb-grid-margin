@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About — Grid Margin</title>
+<title>About this site — Grid Margin</title>
 <meta name="description" content="Grid Margin is a sceptic's gauge of GB electricity grid reliability, companion to The Energy Trap. Open data, open methodology, every figure sourced — and its biases disclosed on the page.">
 <meta property="og:title" content="About Grid Margin">
 <meta property="og:description" content="A sceptic's gauge of GB grid reliability — open data, disclosed biases.">
@@ -19,29 +19,35 @@
   <div class="container masthead-inner">
     <div>
       <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
-      <p class="brand-strap">About this site</p>
     </div>
-    <nav aria-label="Primary"><a href="/">← The gauge</a><a href="share.html">Share cards</a><a href="methodology.html">Methodology</a></nav>
+    <nav aria-label="Primary"><a href="methodology.html">Methodology</a><a href="about.html" aria-current="page">About</a></nav>
   </div>
 </header>
 
 <main class="container prose">
-  <h1>About</h1>
-  <p class="lede">Grid Margin is a sceptic's gauge of how reliable Britain's electricity grid really is — the live companion to <a href="https://theenergytrap.org">The Energy Trap</a>, and sibling to the Subsidy Clock. The Clock measures the cost; Grid Margin measures the risk: how little wind and solar deliver, how much the system leans on gas and imports, and how close it runs to its limits.</p>
+  <h1>About this site</h1>
+  <p class="lede">The grid is getting greener, and renewable power is cheap. That is the official story, told by ministers, regulators and the industry. What it leaves out is reliability: how much of Britain's electricity, at any moment, comes from firm power you can call on whatever the weather — and how much leans on wind, solar and imports that fall away together when a cold, still spell settles over north-west Europe.</p>
 
-  <h2>What this is</h2>
-  <p>The wind rarely blows; when it doesn't, gas and imports carry Britain. This site reads that off the grid's own settled records, half-hour by half-hour, and live in your browser. It is written in the sceptic's voice — but it counts and contextualises, it does not catastrophise.</p>
+  <p>The numbers are public. Elexon, NESO and DUKES publish generation, demand and capacity — every few minutes, and every year — but in separate feeds, in industry units, and framed around carbon and cost, not around whether the lights stay on.</p>
 
-  <h2>The bargain</h2>
-  <p>The data and the methodology are open on purpose: open figures are hard to dismiss. The cost of that openness is discipline — every number here is a settled or live Elexon/NESO/DUKES figure, with no modelled values in this first version. Where a figure has a known bias, we disclose it <em>on the page</em>, not in a footnote: the wind capacity factor is a deliberate conservative lower bound, and its cross-year level is a denominator-mix artifact. Both are stated where the figure is shown.</p>
+  <p>Grid Margin reads them for reliability instead: live in your browser, and from the grid's own settled records, half-hour by half-hour. Every figure traces to its source; the full method is on the <a href="methodology.html">methodology page</a>. Nothing is modelled — and where a figure carries a known bias, such as the deliberately conservative lower-bound wind capacity factor, it is disclosed on the page, not buried in a footnote.</p>
 
-  <h2>Who, and corrections</h2>
-  <p>Made by <a href="https://theenergytrap.org">Richard Lyon</a>. Found something wrong? The figures and the code are in the <a href="https://github.com/richardjlyon/grid-gauge">open repository</a> — corrections are welcome and will be logged. The full methodology is <a href="methodology.html">here</a>.</p>
+  <p>The grid operator already keeps this account. NESO plans to a <em>margin</em> — the spare firm capacity above demand — and de-rates wind, solar and interconnectors in that sum, because it cannot count on them in a crunch: a cold, still spell becalms north-west Europe all at once, so the neighbours you would import from are short at the same moment. The public conversation rarely does the same arithmetic. This is a citizen's version of that margin, kept in plain sight.</p>
+
+  <p>Built and self-funded by <a href="https://theenergytrap.org">Richard Lyon</a>, author of <em>The Energy Trap</em> (Swift Press, 2026), and sibling to the <a href="https://subsidyclock.co.uk">Subsidy Clock</a> — which measures the cost of energy policy as this measures the risk. No advertising, no sponsors. <a href="https://theenergytrap.org/contact">Get in touch</a>.</p>
+
+  <p>The underlying data is Elexon's (BMRS), NESO's and DUKES'; the independent solar cross-check is <a href="https://www.solar.sheffield.ac.uk">Sheffield Solar's PV_Live</a>. Each is cited where it is used on the <a href="methodology.html">methodology page</a>.</p>
+
+  <p>If you find an error in a published figure, I want to know: the figures and the code are in the <a href="https://github.com/richardjlyon/gb-grid-margin">open repository</a>, and confirmed errors are corrected and logged.</p>
+
+  <p>Journalists: figures on this site may be quoted with attribution; I'm available for comment.</p>
+
+  <p>Elsewhere: <a href="https://richardlyon.substack.com" rel="me">Substack</a> · <a href="https://www.linkedin.com/in/richard-lyon-ab93933b4/" rel="me">LinkedIn</a> · <a href="https://x.com/RichardLyon_" rel="me">X</a> · <a href="https://theenergytrap.org" rel="me">The Energy Trap</a></p>
 </main>
 
 <footer class="footer">
   <div class="container">
-    <p class="links"><a href="/">The gauge</a> · <a href="share.html">Share cards</a> · <a href="methodology.html">Methodology</a> · <a href="https://github.com/richardjlyon/grid-gauge">Source &amp; data</a></p>
+    <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; sources</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Source &amp; data</a></p>
     <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
   </div>
 </footer>

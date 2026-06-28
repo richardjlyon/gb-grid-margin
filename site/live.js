@@ -193,7 +193,7 @@ export async function resolveState(faults, clockNow, { httpGet = httpGetReal } =
       verdict: live.verdict,
       capacity: live.capacity,
       feeds: live.feeds,
-      lastUpdated: `${lead} — snapshot ${snapHH} UTC (${age.text})`,
+      lastUpdated: `${lead} · snapshot ${snapHH} UTC (${age.text})`,
       reconcileNote: live.reconcileNote,
       veryStale: !age.uncertain && age.ageMin != null && age.ageMin > STALE_MIN,
     };

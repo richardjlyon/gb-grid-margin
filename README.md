@@ -1,10 +1,12 @@
-# Grid Gauge
+# GB Grid Margin
+
+**Live at [gridmargin.co.uk](https://gridmargin.co.uk).**
 
 A live, public dashboard of Britain's electricity system. It shows, in plain numbers, how
 much of the country's power comes from wind and solar at any moment, how much from gas and
 imported electricity, and how close the system runs to its operational limits.
 
-Grid Gauge is built on one rule: **every figure traces to a public Elexon or NESO dataset and
+GB Grid Margin is built on one rule: **every figure traces to a public Elexon or NESO dataset and
 can be checked.** The data sources, the formulas and the code are all open. No figure on the
 site is modelled — each one is measured.
 
