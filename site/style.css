@@ -384,6 +384,11 @@ main { padding-bottom: 40px; }
   padding:6px 12px; border:1px solid var(--rule); border-radius:999px; color:var(--ink);
   text-decoration:none; }
 .share-btn:hover { border-color:var(--red); color:var(--red); }
+.action-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.action-btn { font:500 13px "Spline Sans Mono",monospace; letter-spacing:.04em;
+  padding:6px 12px; border:1px solid var(--rule); border-radius:5px; background:none;
+  color:var(--ink); cursor:pointer; text-decoration:none; }
+.action-btn:hover { border-color:var(--red); color:var(--red); }
 .card-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:28px; margin-top:24px; }
 .card-tile img { width:100%; height:auto; border:1px solid var(--rule); border-radius:6px; display:block; }
 .card-tile figcaption { font-family:var(--read); font-size:.95rem; margin:10px 0 4px; color:var(--ink); }

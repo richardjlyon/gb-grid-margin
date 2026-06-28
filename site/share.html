@@ -10,11 +10,11 @@
 </div></header>
 <main class="container">
   <h1 class="headline">Share cards</h1>
-  <p class="def">Every card is a sourced figure, rendered the same as the dashboard. Pick one and post it.</p>
+  <p class="def">A media kit for sharing the numbers. Regenerated on every update, so whatever you download carries the latest figures. Free to share — please credit gridmargin.co.uk. Every figure traces to an official source.</p>
   <div id="gallery" class="card-gallery"></div>
 </main>
 <script type="module">
-import { shareButtons } from './share.js';
+import { shareButtons, actionButtons, wireCopyButtons } from './share.js';
 const root = document.getElementById('gallery');
 try {
   const { cards } = await (await fetch('share/cards.json', { cache: 'no-store' })).json();
@@ -23,7 +23,9 @@ try {
       <img src="${c.png}" alt="${c.figure} — ${c.label}" width="1200" height="630" loading="lazy">
       <figcaption>${c.figure} — ${c.label}</figcaption>
       ${shareButtons(c)}
+      ${actionButtons(c)}
     </figure>`).join('');
+  wireCopyButtons(root);
 } catch (e) {
   root.innerHTML = `<p class="warn">Share cards unavailable. ${e.message || e}</p>`;
 }

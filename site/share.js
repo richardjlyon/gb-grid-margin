@@ -17,3 +17,23 @@ export function shareButtons(card) {
     .map((i) => `<a class="share-btn" href="${i.href}" target="_blank" rel="noopener">${i.name}</a>`)
     .join('')}</div>`;
 }
+
+export function actionButtons(card) {
+  return `<div class="action-row">
+    <a class="action-btn" href="${card.png}" download="grid-margin-${card.slug}.png">Download</a>
+    <button class="action-btn" type="button" data-copy="${card.png}">Copy image</button>
+  </div>`;
+}
+
+export function wireCopyButtons(root) {
+  root.querySelectorAll('button[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        const blob = await (await fetch(btn.dataset.copy, { cache: 'no-store' })).blob();
+        await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+        btn.textContent = 'Copied ✓';
+        setTimeout(() => { btn.textContent = 'Copy image'; }, 2000);
+      } catch { btn.textContent = 'Copy failed'; }
+    });
+  });
+}

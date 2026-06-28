@@ -1,7 +1,7 @@
 // site/share.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { intents } from './share.js';
+import { intents, actionButtons } from './share.js';
 
 test('intents builds X / LinkedIn / Bluesky / Facebook URLs pointing at the stub', () => {
   const card = { slug: 'firm-now', figure: '75% firm', label: 'of the grid is firm' };
@@ -11,4 +11,11 @@ test('intents builds X / LinkedIn / Bluesky / Facebook URLs pointing at the stub
   assert.ok(decodeURIComponent(x.href).includes('75% firm — of the grid is firm'));
   assert.ok(decodeURIComponent(x.href).includes('https://gridmargin.co.uk/s/firm-now'));
   assert.deepEqual(out.map((i) => i.name), ['X', 'LinkedIn', 'Bluesky', 'Facebook']);
+});
+
+test('actionButtons renders Download + Copy image for a card', () => {
+  const html = actionButtons({ slug: 'live-balance', png: '/share/live-balance.png?v=abc' });
+  assert.match(html, /Download/);
+  assert.match(html, /Copy image/);
+  assert.match(html, /\/share\/live-balance\.png\?v=abc/);
 });
