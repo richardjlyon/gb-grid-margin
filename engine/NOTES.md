@@ -671,3 +671,42 @@ red zone (< 40% firm), giving an earlier warning at the panel level.
 **Source-trace.** The panel's pure threshold logic (`site/conditions.js`) is unit-tested
 (`site/conditions.test.mjs`, run under `tests/test_parity.py`); because each lamp consumes the
 same live figures the dashboard already renders, there is no separate series to drift.
+
+## 17. System sell-price history store *(Import-cost panel, Task 1, 2026-06-28)*
+
+`engine/system_price_history.py` pulls Elexon's **settled system sell prices** into an
+append-only, git-diffable CSV store — `data/history/system_price_YYYY.csv`, one file per
+settlement year — using the same `engine/widestore.py` primitive as the FUELHH (§6) and embedded
+(§11) stores.
+
+**Endpoint.**
+```
+GET https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/system-prices/{date}
+```
+Returns `{"data": [{"settlementDate": "YYYY-MM-DD", "settlementPeriod": N,
+"systemSellPrice": float_or_null, ...}, ...]}`. One request per settlement day;
+the endpoint has no `/stream` variant or bulk-range parameter. Records with a null
+`systemSellPrice` are dropped by `parse_day` — they represent settlement periods not yet
+published.
+
+**Store format.** Wide CSV, one row per settlement half-hour, columns:
+`settlement_date, settlement_period, system_sell_price`. The price column (£/MWh) is stored
+as **text** (not integer-truncated, unlike the MW columns in FUELHH/embedded) to preserve
+decimal precision; `read_store()` converts it back to `float` on read.
+
+**Revision policy — `on_revision="update"`.** Elexon revises settled system prices
+retrospectively (re-runs after late meter data, dispute resolution, etc.). The daily `append`
+verb uses `on_revision="update"` so the store tracks the latest published figure, with git
+as the audit trail for any change. The one-time `backfill` uses the default `"raise"` —
+a revision during initial backfill is a genuine conflict to surface.
+
+**Clean-data edge.** Mirrors FUELHH: `PRICE_EDGE = 2016-01-01`. Settlement prices exist
+on the modern API from this date; the full backfill (Task 2) populates 2016-01-01 to
+`today − 5 days`.
+
+**CLI verbs.** `backfill [start] [end]` / `append` / `validate` — same shape as §6.
+`validate` reuses `history.expected_periods()` and `history.validate_range()`: a settlement
+day has 48/46/50 periods (same DST-aware rule), so the completeness check is identical.
+No `known_gaps.csv` manifest — unlike §6's 77 Elexon FUELHH non-publications, no permanent
+system-price holes have been observed; an incomplete day surfaces as unexplained and must be
+reviewed.
