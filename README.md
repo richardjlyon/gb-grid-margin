@@ -2,15 +2,18 @@
 
 **Live at [gridmargin.co.uk](https://gridmargin.co.uk).**
 
-A live, public dashboard of Britain's electricity system. It shows, in plain numbers, how
-much of the country's power comes from wind and solar at any moment, how much from gas and
-imported electricity, and how close the system runs to its operational limits.
+A live, public dashboard that reads Britain's electricity grid for **reliability** — not how
+clean the power is, but whether you can count on it. In plain numbers: how much of the
+country's electricity, at any moment, comes from firm, dispatchable power available whatever
+the weather (gas, nuclear, biomass), and how much leans on wind, solar and imports — the
+sources that fall away together when a cold, still spell settles over north-west Europe.
 
-GB Grid Margin is built on one rule: **every figure traces to a public Elexon or NESO dataset and
-can be checked.** The data sources, the formulas and the code are all open. No figure on the
-site is modelled — each one is measured.
+GB Grid Margin is built on one rule: **every figure traces to a public Elexon, NESO or DUKES
+dataset and can be checked.** The data sources, the formulas and the code are all open. No
+figure on the site is modelled — each one is measured.
 
-A companion to *The Energy Trap*.
+A companion to *The Energy Trap*, and sibling to the [Subsidy Clock](https://subsidyclock.co.uk):
+the Clock measures the cost of energy policy; this measures the risk.
 
 ## How it works (hybrid)
 
@@ -69,15 +72,19 @@ record of half-hours Elexon never published; `validate` passes on those but fail
 ## Methodology and provenance
 
 Each published figure carries a source line and a "last updated" timestamp. The formulas and
-their datasets are documented in `engine/NOTES.md` (and, once the site ships, on a methodology
-page). Build-time checks reject implausible values so a bad pull fails loudly rather than
-publishing silently.
+their datasets are documented in `engine/NOTES.md` and on the site's methodology page.
+Build-time checks reject implausible values so a bad pull fails loudly rather than publishing
+silently.
 
 ## Status
 
-Early build. CORS settled; the live verdict and capacity-share pipeline run against real
-FUELINST data. Open methodology decisions are tracked in `engine/NOTES.md`.
+The dashboard and engine are built and tested: three sections — the reliability gauge, the
+capacity trap, and wind unreliability — on the live and settled layers, with a full
+methodology page. Continuous deployment (a scheduled refresh job plus hosting) is the
+remaining piece before launch. Open methodology decisions are tracked in `engine/NOTES.md`.
 
 ## Licence
 
-TBC.
+- **Code** — [MIT](LICENSE). Use it freely.
+- **Derived figures and series** (the JSON this project computes and publishes) — [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): reuse with attribution to GB Grid Margin.
+- **Raw data** — Elexon (BMRS), NESO and DUKES remain under their own terms; this project does not relicense them.
