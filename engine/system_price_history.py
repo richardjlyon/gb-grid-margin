@@ -76,8 +76,12 @@ def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR,
     to absorb Elexon's retrospective settlement-price revisions (see ``widestore.append_rows``).
     Returns the number of rows newly written or updated.
     """
-    # Normalise price to float so the CSV representation is consistent across calls.
-    normalised = [{**r, "system_sell_price": float(r["system_sell_price"])} for r in rows]
+    # Normalise the price to the SAME string form the CSV round-trip produces.
+    # system_sell_price is a TEXT column, so widestore's idempotency check compares the
+    # in-memory value against the DictReader string read back from disk. Storing a float
+    # in memory (800.0) would never equal the stored string ('800.0'), misclassifying every
+    # identical re-append as a revision. str(float(x)) matches what DictWriter writes.
+    normalised = [{**r, "system_sell_price": str(float(r["system_sell_price"]))} for r in rows]
     return widestore.append_rows(
         normalised, COLUMNS, _TEXT_COLUMNS,
         lambda sd: year_path(sd, base_dir),
