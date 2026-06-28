@@ -47,6 +47,11 @@ jobs:
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
 
+      - name: Refresh live fallback snapshot (non-fatal — live layer is primary)
+        run: |
+          uv run python -m engine.build_site build \
+            || echo "::warning::live fallback rebuild failed; keeping last-good latest.json"
+
       - name: Cache Playwright Chromium
         uses: actions/cache@v4
         with:
@@ -56,14 +61,12 @@ jobs:
       - name: Install Chromium for share cards
         run: uv run playwright install --with-deps chromium
 
-      - name: Rebuild share cards (non-fatal — yesterday's dated cards stay live)
+      # After the live-snapshot refresh above, so the live card is built from the
+      # current latest.json (not the previous cycle's). Non-fatal — yesterday's
+      # dated cards stay live on a render failure.
+      - name: Rebuild share cards
         run: uv run python -m engine.sharecards build
           || echo "::warning::share cards failed — previous cards remain"
-
-      - name: Refresh live fallback snapshot (non-fatal — live layer is primary)
-        run: |
-          uv run python -m engine.build_site build \
-            || echo "::warning::live fallback rebuild failed; keeping last-good latest.json"
 
       - name: Commit & push if the data changed
         run: |

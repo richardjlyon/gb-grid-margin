@@ -3,7 +3,10 @@ const SITE = 'https://gridmargin.co.uk';
 
 export function intents(card) {
   const text = encodeURIComponent(`${card.figure} — ${card.label}`);
-  const url = encodeURIComponent(`${SITE}/s/${card.slug}`);
+  // The content hash on the shared URL is the cache-bust: social platforms key their
+  // unfurl cache off the posted URL, so a re-rendered card (new hash) forces a fresh card.
+  const bust = card.version ? `?v=${card.version}` : '';
+  const url = encodeURIComponent(`${SITE}/s/${card.slug}${bust}`);
   return [
     { name: 'X', href: `https://twitter.com/intent/tweet?text=${text}&url=${url}` },
     { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}` },

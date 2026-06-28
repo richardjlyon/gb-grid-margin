@@ -62,7 +62,6 @@ def gauge_svg(firm_pct: float, band: str) -> str:
 
 
 COMBINED_BASIS = "Combined transmission + embedded wind ÷ DUKES 6.2 installed capacity — a true load factor."
-DUKES_BASIS = "Wind+solar output ÷ DUKES 6.2 installed capacity (UK, end-2024)."
 
 # --- reliability stripe ramp (parity-locked to site/render.js) ---------------
 RELIABILITY_RAMP_LO, RELIABILITY_RAMP_HI = 0.40, 0.65   # mirror site/render.js RELIABILITY_RAMP
@@ -92,42 +91,8 @@ def reliable_share_to_color(s: float | None) -> tuple[int, int, int]:
     return (r, g, b)
 
 
-def reliability_stripe_svg(values: list[float | None], width: int = 1040, height: int = 300) -> str:
-    """Pack the half-hourly firm-share series into `width` columns (mean each), one rect per column."""
-    n = len(values)
-    rects = []
-    for c in range(width):
-        i0 = (c * n) // width
-        i1 = max(i0 + 1, ((c + 1) * n) // width)
-        vs = [values[i] for i in range(i0, min(i1, n)) if values[i] is not None]
-        r, g, b = reliable_share_to_color(sum(vs) / len(vs) if vs else None)
-        rects.append(f'<rect x="{c}" y="0" width="1" height="{height}" fill="rgb({r},{g},{b})"/>')
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" '
-            f'preserveAspectRatio="none">{"".join(rects)}</svg>')
-
-
 def _fmt_gw(mw: float) -> str:
     return f"{mw / 1000:.1f} GW"
-
-
-def _stamp_live(snapshot: str) -> str:
-    d = datetime.fromisoformat(snapshot.replace("Z", "+00:00"))
-    return f"as of {d.strftime('%d %b %H:%M')} UTC"
-
-
-def _rebuilt(generated_utc: str | None) -> str:
-    """' · rebuilt 25 Jun 2026' from a generated_utc ISO stamp, or '' if absent.
-
-    Threaded onto the settled-card stamps so a shared settled card carries the date
-    its underlying figure was last derived — not just a static 'since 2016'.
-    """
-    if not generated_utc:
-        return ""
-    try:
-        d = datetime.fromisoformat(generated_utc.replace("Z", "+00:00"))
-    except ValueError:
-        return ""
-    return f" · rebuilt {d.strftime('%d %b %Y')}"
 
 
 def _issued(issued_at: str | None) -> str:
@@ -356,7 +321,8 @@ def write_manifest(cards: list[dict], out_dir: Path | str, asof: str,
     out.mkdir(parents=True, exist_ok=True)
     payload = {"asof": asof, "cards": [{
         "slug": c["slug"], "figure": c["figure"], "label": c["label"],
-        "kind": c["kind"], "png": f"/share/{c['slug']}.png?v={versions.get(c['slug'], '')}",
+        "kind": c["kind"], "version": versions.get(c["slug"], ""),
+        "png": f"/share/{c['slug']}.png?v={versions.get(c['slug'], '')}",
     } for c in cards]}
     (out / "cards.json").write_text(json.dumps(payload, indent=2) + "\n")
 
@@ -370,7 +336,7 @@ def write_stubs(cards: list[dict], out_dir: Path | str, asof: str,
         html = STUB_TEMPLATE.format(
             title=_html.escape(f"{c['figure']} — {c['label']}"),
             description=_html.escape(f"As of {asof}. Every figure traces to Elexon, NESO & DUKES."),
-            stub_url=f"{SITE_URL}/s/{c['slug']}",
+            stub_url=f"{SITE_URL}/s/{c['slug']}?v={versions.get(c['slug'], '')}",
             image_url=f"{SITE_URL}/share/{c['slug']}.png?v={versions.get(c['slug'], '')}",
             site_url=SITE_URL, target=target, target_js=json.dumps(target),
             figure=_html.escape(c["figure"]), label=_html.escape(c["label"]), asof=asof)
