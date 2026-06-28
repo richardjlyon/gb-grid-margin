@@ -623,6 +623,8 @@ function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
 // (updateComputedLamps, from refreshLive); the official scarcity lamp refreshes on the SYSWARN poll
 // (updateScarcityLamp). A failure on either path degrades only its own lamps — never a sibling, never
 // the verdict. ?cond=wind:5,firm,import,scarcity:emn forces states for previewing.
+// WIND_RUN is a daily settled series (rebuilt by the cron); fetched once per page load — it only
+// changes on rebuild, so the 5-min computed-lamp poll re-renders the same cached object intentionally.
 let WIND_RUN = null;
 
 function condOverride() {
@@ -661,6 +663,7 @@ function _firmStatus(l) {
 }
 function _importStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
+  if (l.pct < 0) return `Nominal · <b>${_round(Math.abs(l.pct))}%</b> export`;
   return `${l.state === 'active' ? 'Active' : 'Nominal'} · <b>${_round(l.pct)}%</b>`;
 }
 function _scarcityStatus(l) {

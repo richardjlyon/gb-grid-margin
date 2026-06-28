@@ -157,8 +157,6 @@ a:hover { color: var(--red); }
   .cond-cell { flex: 1 1 45%; border-right: 0; }
   .cond-cell:nth-child(even) { border-right: 1px solid var(--cond-line); }
 }
-@media (prefers-reduced-motion: reduce) { .cond-led { transition: none; } }
-
 /* ---------- the ledger: entries separated by a double rule ---------- */
 main { padding-bottom: 40px; }
 .entry { padding: 30px 0 26px; border-top: 3px double var(--rule); }

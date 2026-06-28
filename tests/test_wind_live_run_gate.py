@@ -39,3 +39,4 @@ def test_wind_live_run_json_matches_raw_recompute():
         run += 1
         prev = s["date"]
     assert payload["current_run_days"] == run
+    assert payload["current_cf_pct"] == series[-1]["cf_pct"]
