@@ -1,3 +1,5 @@
+from pathlib import Path as _P
+
 from engine import sharecards
 
 
@@ -129,3 +131,10 @@ def test_compose_hero_fills_headline_tagline_gauge():
     assert "today?" in html
     assert "<svg" in html
     assert "EVERY FIGURE TRACES TO ELEXON" in html
+
+
+def test_index_og_image_is_hero():
+    html = (_P(sharecards.REPO) / "site" / "index.html").read_text()
+    assert html.count('property="og:image"') == 1
+    assert "/share/hero.png" in html
+    assert "/share/firm-now.png" not in html
