@@ -416,7 +416,17 @@ STUB_TEMPLATE = """<!DOCTYPE html>
 
 
 def _compose_hero(card: dict) -> str:
-    raise NotImplementedError
+    # red-accent the trailing "today?" so the headline pays off the brand
+    headline = _html.escape(card["headline"]).replace(
+        "today?", '<span class="r">today?</span>')
+    html = (TEMPLATES / "sharecard-hero.html").read_text()
+    html = (html
+            .replace("{{HEADLINE}}", headline)
+            .replace("{{TAGLINE}}", _html.escape(card["tagline"]))
+            .replace("{{SVG}}", card.get("svg") or ""))
+    if "{{" in html:
+        raise ValueError("unfilled token in hero card")
+    return html
 
 
 def compose(card: dict) -> str:

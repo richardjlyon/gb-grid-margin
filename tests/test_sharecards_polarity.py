@@ -120,3 +120,12 @@ def test_compose_card_no_gauge_when_svg_none():
     html = sharecards.compose(c)
     assert "{{" not in html
     assert 'class="card red"' in html
+
+
+def test_compose_hero_fills_headline_tagline_gauge():
+    html = sharecards.compose(sharecards.hero_card())
+    assert "{{" not in html
+    assert "your hospital" in html
+    assert "today?" in html
+    assert "<svg" in html
+    assert "EVERY FIGURE TRACES TO ELEXON" in html
