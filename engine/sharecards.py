@@ -259,6 +259,20 @@ def recent_lull_card(wu: dict) -> dict:
         "caveat": COMBINED_BASIS, "svg": None}
 
 
+HERO_FIRM = 42.0  # fixed illustrative needle (≈ long-run firm share); NOT a live reading
+
+
+def hero_card() -> dict:
+    """Evergreen OG/link-preview card. No perishable number — the 'today?' is rhetorical,
+    the gauge needle is fixed/illustrative, so a cached unfurl can never go stale-wrong."""
+    return {
+        "slug": "hero", "kind": "hero", "band": "charcoal", "template": "hero",
+        "headline": "What's powering your hospital today?",
+        "tagline": ("A live, sourced gauge of how much of Britain's grid is leaning on "
+                    "weather and imports."),
+        "svg": gauge_svg(HERO_FIRM, "charcoal")}
+
+
 def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
     data = Path(data_dir)
     latest = json.loads((data / "latest.json").read_text())["verdict"]

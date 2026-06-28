@@ -90,3 +90,14 @@ def test_recent_lull_picks_latest_3day_run():
 def test_fmt_span_same_month_and_cross_month():
     assert sharecards._fmt_span("2025-10-12", "2025-10-14") == "12–14 Oct 2025"
     assert sharecards._fmt_span("2025-08-29", "2025-09-02") == "29 Aug – 2 Sep 2025"
+
+
+def test_hero_card_is_evergreen():
+    c = sharecards.hero_card()
+    assert c["slug"] == "hero"
+    assert c["template"] == "hero"
+    assert c["band"] == "charcoal"
+    assert "hospital" in c["headline"].lower()
+    assert c["svg"]                       # illustrative gauge, fixed
+    # carries no live figure/number
+    assert "figure" not in c or not c.get("figure")
