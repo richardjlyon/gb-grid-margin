@@ -31,7 +31,7 @@ export function heavyImportsLamp(netImportMw, demandMw) {
 
 // The official guest. Active state is 'in_force' (red), all-clear is 'clear'. Mirrors resolveWarnings().
 export function scarcityLamp(warn) {
-  if (!warn || warn.status === 'unavailable') return { state: 'unavailable' };
+  if (!warn || !warn.status || warn.status === 'unavailable') return { state: 'unavailable' };
   if (warn.status === 'in_force') return { state: 'in_force', type: warn.type, label: warn.typeLabel };
   return { state: 'clear' };
 }

@@ -18,6 +18,9 @@ test('windLullLamp — missing data is unavailable', () => {
   assert.equal(windLullLamp(null).state, 'unavailable');
   assert.equal(windLullLamp({}).state, 'unavailable');
 });
+test('windLullLamp — boundary at 1 day', () => {
+  assert.equal(windLullLamp({ current_run_days: 1, current_cf_pct: 19, as_of: '2026-06-23' }).state, 'active');
+});
 
 test('firmMajorityLamp — boundary at 50', () => {
   assert.equal(firmMajorityLamp(49.9).state, 'active');
@@ -33,10 +36,17 @@ test('heavyImportsLamp — boundary at 25% of demand', () => {
   assert.equal(heavyImportsLamp(2600, 0).state, 'unavailable');  // bad demand
   assert.equal(HEAVY_IMPORT_PCT, 25);
 });
+test('heavyImportsLamp — NaN guards', () => {
+  assert.equal(heavyImportsLamp(NaN, 10000).state, 'unavailable');
+  assert.equal(heavyImportsLamp(2600, NaN).state, 'unavailable');
+});
 
 test('scarcityLamp — maps warning states', () => {
   assert.equal(scarcityLamp({ status: 'in_force', type: 'EMN', typeLabel: 'Electricity Margin Notice' }).state, 'in_force');
   assert.equal(scarcityLamp({ status: 'clear' }).state, 'clear');
   assert.equal(scarcityLamp({ status: 'unavailable' }).state, 'unavailable');
   assert.equal(scarcityLamp(null).state, 'unavailable');
+});
+test('scarcityLamp — malformed object with no status', () => {
+  assert.equal(scarcityLamp({}).state, 'unavailable');
 });
