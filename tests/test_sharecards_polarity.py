@@ -67,3 +67,26 @@ def test_live_balance_figure_matches_gauge_firm():
     # gauge built from the same firm_pct as the headline (invariant)
     c = sharecards.live_balance_card(_mk(35.4))
     assert sharecards.gauge_svg(35.4, "red") == c["svg"]
+
+
+def test_recent_lull_picks_latest_3day_run():
+    wu = {
+        "lulls": [
+            {"start": "2024-11-03", "end": "2024-11-05", "days": 3, "min_cf": 0.0451},
+            {"start": "2025-10-12", "end": "2025-10-14", "days": 3, "min_cf": 0.0393},
+            {"start": "2026-05-04", "end": "2026-05-04", "days": 1, "min_cf": 0.0972},  # too short
+        ],
+        "summary": {"counts": {"ge_3d": 45}},
+    }
+    c = sharecards.recent_lull_card(wu)
+    assert c["band"] == "red"
+    assert c["svg"] is None
+    assert c["figure"] == "3 days"
+    assert "12" in c["label"] and "14 Oct 2025" in c["label"]   # the latest >=3-day run
+    assert "3.9% of capacity" in c["label"]                      # min_cf 0.0393
+    assert "45" in c["label"]                                    # ge_3d context
+
+
+def test_fmt_span_same_month_and_cross_month():
+    assert sharecards._fmt_span("2025-10-12", "2025-10-14") == "12–14 Oct 2025"
+    assert sharecards._fmt_span("2025-08-29", "2025-09-02") == "29 Aug – 2 Sep 2025"

@@ -232,6 +232,33 @@ def live_balance_card(latest: dict) -> dict:
         "caveat": None, "svg": gauge_svg(firm, band)}
 
 
+def _fmt_span(start: str, end: str) -> str:
+    """'12–14 Oct 2025' (same month) or '29 Aug – 2 Sep 2025' (cross-month)."""
+    a = datetime.fromisoformat(start)
+    b = datetime.fromisoformat(end)
+    if (a.year, a.month) == (b.year, b.month):
+        return f"{a.day}–{b.day} {b.strftime('%b %Y')}"
+    return f"{a.day} {a.strftime('%b')} – {b.day} {b.strftime('%b %Y')}"
+
+
+def recent_lull_card(wu: dict) -> dict:
+    """The most recent >=3-day wind lull (combined-basis CF < 10%). Intrinsically red;
+    no gauge (a day count is not a share)."""
+    runs = [l for l in wu["lulls"] if l["days"] >= 3]
+    if not runs:
+        raise GuardError("wu: no >=3-day wind lull in the store (empty/early?)")
+    lull = runs[-1]                                   # lulls are start-ascending
+    count = wu["summary"]["counts"]["ge_3d"]
+    return {
+        "slug": "recent-lull", "kind": "settled", "band": "red", "template": "card",
+        "figure": f"{lull['days']} days",
+        "label": (f"the most recent wind lull — {_fmt_span(lull['start'], lull['end'])}, "
+                  f"when wind fell as low as {lull['min_cf'] * 100:.1f}% of capacity. "
+                  f"Britain has had {count} such spells since 2016."),
+        "stamp": "most recent ≥3-day wind lull · combined basis",
+        "caveat": COMBINED_BASIS, "svg": None}
+
+
 def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
     data = Path(data_dir)
     latest = json.loads((data / "latest.json").read_text())["verdict"]
