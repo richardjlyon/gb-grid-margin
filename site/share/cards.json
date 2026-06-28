@@ -1,68 +1,68 @@
 {
-  "asof": "25 June 2026",
+  "asof": "27 June 2026",
   "cards": [
     {
       "slug": "firm-now",
-      "figure": "25% unreliable",
+      "figure": "65% unreliable",
       "label": "of Britain's grid is weather-dependent or imported right now \u2014 wind, solar and interconnectors that fall away together. The rest is firm: gas, nuclear, biomass.",
       "kind": "live",
-      "png": "/share/firm-now.png?v=2abff105d4"
+      "png": "/share/firm-now.png?v=1fa3383422"
     },
     {
       "slug": "capacity-trap",
-      "figure": "23% of capacity",
-      "label": "Britain has built 50.4 GW of wind & solar. Right now the whole fleet is delivering 11.4 GW.",
+      "figure": "38% of capacity",
+      "label": "Britain has built 50.4 GW of wind & solar. Right now the whole fleet is delivering 19.4 GW.",
       "kind": "live",
-      "png": "/share/capacity-trap.png?v=279b16b5c3"
+      "png": "/share/capacity-trap.png?v=f1508020d5"
     },
     {
       "slug": "gas-vs-wind",
-      "figure": "1.3\u00d7 more",
-      "label": "the gas fleet out-produces every wind farm in Britain right now \u2014 14.3 GW of gas against 11.4 GW of wind.",
+      "figure": "2.1\u00d7 more",
+      "label": "wind out-produces the whole gas fleet right now \u2014 10.9 GW of wind against 5.2 GW of gas.",
       "kind": "live",
-      "png": "/share/gas-vs-wind.png?v=187fe37314"
+      "png": "/share/gas-vs-wind.png?v=ca0f03a0f3"
     },
     {
       "slug": "wind-stripe",
-      "figure": "22% mean",
-      "label": "Each column is one day's wind since 2016. The wind rarely blows above a fraction of its capacity.",
+      "figure": "29% mean",
+      "label": "Britain's wind has averaged that share of its installed capacity since 2016 \u2014 combined transmission and embedded output.",
       "kind": "settled",
-      "png": "/share/wind-stripe.png?v=3c6f21185e"
+      "png": "/share/wind-stripe.png?v=d537b7c47d"
     },
     {
       "slug": "reliability-stripe",
       "figure": "51% mean unreliable",
       "label": "Every half-hour of the last year: red where Britain leaned on weather and imports, pale where firm power carried demand.",
       "kind": "settled",
-      "png": "/share/reliability-stripe.png?v=a3a47ee3be"
+      "png": "/share/reliability-stripe.png?v=1f6c6e0c3a"
     },
     {
       "slug": "days-below-10",
-      "figure": "13 days",
-      "label": "in 2026 (so far), Britain's wind ran below a tenth of its installed capacity.",
+      "figure": "423 days",
+      "label": "since 2016, Britain's wind ran below a tenth of its installed capacity.",
       "kind": "settled",
-      "png": "/share/days-below-10.png?v=804188704c"
+      "png": "/share/days-below-10.png?v=c007c2405e"
     },
     {
       "slug": "lowest-day",
-      "figure": "0.9%",
+      "figure": "2.1%",
       "label": "of capacity \u2014 the wind fleet's worst day on record, 2016-01-19.",
       "kind": "settled",
-      "png": "/share/lowest-day.png?v=7994c5fda1"
+      "png": "/share/lowest-day.png?v=e685cb1a42"
     },
     {
       "slug": "longest-calm",
-      "figure": "17 days",
-      "label": "the longest run wind stayed below 10% of capacity \u2014 2016-06-03 to 2016-06-19.",
+      "figure": "10 days",
+      "label": "the longest run wind stayed below a tenth of capacity \u2014 2016-06-04 to 2016-06-13.",
       "kind": "settled",
-      "png": "/share/longest-calm.png?v=43474020f1"
+      "png": "/share/longest-calm.png?v=b945963db4"
     },
     {
       "slug": "warning",
-      "figure": "Margin notice",
-      "label": "An Electricity Margin Notice is in force in Britain.",
+      "figure": "All clear",
+      "label": "No grid margin warning is in force in Britain right now.",
       "kind": "warning",
-      "png": "/share/warning.png?v=4246a4d915"
+      "png": "/share/warning.png?v=93b0681f85"
     }
   ]
 }

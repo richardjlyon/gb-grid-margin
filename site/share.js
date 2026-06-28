@@ -1,5 +1,5 @@
 // site/share.js — prefilled social share intents + button markup for the cards.
-const SITE = 'https://gridgauge.co.uk';
+const SITE = 'https://gridmargin.co.uk';
 
 export function intents(card) {
   const text = encodeURIComponent(`${card.figure} — ${card.label}`);

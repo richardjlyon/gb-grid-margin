@@ -9,6 +9,6 @@ test('intents builds X / LinkedIn / Bluesky / Facebook URLs pointing at the stub
   const x = out.find((i) => i.name === 'X');
   assert.ok(x.href.includes('twitter.com/intent/tweet'));
   assert.ok(decodeURIComponent(x.href).includes('75% firm — of the grid is firm'));
-  assert.ok(decodeURIComponent(x.href).includes('https://gridgauge.co.uk/s/firm-now'));
+  assert.ok(decodeURIComponent(x.href).includes('https://gridmargin.co.uk/s/firm-now'));
   assert.deepEqual(out.map((i) => i.name), ['X', 'LinkedIn', 'Bluesky', 'Facebook']);
 });

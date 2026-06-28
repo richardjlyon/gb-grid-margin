@@ -1,4 +1,4 @@
-"""Grid Gauge share cards (Stage 8): sourced 1200x630 OG PNGs + unfurl stubs,
+"""Grid Margin share cards (Stage 8): sourced 1200x630 OG PNGs + unfurl stubs,
 built from the same site JSON the dashboard reads so a card can never disagree
 with the site. Visual system: Ink (default) / Instrument (gauge & stripe) /
 Alarm (active warning only)."""
@@ -22,7 +22,7 @@ from engine.guards import (
 
 REPO = Path(__file__).resolve().parent.parent
 TEMPLATES = Path(__file__).resolve().parent / "templates"
-SITE_URL = "https://gridgauge.co.uk"
+SITE_URL = "https://gridmargin.co.uk"
 CARD_W, CARD_H = 1200, 630
 
 
@@ -290,12 +290,12 @@ def warning_card(state: dict) -> dict:
 
 STUB_TEMPLATE = """<!DOCTYPE html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="robots" content="noindex">
-<title>{title} — Grid Gauge</title>
+<title>{title} — Grid Margin</title>
 <meta name="description" content="{description}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{description}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Grid Gauge">
+<meta property="og:site_name" content="Grid Margin">
 <meta property="og:url" content="{stub_url}">
 <meta property="og:image" content="{image_url}">
 <meta property="og:image:width" content="1200">
@@ -304,7 +304,7 @@ STUB_TEMPLATE = """<!DOCTYPE html>
 <link rel="canonical" href="{site_url}/">
 <meta http-equiv="refresh" content="0;url={target}">
 </head><body>
-<p>{figure} — {label} (as of {asof}) — <a href="{target}">Grid Gauge</a>.</p>
+<p>{figure} — {label} (as of {asof}) — <a href="{target}">Grid Margin</a>.</p>
 <script>location.replace({target_js});</script>
 </body></html>
 """

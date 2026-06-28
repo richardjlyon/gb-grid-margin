@@ -1,4 +1,4 @@
-// site/app.js — the Grid Gauge dashboard renderer.
+// site/app.js — the Grid Margin dashboard renderer.
 //
 // Two sources, never blended on screen: the LIVE layer (resolveState in live.js, which
 // recomputes the verdict in the browser and falls back to the build's latest.json), and

@@ -1,4 +1,4 @@
-// site/render.js — pure presentation helpers for the Grid Gauge dashboard.
+// site/render.js — pure presentation helpers for the Grid Margin dashboard.
 //
 // No DOM, no network: just the maths that turns engine numbers into the gauge angle,
 // the stripe's ink ramp, the gate-of-five tally and the display strings. Kept separate

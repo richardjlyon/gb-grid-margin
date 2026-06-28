@@ -1,4 +1,4 @@
-// Pure render helpers for the Grid Gauge dashboard — node --test, run under `uv run pytest`.
+// Pure render helpers for the Grid Margin dashboard — node --test, run under `uv run pytest`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
