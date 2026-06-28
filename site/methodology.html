@@ -30,7 +30,7 @@
   <p class="index">On this page:
     <a href="#denominator">Denominator</a> · <a href="#nameplate">Nameplate</a> ·
     <a href="#verdict">Verdict pair</a> · <a href="#reliability">Reliability block</a> · <a href="#capacity-trap">Capacity trap</a> ·
-    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#warnings">Operational warnings</a> ·
+    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#conditions">Grid conditions panel</a> · <a href="#warnings">Operational warnings</a> ·
     <a href="#wind-unreliability">Wind unreliability</a> · <a href="#ytd">Year-to-date shares</a> ·
     <a href="#store">The history store</a> · <a href="#guards">Guards &amp; the honesty bargain</a> ·
     <a href="#cards">Share cards</a></p>
@@ -81,6 +81,21 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
   <h2 id="gas-vs-wind">Gas vs every wind farm</h2>
   <p class="meta">Source: Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot · live</p>
   <p><strong>Formula in words:</strong> the whole wind fleet's metered output against the whole gas fleet's, from one snapshot. The card is shown only while gas genuinely out-produces all wind. The per-station version ("one gas plant beats the lot") needs per-unit data (Elexon B1610) and is a deliberate fast-follow — asserted only when true.</p>
+
+  <h2 id="conditions">The grid conditions panel</h2>
+  <p class="meta">Sources: transmission daily wind CF (settled, ~1 day lag) · Elexon FUELINST (live firm share and net imports) · Elexon SYSWARN (active notices, live) · cadence: computed lamps ~5 min; wind lull daily</p>
+  <p>Four lamps below the gauge give a quick read of present conditions. Two colour states carry distinct meanings:</p>
+  <p class="formula">AMBER — the site's own computed reading of live or recent-settled data
+RED   — an official NESO notice from Elexon SYSWARN (the only authoritative signal)</p>
+  <p>One or two amber lamps are the ordinary state. Britain's grid genuinely leans on weather and imports most of the time &#8212; that is the finding, not a fault in the display.</p>
+  <p>The four lamps, with their thresholds:</p>
+  <ul>
+    <li><strong>WIND LULL.</strong> Amber when the transmission-only daily wind capacity factor (Elexon FUELHH WIND &#247; DUKES total UK wind nameplate, annual-step) has been below <strong>20%</strong> for at least the most recently settled day. The status reads &#8220;Day N&#8221; to show how long the run has continued. Settled data: lags live by approximately one day.</li>
+    <li><strong>WEATHER-DEPENDENT MAJORITY.</strong> Amber when the firm (dispatchable) share of national demand &#8212; the same figure the reliability gauge shows &#8212; falls below <strong>50%</strong>. At that point, weather-driven output plus net imports together supply more than half the grid. Live, ~5-min cadence.</li>
+    <li><strong>HEAVY IMPORTS.</strong> Amber when net interconnector imports exceed <strong>25%</strong> of national demand &#8212; roughly the heaviest one-in-six of recent hours. Live, ~5-min cadence.</li>
+    <li><strong>SCARCITY NOTICE.</strong> Red when Elexon SYSWARN carries at least one active margin notice. This is the only authoritative lamp. The three-tier ladder (NISM &#8594; EMN &#8594; CMN) is described in the <a href="#warnings">Operational warnings</a> section. The lamp is dormant when no notice is in force.</li>
+  </ul>
+  <p class="caveat"><strong>Computed vs authoritative.</strong> The three amber lamps are this site&#8217;s own reading &#8212; useful context, not an official statement about system state. Only the red SCARCITY NOTICE lamp carries an authoritative source: a NESO notice published on Elexon SYSWARN. Amber lamps with no red notice mean the site sees a condition worth flagging &#8212; not that an operator has raised an alarm.</p>
 
   <h2 id="warnings">Operational warnings — the scarcity ladder</h2>
   <p class="meta">Source: <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings">Elexon SYSWARN</a> (active-only feed) · live in the browser · cadence: polled, ~5 min</p>
