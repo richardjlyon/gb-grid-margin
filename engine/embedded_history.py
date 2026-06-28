@@ -177,20 +177,50 @@ def fetch_pvlive(date_from: date, date_to: date) -> PvLiveSeries:
     return PvLiveSeries.model_validate(_get_json(f"{PVLIVE}/gsp/0?{q}"))
 
 
-def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR,
-                on_revision: str = "raise") -> int:
-    """Backfill/append the embedded store over [start, end] inclusive, fetched per year."""
+def fetch_range(start: date, end: date) -> list[dict]:
+    """Fetch + parse embedded rows over [start, end] inclusive, per year, no write."""
     rids = resource_ids()
-    written = 0
+    rows: list[dict] = []
     for year in range(start.year, end.year + 1):
         rid = rids.get(year)
         if rid is None:
             print(f"  no resource for {year}, skipping")
             continue
-        rows = [r for r in parse_records(fetch_year_records(rid))
-                if start.isoformat() <= r["settlement_date"] <= end.isoformat()]
-        written += append_rows(rows, base_dir, on_revision)
-    return written
+        rows += [r for r in parse_records(fetch_year_records(rid))
+                 if start.isoformat() <= r["settlement_date"] <= end.isoformat()]
+    return sorted(rows, key=lambda r: (r["settlement_date"], r["settlement_period"]))
+
+
+def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR,
+                on_revision: str = "raise") -> int:
+    """Backfill/append the embedded store over [start, end] inclusive, fetched per year."""
+    return append_rows(fetch_range(start, end), base_dir, on_revision)
+
+
+def trim_ragged_edge(rows: list[dict], edge: date | None) -> list[dict]:
+    """Hold the store's edge at the last COMPLETE day, dropping NESO's ragged recent edge.
+
+    NESO publishes embedded outturn ~21 days in arrears and the most recent days arrive
+    partial (and revise upward), so a daily append that ingested them would write incomplete
+    days the gap gate rightly rejects. Keep every overlap row on/before ``edge`` (so
+    revisions still update) and, of the new days after ``edge``, keep only the unbroken run
+    of complete days — stopping at the first day whose half-hour count is short of its
+    DST-aware expected total (and anything orphaned behind it).
+    """
+    from engine import history
+    if not rows or edge is None:
+        return rows
+    edge_s = edge.isoformat()
+    new = [r for r in rows if r["settlement_date"] > edge_s]
+    if not new:
+        return rows
+    s = date.fromisoformat(new[0]["settlement_date"])
+    e = date.fromisoformat(new[-1]["settlement_date"])
+    incomplete = sorted(i["date"] for i in history.incomplete_days(new, s, e))
+    if not incomplete:
+        return rows  # every new day is complete — ingest the lot
+    first_bad = incomplete[0]
+    return [r for r in rows if r["settlement_date"] < first_bad]
 
 
 def latest_settled_day() -> date:
@@ -214,8 +244,12 @@ def main(argv: list[str] | None = None) -> None:
     elif cmd == "append":
         end = latest_settled_day()
         start = end - timedelta(days=NESO_LAG_DAYS + 7)  # overlap absorbs late settlement
-        n = build_range(start, end, on_revision="update")  # absorb NESO revisions
-        print(f"append embedded {start}..{end}: {n} rows written")
+        existing = read_store()
+        edge = date.fromisoformat(existing[-1]["settlement_date"]) if existing else None
+        rows = trim_ragged_edge(fetch_range(start, end), edge)  # hold edge at last full day
+        n = append_rows(rows, on_revision="update")  # absorb NESO revisions
+        last = rows[-1]["settlement_date"] if rows else (edge.isoformat() if edge else "—")
+        print(f"append embedded {start}..{end}: {n} rows written (edge {last})")
     elif cmd == "validate":
         rows = read_store()
         if not rows:

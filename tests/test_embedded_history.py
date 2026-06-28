@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from datetime import date
+
 from engine.embedded_history import (
     COLUMNS,
     append_rows,
@@ -13,6 +15,7 @@ from engine.embedded_history import (
     read_store,
     solar_crosscheck,
     to_row,
+    trim_ragged_edge,
     year_path,
 )
 from engine.models import EmbeddedHistRow
@@ -22,6 +25,40 @@ def _rec(period, wind, solar, day="2016-06-01", wcap=5000, scap=9000):
     return {"SETTLEMENT_DATE": day, "SETTLEMENT_PERIOD": period,
             "EMBEDDED_WIND_GENERATION": wind, "EMBEDDED_SOLAR_GENERATION": solar,
             "EMBEDDED_WIND_CAPACITY": wcap, "EMBEDDED_SOLAR_CAPACITY": scap}
+
+
+def _day_rows(day, n_periods):
+    """Minimal store rows for one settlement day with n_periods half-hours present."""
+    return [{"settlement_date": day, "settlement_period": p,
+             "period_start_utc": f"{day}T00:00:00Z", "embedded_wind_mw": 0,
+             "embedded_solar_mw": 0, "embedded_wind_capacity_mw": 0,
+             "embedded_solar_capacity_mw": 0} for p in range(1, n_periods + 1)]
+
+
+class TestTrimRaggedEdge:
+    def test_stops_before_first_incomplete_new_day(self):
+        """NESO's partial recent days (and anything orphaned behind them) must not enter
+        the store: a June day needs 48 half-hours, so 06-03 with 25 is dropped — and so is
+        the complete-but-orphaned 06-04 behind it."""
+        edge = date(2024, 6, 1)
+        rows = (_day_rows("2024-06-01", 48)   # overlap (<= edge), kept for revision update
+                + _day_rows("2024-06-02", 48)  # new, complete
+                + _day_rows("2024-06-03", 25)  # new, PARTIAL — the ragged edge
+                + _day_rows("2024-06-04", 48))  # new, complete but orphaned by the gap
+        kept = trim_ragged_edge(rows, edge)
+        assert sorted({r["settlement_date"] for r in kept}) == ["2024-06-01", "2024-06-02"]
+
+    def test_keeps_everything_when_new_days_complete(self):
+        edge = date(2024, 6, 1)
+        rows = (_day_rows("2024-06-01", 48) + _day_rows("2024-06-02", 48)
+                + _day_rows("2024-06-03", 48))
+        assert trim_ragged_edge(rows, edge) == rows
+
+    def test_trailing_partial_day_trimmed(self):
+        edge = date(2024, 6, 1)
+        rows = _day_rows("2024-06-02", 48) + _day_rows("2024-06-03", 40)
+        assert sorted({r["settlement_date"] for r in trim_ragged_edge(rows, edge)}) \
+            == ["2024-06-02"]
 
 
 class TestToRow:
