@@ -25,3 +25,4 @@ node_modules/
 
 # Dev-only live-layer validation harness — never shipped to prod (fault-injection page)
 site/validate.html
+.vercel
