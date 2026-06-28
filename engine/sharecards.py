@@ -58,6 +58,15 @@ RELIABILITY_RAMP_LO, RELIABILITY_RAMP_HI = 0.40, 0.65   # mirror site/render.js 
 _REL_PAPER, _REL_RED, _REL_GAP = (251, 251, 249), (214, 18, 31), (232, 232, 230)
 
 
+def firm_band(firm_pct: float) -> str:
+    """Green/amber/red band for the live card, cut at the dashboard gauge's ramp."""
+    if firm_pct < RELIABILITY_RAMP_LO * 100:
+        return "red"
+    if firm_pct < RELIABILITY_RAMP_HI * 100:
+        return "amber"
+    return "green"
+
+
 def reliable_share_to_color(s: float | None) -> tuple[int, int, int]:
     """Firm share -> RGB, identical to site/render.js reliableShareToColor (parity-locked).
 
