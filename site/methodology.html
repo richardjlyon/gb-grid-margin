@@ -83,14 +83,14 @@ Weather &amp; imports = wind + solar + net interconnector imports</p>
   <p><strong>Formula in words:</strong> the whole wind fleet's metered output against the whole gas fleet's, from one snapshot. The card is shown only while gas genuinely out-produces all wind. The per-station version ("one gas plant beats the lot") needs per-unit data (Elexon B1610) and is a deliberate fast-follow — asserted only when true.</p>
 
   <h2 id="conditions">The grid conditions panel</h2>
-  <p class="meta">Sources: transmission daily wind CF (settled, ~1 day lag) · Elexon FUELINST (live firm share and net imports) · Elexon SYSWARN (active notices, live) · cadence: computed lamps ~5 min; wind lull daily</p>
+  <p class="meta">Sources: Elexon FUELINST + NESO embedded (live wind CF, firm share, net imports) &#247; DUKES nameplate · Elexon SYSWARN (active notices, live) · cadence: all lamps live, ~5 min</p>
   <p>Four lamps below the gauge give a quick read of present conditions. Two colour states carry distinct meanings:</p>
-  <p class="formula">AMBER — the site's own computed reading of live or recent-settled data
+  <p class="formula">AMBER — the site's own computed reading of the live grid
 RED   — an official NESO notice from Elexon SYSWARN (the only authoritative signal)</p>
   <p>One or two amber lamps are the ordinary state. Britain's grid genuinely leans on weather and imports most of the time &#8212; that is the finding, not a fault in the display.</p>
   <p>The four lamps, with their thresholds:</p>
   <ul>
-    <li><strong>WIND LULL.</strong> Amber when the transmission-only daily wind capacity factor (Elexon FUELHH WIND &#247; DUKES total UK wind nameplate, annual-step) has been below <strong>20%</strong> for at least the most recently settled day. The status reads &#8220;Day N&#8221; to show how long the run has continued. Settled data: lags live by approximately one day.</li>
+    <li><strong>WIND LULL.</strong> Amber when the <strong>live</strong> wind capacity factor &#8212; live wind output (Elexon FUELINST + NESO embedded) &#247; DUKES total UK wind nameplate &#8212; is below <strong>25%</strong>: the same figure the capacity dial in &#8220;Wind and solar is mostly idle&#8221; points to, so the lamp and that dial always agree. It measures how hard the wind is blowing right now (capacity factor), not wind's share of demand. How long such calms <em>last</em> is shown by the drought plot in &#8220;When the wind stops, it stops for days&#8221;. Live, ~5-min cadence.</li>
     <li><strong>WEATHER-DEPENDENT MAJORITY.</strong> Amber when the firm (dispatchable) share of national demand &#8212; the same figure the reliability gauge shows &#8212; falls below <strong>50%</strong>. At that point, weather-driven output plus net imports together supply more than half the grid. Live, ~5-min cadence.</li>
     <li><strong>HEAVY IMPORTS.</strong> Amber when net interconnector imports exceed <strong>25%</strong> of national demand &#8212; roughly the heaviest one-in-six of recent hours. Live, ~5-min cadence.</li>
     <li><strong>SCARCITY NOTICE.</strong> Red when Elexon SYSWARN carries at least one active margin notice. This is the only authoritative lamp. The three-tier ladder (NISM &#8594; EMN &#8594; CMN) is described in the <a href="#warnings">Operational warnings</a> section. The lamp is dormant when no notice is in force.</li>

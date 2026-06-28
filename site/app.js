@@ -622,10 +622,7 @@ function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
 // Two independent update paths: the three computed lamps refresh on the live verdict poll
 // (updateComputedLamps, from refreshLive); the official scarcity lamp refreshes on the SYSWARN poll
 // (updateScarcityLamp). A failure on either path degrades only its own lamps — never a sibling, never
-// the verdict. ?cond=wind:5,firm,import,scarcity:emn forces states for previewing.
-// WIND_RUN is a daily settled series (rebuilt by the cron); fetched once per page load — it only
-// changes on rebuild, so the 5-min computed-lamp poll re-renders the same cached object intentionally.
-let WIND_RUN = null;
+// the verdict. ?cond=wind:18,firm,import,scarcity:emn forces states for previewing.
 
 function condOverride() {
   const v = new URLSearchParams(window.location.search).get('cond');
@@ -634,7 +631,7 @@ function condOverride() {
   const find = (k) => [...set].find((s) => s === k || s.startsWith(k + ':'));
   const arg = (s) => (s && s.includes(':') ? s.split(':')[1] : null);
   const out = {};
-  const w = find('wind'); if (w) out.wind = { state: 'active', days: Number(arg(w)) || 5, cfPct: 14, asOf: '—' };
+  const w = find('wind'); if (w) out.wind = { state: 'active', cfPct: Number(arg(w)) || 14 };
   if (find('firm')) out.firm = { state: 'active', firmPct: 38 };
   if (find('import')) out.import = { state: 'active', pct: 29 };
   const sc = find('scarcity'); if (sc) out.scarcity = { state: 'in_force', type: (arg(sc) || 'emn').toUpperCase(), label: 'Electricity Margin Notice' };
@@ -653,9 +650,8 @@ function setLamp(id, state, statusHtml, aria) {
 }
 
 function _windStatus(l) {
-  if (l.state === 'active') return `Day <b>${l.days}</b> · <b>${_round(l.cfPct)}%</b> cap`;
-  if (l.state === 'nominal') return `Nominal · <b>${_round(l.cfPct)}%</b> cap`;
-  return 'unavailable';
+  if (l.state === 'unavailable') return 'unavailable';
+  return `${l.state === 'active' ? 'Low' : 'Nominal'} · <b>${_round(l.cfPct)}%</b> cap`;
 }
 function _firmStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
@@ -674,7 +670,11 @@ function _scarcityStatus(l) {
 
 function updateComputedLamps(verdict) {
   const ov = condOverride() || {};
-  const wind = ov.wind || windLullLamp(WIND_RUN);
+  // live wind capacity factor = live wind output / DUKES total wind nameplate — the SAME figure as
+  // the Entry-02 dial, so the lamp and the dial can never disagree.
+  const windNameplateMw = (NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000;
+  const windCf = verdict ? (verdict.wind_mw / windNameplateMw) * 100 : NaN;
+  const wind = ov.wind || windLullLamp(windCf);
   const firm = ov.firm || firmMajorityLamp(verdict ? verdict.firm_pct : NaN);
   const imp = ov.import || heavyImportsLamp(verdict ? verdict.net_import_mw : NaN,
     verdict ? verdict.national_demand_mw : NaN);
@@ -820,9 +820,6 @@ async function main() {
   } catch (e) {
     $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
   }
-  // wind lull run series — non-fatal; WIND_RUN stays null on failure (lamp shows unavailable)
-  try { WIND_RUN = await getJSON('data/wind_live_run.json'); }
-  catch (e) { WIND_RUN = null; }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   updateScarcityLamp();

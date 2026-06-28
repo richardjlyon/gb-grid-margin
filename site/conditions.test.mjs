@@ -2,24 +2,24 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   windLullLamp, firmMajorityLamp, heavyImportsLamp, scarcityLamp,
-  FIRM_MAJORITY_PCT, HEAVY_IMPORT_PCT,
+  WIND_LULL_PCT, FIRM_MAJORITY_PCT, HEAVY_IMPORT_PCT,
 } from './conditions.js';
 
-test('windLullLamp — in a run is active with day count', () => {
-  const r = windLullLamp({ current_run_days: 3, current_cf_pct: 18, as_of: '2026-06-23' });
+test('windLullLamp — live CF below the line is active (a lull now)', () => {
+  const r = windLullLamp(18);
   assert.equal(r.state, 'active');
-  assert.equal(r.days, 3);
   assert.equal(r.cfPct, 18);
 });
-test('windLullLamp — run 0 is nominal', () => {
-  assert.equal(windLullLamp({ current_run_days: 0, current_cf_pct: 31, as_of: '2026-06-23' }).state, 'nominal');
+test('windLullLamp — boundary: exactly the line is nominal', () => {
+  assert.equal(windLullLamp(25).state, 'nominal');   // 25 exactly → nominal (strict <)
+  assert.equal(windLullLamp(24.9).state, 'active');
+  assert.equal(windLullLamp(31).state, 'nominal');
+  assert.equal(WIND_LULL_PCT, 25);
 });
-test('windLullLamp — missing data is unavailable', () => {
+test('windLullLamp — non-finite CF is unavailable', () => {
+  assert.equal(windLullLamp(NaN).state, 'unavailable');
+  assert.equal(windLullLamp(undefined).state, 'unavailable');
   assert.equal(windLullLamp(null).state, 'unavailable');
-  assert.equal(windLullLamp({}).state, 'unavailable');
-});
-test('windLullLamp — boundary at 1 day', () => {
-  assert.equal(windLullLamp({ current_run_days: 1, current_cf_pct: 19, as_of: '2026-06-23' }).state, 'active');
 });
 
 test('firmMajorityLamp — boundary at 50', () => {

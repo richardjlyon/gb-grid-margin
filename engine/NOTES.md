@@ -639,25 +639,22 @@ file agrees.
 `reliability_all.json` is no longer emitted by `engine.derived.build`. `reliability_year.json`
 (flat, rolling 12 months) is retained solely as the share-card source (§13).
 
-## 16. Live wind-run series — Grid Conditions panel *(2026-06-28)*
+## 16. Grid Conditions panel — lamp thresholds *(2026-06-28)*
 
-`site/data/wind_live_run.json` is emitted by `engine.derived.build` (alongside the other
-reliability files) and powers the wind lamp in the Grid Conditions panel on the homepage.
+The homepage's Grid Conditions rail lights four lamps from the **live** dashboard figures (no
+new derived series — every lamp reads the same numbers the live verdict / capacity dials show,
+so a lamp can never disagree with the chart it summarises).
 
-**Basis — transmission-only, not combined.** The combined daily CF used by Entry 03's carpet
-(§15 of wind unreliability) requires NESO embedded wind, which lags ~3 weeks at the live
-edge. A "current run" counter needs yesterday's settled figure, so the transmission-only lower
-bound is used here (Elexon FUELHH `WIND` column, mean MW per day ÷ DUKES total UK wind
-nameplate, annual-step). This matches the basis used by the stripe/counters (§12).
-
-**Threshold — `< 20%` transmission CF ≈ `< 25%` combined CF in day-count terms.** Both
-thresholds light ~43% of historical days. The transmission-only CF understates the true
-combined CF (embedded wind excluded from the numerator), so the threshold is set lower to
-reproduce the same day-count frequency. The panel labels the run length, not the raw CF, so
-an absolute CF claim is avoided.
-
-**Updates daily.** The cron (`refresh-data.yml`) runs `engine.derived build` after each
-FUELHH append, so the run counter advances by one day each morning with no additional step.
+**Wind lull — live wind CF `< 25%`.** The lamp lights on the *live* wind capacity factor —
+live wind output (Elexon FUELINST + NESO embedded) ÷ DUKES total UK wind nameplate — the
+identical figure the Entry-02 capacity dial points to. Below 25% reads as becalmed *right now*;
+the 25% line corresponds to the bottom ~half of the combined-basis daily distribution (the
+"below typical" band). **No run-length is shown:** a "Day N of a run" counter would need
+*settled* daily CF, but complete settled FUELHH lags ~5 days, so it can never reflect the
+current day — it would contradict the live dial (the exact bug that motivated this design). The
+lull-*duration* story ("when the wind stops, it stops for days") is told honestly, on settled
+data, by Entry 03's drought plot. An earlier `wind_live_run.json` series (transmission-only
+daily run counter) was built and then removed for this reason.
 
 **Imports 25% threshold derivation.** The Grid Conditions panel lights an amber imports lamp
 when net-import share of demand exceeds 25%. Derivation: net-import share = sum of signed
@@ -671,7 +668,6 @@ live firm share (reliable + imports) falls below 50%. This is the majority line:
 plus imports are carrying more than half of demand." It trips amber before the verdict gauge's
 red zone (< 40% firm), giving an earlier warning at the panel level.
 
-**Recompute gate.** `tests/test_wind_live_run_gate.py` independently re-derives the daily
-transmission CF series from the raw FUELHH CSVs (no `engine.wind_live_run` import) and
-asserts that the published `wind_live_run.json` agrees on `recent[-40:]`, `as_of`, and
-`current_run_days`.
+**Source-trace.** The panel's pure threshold logic (`site/conditions.js`) is unit-tested
+(`site/conditions.test.mjs`, run under `tests/test_parity.py`); because each lamp consumes the
+same live figures the dashboard already renders, there is no separate series to drift.
