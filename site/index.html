@@ -34,12 +34,15 @@
     </nav>
   </div>
 </header>
-<div class="clockstrip"><div class="container" id="clockstrip">Reading the grid…</div></div>
-
-<!-- GRID CONDITIONS — live reliability lamps; amber = our computed condition, red = official NESO notice -->
+<!-- GRID CONDITIONS — live reliability lamps; amber = our computed condition, red = official NESO notice.
+     One dark instrument band: the live snapshot stamp sits in the band header, the lamps below. -->
 <div class="conditions" id="conditions" data-loading aria-live="polite" aria-label="Live grid conditions">
-  <div class="container cond-rail">
-    <div class="cond-head"><span class="cond-t">GRID</span><span class="cond-s">CONDITIONS</span></div>
+  <div class="container">
+    <div class="cond-band-head">
+      <span class="cond-title">GRID CONDITIONS</span>
+      <span class="cond-snapshot" id="clockstrip">Reading the grid…</span>
+    </div>
+    <div class="cond-rail">
     <a class="cond-cell" id="cond-wind" data-state="loading" href="#entry-wind" aria-label="Wind lull — loading">
       <span class="cond-led" aria-hidden="true"></span>
       <span class="cond-txt"><span class="cond-legend">Wind lull</span><span class="cond-status">…</span></span>
@@ -56,6 +59,7 @@
       <span class="cond-led" aria-hidden="true"></span>
       <span class="cond-txt"><span class="cond-legend">Scarcity notice ◆</span><span class="cond-status">…</span></span>
     </a>
+    </div>
   </div>
 </div>
 

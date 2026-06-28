@@ -92,12 +92,6 @@ a:hover { color: var(--red); }
 }
 @keyframes pulse { 50% { opacity: 0.3; } }
 
-/* clock strip under the masthead */
-.clockstrip {
-  font-family: var(--mono); font-size: 0.78rem; color: var(--slate);
-  padding: 9px 0; border-bottom: 1px solid var(--rule); background: var(--paper);
-}
-
 /* GRID CONDITIONS rail — a dark instrument band; austere + one warm amber accent */
 .conditions {
   --cond-bg: #16181d; --cond-line: #23262c; --cond-dim: #7d7f86;
@@ -106,13 +100,18 @@ a:hover { color: var(--red); }
   border-top: 1px solid #000; border-bottom: 1px solid var(--cond-line);
   font-family: var(--mono);
 }
-.cond-rail { display: flex; align-items: stretch; padding: 0; }
-.cond-head {
-  flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  padding: 11px 16px 11px 0; margin-right: 14px; border-right: 1px solid var(--cond-line);
+/* band header row: title left, live snapshot right — folds the snapshot into the one dark band */
+.cond-band-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 9px 0 8px; border-bottom: 1px solid var(--cond-line);
 }
-.cond-t { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #cfcabd; }
-.cond-s { font-size: 9px; letter-spacing: .14em; color: #6c6e74; }
+.cond-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #cfcabd; }
+.cond-snapshot {
+  font-size: 0.72rem; letter-spacing: .03em; color: var(--cond-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cond-rail { display: flex; align-items: stretch; }
+.cond-cell:first-child { padding-left: 0; }
 .cond-cell {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
   padding: 12px 14px; border-right: 1px solid var(--cond-line);
@@ -151,11 +150,10 @@ a:hover { color: var(--red); }
 /* unavailable — dim, no accent */
 .cond-cell[data-state="unavailable"] .cond-status { color: #56585e; font-style: italic; }
 @media (max-width: 720px) {
+  .cond-band-head { flex-wrap: wrap; gap: 2px 14px; }
   .cond-rail { flex-wrap: wrap; }
-  .cond-head { width: 100%; flex-direction: row; gap: 6px; margin: 0; padding: 8px 0;
-    border-right: 0; border-bottom: 1px solid var(--cond-line); }
-  .cond-cell { flex: 1 1 45%; border-right: 0; }
-  .cond-cell:nth-child(even) { border-right: 1px solid var(--cond-line); }
+  .cond-cell, .cond-cell:first-child { flex: 1 1 45%; border-right: 0; padding-left: 14px; }
+  .cond-cell:nth-child(odd) { border-right: 1px solid var(--cond-line); }
 }
 /* ---------- the ledger: entries separated by a double rule ---------- */
 main { padding-bottom: 40px; }
