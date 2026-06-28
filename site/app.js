@@ -645,7 +645,8 @@ function setLamp(id, state, statusHtml, aria) {
   const el = $(id);
   if (!el) return;
   el.dataset.state = state;
-  el.querySelector('.cond-status').innerHTML = statusHtml;
+  const status = el.querySelector('.cond-status');
+  if (status) status.innerHTML = statusHtml;
   if (aria) el.setAttribute('aria-label', aria);
 }
 
@@ -674,10 +675,14 @@ function updateComputedLamps(verdict) {
   const firm = ov.firm || firmMajorityLamp(verdict ? verdict.firm_pct : NaN);
   const imp = ov.import || heavyImportsLamp(verdict ? verdict.net_import_mw : NaN,
     verdict ? verdict.national_demand_mw : NaN);
-  setLamp('cond-wind', wind.state, _windStatus(wind), `Wind lull — ${_windStatus(wind).replace(/<[^>]+>/g, '')}`);
-  setLamp('cond-firm', firm.state, _firmStatus(firm), `Weather-dependent majority — ${_firmStatus(firm).replace(/<[^>]+>/g, '')}`);
-  setLamp('cond-import', imp.state, _importStatus(imp), `Heavy imports — ${_importStatus(imp).replace(/<[^>]+>/g, '')}`);
-  $('conditions').removeAttribute('data-loading');
+  const windStatus = _windStatus(wind);
+  setLamp('cond-wind', wind.state, windStatus, `Wind lull — ${windStatus.replace(/<[^>]+>/g, '')}`);
+  const firmStatus = _firmStatus(firm);
+  setLamp('cond-firm', firm.state, firmStatus, `Weather-dependent majority — ${firmStatus.replace(/<[^>]+>/g, '')}`);
+  const importStatus = _importStatus(imp);
+  setLamp('cond-import', imp.state, importStatus, `Heavy imports — ${importStatus.replace(/<[^>]+>/g, '')}`);
+  const wrap = $('conditions');
+  if (wrap) wrap.removeAttribute('data-loading');
 }
 
 async function updateScarcityLamp() {
