@@ -221,12 +221,14 @@ def build(out_dir: Path = SITE_DATA) -> int:
             print(f"wind unreliability build failed (GuardError): {e}", file=sys.stderr)
             return 1
         reliability_files.append(("wind_unreliability", wu_payload))
-
-        wlr_payload = wind_live_run.build_payload(rows, nameplate["wind_gw"] * 1000, generated)
-        reliability_files.append(("wind_live_run", wlr_payload))
     else:
         print("embedded store empty — skipping reliability_*.json + capacity_carpets.json "
               "(run embedded_history backfill)")
+
+    # Wind live-run (Grid Conditions panel) is transmission-only — independent of the embedded store,
+    # so it emits even when embedded data is missing/lagging (its reason for existing).
+    wlr_payload = wind_live_run.build_payload(rows, nameplate["wind_gw"] * 1000, generated)
+    reliability_files.append(("wind_live_run", wlr_payload))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("ytd_shares", ytd), ("nameplate", nameplate),

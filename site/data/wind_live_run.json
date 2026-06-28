@@ -1,7 +1,7 @@
 {
   "basis": "Daily wind capacity factor = mean transmission wind power (Elexon FUELHH, settled) over the day / DUKES total UK wind nameplate. Transmission-only lower bound, fresh to the last settled day; comparable to Entry 03's combined-basis carpet. Lull = run of consecutive days below 20% CF.",
   "threshold_pct": 20,
-  "generated_utc": "2026-06-28T20:59:58.431297+00:00",
+  "generated_utc": "2026-06-28T21:03:14.424375+00:00",
   "as_of": "2026-06-23",
   "current_run_days": 4,
   "current_cf_pct": 14.3,
