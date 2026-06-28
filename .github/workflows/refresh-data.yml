@@ -30,36 +30,58 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Sync runtime deps (no dev — no Playwright needed for the data rebuild)
-        run: uv sync --no-dev
+      - name: Sync deps (incl. Playwright for card rendering)
+        run: uv sync
 
       - name: Append newly-settled FUELHH history
-        run: uv run --no-dev python -m engine.history append
+        run: uv run python -m engine.history append
 
       - name: Append newly-settled embedded solar/wind history
-        run: uv run --no-dev python -m engine.embedded_history append
+        run: uv run python -m engine.embedded_history append
 
       - name: Validate history stores (fails the run on any NEW unexplained gap)
         run: |
-          uv run --no-dev python -m engine.history validate
-          uv run --no-dev python -m engine.embedded_history validate
+          uv run python -m engine.history validate
+          uv run python -m engine.embedded_history validate
 
       - name: Rebuild derived settled series (site/data/*.json)
-        run: uv run --no-dev python -m engine.derived build
+        run: uv run python -m engine.derived build
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('uv.lock') }}
+
+      - name: Install Chromium for share cards
+        run: uv run playwright install --with-deps chromium
+
+      - name: Rebuild share cards (non-fatal — yesterday's dated cards stay live)
+        run: uv run python -m engine.sharecards build
+          || echo "::warning::share cards failed — previous cards remain"
 
       - name: Refresh live fallback snapshot (non-fatal — live layer is primary)
         run: |
-          uv run --no-dev python -m engine.build_site build \
+          uv run python -m engine.build_site build \
             || echo "::warning::live fallback rebuild failed; keeping last-good latest.json"
 
       - name: Commit & push if the data changed
         run: |
           git config user.name "grid-margin-bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/history site/data
+          git add data/history site/data site/share site/s site/index.html
           if git diff --cached --quiet; then
             echo "No data changes — nothing to publish."
           else
             git commit -m "data: daily settled refresh [skip ci]"
             git push
+          fi
+
+      - name: Trigger Vercel deploy (explicit hook; push auto-deploy is unreliable)
+        if: success()
+        run: |
+          if [ -n "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
+            curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}" > /dev/null
+          else
+            echo "::warning::VERCEL_DEPLOY_HOOK not set — relying on git-integration auto-deploy"
           fi
