@@ -733,7 +733,7 @@ function renderWindUnreliability(data) {
     <canvas id="wind-drought" class="wind-drought" role="img"
       aria-label="${esc(droughtCaption(data.summary))}"></canvas>
     <p class="wind-caption">${esc(droughtCaption(data.summary))}</p>
-    <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#wind-unreliability">how this is measured</a></p>`;
+    <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#wind-unreliability">→ method</a></p>`;
   drawWindCarpet(data);
   drawDroughtPlot(data);
 }
