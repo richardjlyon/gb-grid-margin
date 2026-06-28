@@ -34,3 +34,36 @@ def test_gauge_needle_fraction_tracks_firm_pct():
         assert m is not None, f"No <line> found in SVG: {svg[:200]}"
         return float(m.group(1))
     assert needle_x(sharecards.gauge_svg(20.0, "red")) < needle_x(sharecards.gauge_svg(80.0, "green"))
+
+
+def _mk(firm, snap="2026-06-27T15:10:00Z"):
+    return {"firm_pct": firm, "snapshot": snap}
+
+
+def test_live_balance_red_leads_with_unreliable():
+    c = sharecards.live_balance_card(_mk(35.4))
+    assert c["band"] == "red"
+    assert c["figure"] == "65%"                       # round(100-35.4) = red-arc length
+    assert "leaned on weather and imports" in c["label"]
+    assert c["svg"]                                    # has a gauge
+    assert c["stamp"] == "live snapshot · 27 Jun 2026, 15:10"
+
+
+def test_live_balance_green_leads_with_firm():
+    c = sharecards.live_balance_card(_mk(70.0))
+    assert c["band"] == "green"
+    assert c["figure"] == "70%"                        # round(firm) = green-arc length
+    assert "ran on firm power" in c["label"]
+
+
+def test_live_balance_amber_neutral_framing():
+    c = sharecards.live_balance_card(_mk(50.0))
+    assert c["band"] == "amber"
+    assert c["figure"] == "50%"
+    assert "depended on weather and imports" in c["label"]
+
+
+def test_live_balance_figure_matches_gauge_firm():
+    # gauge built from the same firm_pct as the headline (invariant)
+    c = sharecards.live_balance_card(_mk(35.4))
+    assert sharecards.gauge_svg(35.4, "red") == c["svg"]

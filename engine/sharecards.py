@@ -142,6 +142,12 @@ def _issued(issued_at: str | None) -> str:
     return f" · issued {d.strftime('%d %b %H:%M')} UTC"
 
 
+def _stamp_snapshot(snapshot: str) -> str:
+    """'live snapshot · 27 Jun 2026, 15:10' from a verdict snapshot ISO stamp (UTC)."""
+    d = datetime.fromisoformat(snapshot.replace("Z", "+00:00"))
+    return f"live snapshot · {d.strftime('%d %b %Y, %H:%M')}"
+
+
 # Sanity envelope for the card's published wind+solar capacity denominator (GW).
 _CAPACITY_MIN_GW, _CAPACITY_MAX_GW = 1.0, 500.0
 
@@ -200,6 +206,30 @@ def gas_vs_wind_headline(gas_mw: float, wind_mw: float) -> tuple[str, str]:
         lab = (f"wind out-produces the whole gas fleet right now — "
                f"{_fmt_gw(wind_mw)} of wind against {_fmt_gw(gas_mw)} of gas.")
     return fig, lab
+
+
+def live_balance_card(latest: dict) -> dict:
+    """The flagship live card. Background band + adaptive framing from the live firm
+    share; gauge and headline both derive from the same firm_pct (invariant)."""
+    firm = latest["firm_pct"]
+    band = firm_band(firm)
+    if band == "green":
+        figure = f"{int(firm + 0.5)}%"
+        label = ("of Britain's grid ran on firm power this morning — gas, nuclear and "
+                 "biomass that answer on demand.")
+    elif band == "red":
+        figure = f"{int(100 - firm + 0.5)}%"
+        label = ("of Britain's grid leaned on weather and imports this morning — wind, "
+                 "solar and interconnectors that fall away together.")
+    else:  # amber
+        figure = f"{int(firm + 0.5)}%"
+        label = ("of Britain's grid was firm power this morning — the rest depended on "
+                 "weather and imports, in roughly equal measure.")
+    return {
+        "slug": "live-balance", "kind": "live", "band": band, "template": "card",
+        "figure": figure, "label": label,
+        "stamp": _stamp_snapshot(latest["snapshot"]),
+        "caveat": None, "svg": gauge_svg(firm, band)}
 
 
 def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
