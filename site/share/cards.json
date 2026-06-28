@@ -3,11 +3,11 @@
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "61%",
+      "figure": "60%",
       "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
       "kind": "live",
-      "version": "4d3ec2c2ae",
-      "png": "/share/live-balance.png?v=4d3ec2c2ae"
+      "version": "dafc748f88",
+      "png": "/share/live-balance.png?v=dafc748f88"
     },
     {
       "slug": "recent-lull",
