@@ -36,13 +36,21 @@ jobs:
       - name: Append newly-settled FUELHH history
         run: uv run python -m engine.history append
 
-      - name: Append newly-settled embedded solar/wind history
-        run: uv run python -m engine.embedded_history append
+      - name: Validate FUELHH store (fatal — the critical settled store)
+        run: uv run python -m engine.history validate
 
-      - name: Validate history stores (fails the run on any NEW unexplained gap)
+      # Embedded (NESO solar/wind) is best-effort: it lags ~3 weeks and its ragged edge
+      # must NEVER abort the FUELHH → derived → deploy path. A transient incomplete NESO
+      # day previously failed the whole run, silently staling the entire settled layer
+      # (including the healthy FUELHH data). On any append/validate failure, revert the
+      # embedded store to last-good and carry on; only the embedded-derived layers lag a cycle.
+      - name: Append + validate embedded solar/wind (best-effort, revert on failure)
         run: |
-          uv run python -m engine.history validate
-          uv run python -m engine.embedded_history validate
+          uv run python -m engine.embedded_history append || true
+          if ! uv run python -m engine.embedded_history validate; then
+            echo "::warning::embedded store invalid (likely ragged NESO edge) — reverting to last-good; FUELHH + derived still refresh"
+            git checkout -- data/history/embedded_*.csv
+          fi
 
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
