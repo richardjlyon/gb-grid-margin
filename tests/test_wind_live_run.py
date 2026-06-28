@@ -46,7 +46,7 @@ def test_current_run_breaks_on_calendar_gap():
 
 
 def test_build_payload_shape():
-    p = wlr.build_payload(_rows({"2026-06-20": 6416.4, "2026-06-21": 3208.2}),
+    p = wlr.build_payload(_rows({"2026-06-20": 4810.0, "2026-06-21": 3208.2}),
                           32082.0, "2026-06-24T06:00:00+00:00")
     assert p["threshold_pct"] == 20
     assert p["as_of"] == "2026-06-21"

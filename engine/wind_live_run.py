@@ -48,7 +48,7 @@ def current_run(series: list[dict], threshold_pct: float = WIND_LIVE_LULL_PCT) -
     days = 0
     prev_date = None
     for s in reversed(series):
-        if s["cf_pct"] > threshold_pct:
+        if s["cf_pct"] >= threshold_pct:
             break
         if prev_date is not None and not _adjacent(s["date"], prev_date):
             break
