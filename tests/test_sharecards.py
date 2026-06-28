@@ -9,7 +9,7 @@ def test_module_constants():
 
 
 def test_gauge_svg_has_green_red_and_needle():
-    svg = sharecards.gauge_svg(83.0)
+    svg = sharecards.gauge_svg(83.0, "green")
     assert svg.startswith("<svg") and svg.rstrip().endswith("</svg>")
     assert "#1f9d57" in svg and "#d6121f" in svg     # green firm arc + red remainder
     assert svg.count("<path") >= 2 and "<line" in svg  # two arcs + needle
@@ -160,7 +160,7 @@ def test_render_writes_1200x630_pngs(tmp_path):
         {"slug": "stat", "theme": "ink", "template": "stat", "figure": "75% firm",
          "label": "L", "stamp": "S", "caveat": None, "svg": None},
         {"slug": "inst", "theme": "ink", "template": "instrument", "figure": "75% firm",
-         "label": "L", "stamp": "S", "caveat": None, "svg": sharecards.gauge_svg(75)},
+         "label": "L", "stamp": "S", "caveat": None, "svg": sharecards.gauge_svg(75, "green")},
     ]
     sharecards.render(cards, tmp_path)
     for slug in ("stat", "inst"):

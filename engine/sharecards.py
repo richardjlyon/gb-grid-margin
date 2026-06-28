@@ -32,20 +32,32 @@ def _arc_point(cx: float, cy: float, r: float, frac: float) -> tuple[float, floa
     return cx + r * math.cos(ang), cy - r * math.sin(ang)
 
 
-def gauge_svg(firm_pct: float) -> str:
-    cx, cy, r, w = 260.0, 280.0, 200.0, 40.0
+# Per-band gauge palette: (firm_arc, unreliable_arc, needle/hub)
+_GAUGE_PALETTE = {
+    "green":    ("#1f9d57", "#d6121f", "#ffffff"),
+    "red":      ("#2bb56a", "#7d0a10", "#ffffff"),  # maroon stays visible on red fill
+    "amber":    ("#15803d", "#c20f1a", "#1a1205"),  # ink needle on light amber
+    "charcoal": ("#1f9d57", "#d6121f", "#ffffff"),  # hero illustrative gauge
+}
+
+
+def gauge_svg(firm_pct: float, band: str) -> str:
+    """Half-dial icon. Green firm arc (left→needle), unreliable arc (needle→right),
+    needle at the firm fraction. Colours flip per background band for legibility."""
+    firm_col, unrel_col, needle = _GAUGE_PALETTE[band]
+    cx, cy, r, w = 150.0, 150.0, 120.0, 22.0
     f = max(0.0, min(1.0, firm_pct / 100.0))
     lx, ly = _arc_point(cx, cy, r, 0.0)
     bx, by = _arc_point(cx, cy, r, f)
     rx, ry = _arc_point(cx, cy, r, 1.0)
-    nx, ny = _arc_point(cx, cy, r - 20, f)
+    nx, ny = _arc_point(cx, cy, r - 12, f)
     arc = f"A {r} {r} 0 0 1"
     return (
-        f'<svg viewBox="0 0 520 300" width="520" xmlns="http://www.w3.org/2000/svg">'
-        f'<path d="M {lx:.1f} {ly:.1f} {arc} {bx:.1f} {by:.1f}" fill="none" stroke="#1f9d57" stroke-width="{w}"/>'
-        f'<path d="M {bx:.1f} {by:.1f} {arc} {rx:.1f} {ry:.1f}" fill="none" stroke="#d6121f" stroke-width="{w}"/>'
-        f'<line x1="{cx}" y1="{cy}" x2="{nx:.1f}" y2="{ny:.1f}" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'
-        f'<circle cx="{cx}" cy="{cy}" r="11" fill="#fff"/>'
+        f'<svg viewBox="0 0 300 170" width="300" xmlns="http://www.w3.org/2000/svg">'
+        f'<path d="M {lx:.1f} {ly:.1f} {arc} {bx:.1f} {by:.1f}" fill="none" stroke="{firm_col}" stroke-width="{w}" stroke-linecap="round"/>'
+        f'<path d="M {bx:.1f} {by:.1f} {arc} {rx:.1f} {ry:.1f}" fill="none" stroke="{unrel_col}" stroke-width="{w}" stroke-linecap="round"/>'
+        f'<line x1="{cx}" y1="{cy}" x2="{nx:.1f}" y2="{ny:.1f}" stroke="{needle}" stroke-width="7" stroke-linecap="round"/>'
+        f'<circle cx="{cx}" cy="{cy}" r="10" fill="{needle}"/>'
         f'</svg>'
     )
 
@@ -212,7 +224,7 @@ def load_cards(data_dir: Path | str) -> tuple[list[dict], str]:
         "label": "of Britain's grid is weather-dependent or imported right now — wind, "
                  "solar and interconnectors that fall away together. The rest is firm: "
                  "gas, nuclear, biomass.",
-        "stamp": live_stamp, "caveat": None, "svg": gauge_svg(firm)})
+        "stamp": live_stamp, "caveat": None, "svg": gauge_svg(firm, firm_band(firm))})
 
     built_gw = nameplate["wind_plus_solar_gw"]
     delivering = latest["wind_mw"] + latest["solar_mw"]
