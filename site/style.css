@@ -389,6 +389,8 @@ main { padding-bottom: 40px; }
   padding:6px 12px; border:1px solid var(--rule); border-radius:5px; background:none;
   color:var(--ink); cursor:pointer; text-decoration:none; }
 .action-btn:hover { border-color:var(--red); color:var(--red); }
+.share-page { padding-top: 30px; }
+.share-page .def { max-width: 46em; }
 .card-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:28px; margin-top:24px; }
 .card-tile img { width:100%; height:auto; border:1px solid var(--rule); border-radius:6px; display:block; }
 .card-tile figcaption { font-family:var(--read); font-size:.95rem; margin:10px 0 4px; color:var(--ink); }
