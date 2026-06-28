@@ -81,6 +81,20 @@ def test_warning_card_calm_when_clear():
     assert "no" in c["figure"].lower() or "clear" in c["figure"].lower()
 
 
+def test_warning_card_gated_off_by_default(monkeypatch):
+    """Launch default: a static warning card is suppressed (a withdrawn notice would
+    otherwise read 'in force' forever). Returns no card to add to the build."""
+    monkeypatch.setattr(sharecards, "SERVE_WARNING_CARD", False)
+    assert sharecards.warning_cards({"in_force": False}) == []
+
+
+def test_warning_card_served_when_enabled(monkeypatch):
+    """Once the refresh cron is proven, flipping the flag re-includes the live card."""
+    monkeypatch.setattr(sharecards, "SERVE_WARNING_CARD", True)
+    cards = sharecards.warning_cards({"in_force": False})
+    assert len(cards) == 1 and cards[0]["slug"] == "warning"
+
+
 def test_compose_fills_tokens_and_marks_accent():
     card = {"slug": "x", "theme": "ink", "template": "stat",
             "figure": "75% firm", "label": "L", "stamp": "S", "caveat": None, "svg": None}

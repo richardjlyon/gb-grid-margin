@@ -288,6 +288,19 @@ def warning_card(state: dict) -> dict:
             "stamp": "Live · Elexon SYSWARN", "caveat": None, "svg": None}
 
 
+# Gate: the warning card is a static build-time snapshot of a binary in-force/clear state.
+# A withdrawn notice would keep a stored "in force" card reading as a stale false alarm
+# (and a stored "all clear" card a false negative once a notice fires), so it stays OFF
+# until the deploy refresh cadence is proven to rebuild it frequently. Flip to True then.
+SERVE_WARNING_CARD = False
+
+
+def warning_cards(state: dict) -> list[dict]:
+    """The warning card wrapped in a list, or [] when gated off — the build splices this
+    into the catalogue so the gate is a single source of truth."""
+    return [warning_card(state)] if SERVE_WARNING_CARD else []
+
+
 STUB_TEMPLATE = """<!DOCTYPE html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="robots" content="noindex">
 <title>{title} — Grid Margin</title>
@@ -410,7 +423,11 @@ def build(data_dir: Path | str = REPO / "site" / "data",
     except (GuardError, FileNotFoundError, KeyError, ValueError) as e:
         print(f"card build failed ({type(e).__name__}): {e}", file=sys.stderr)
         return 1
-    cards.append(warning_card(wmod.parse_active_warnings(wmod.fetch_active_warnings())))
+    # Only hit the live SYSWARN feed when the card is actually served (gate authority is
+    # warning_cards; the {} keeps the build offline-safe and fast while gated off).
+    state = (wmod.parse_active_warnings(wmod.fetch_active_warnings())
+             if SERVE_WARNING_CARD else {})
+    cards += warning_cards(state)
     try:
         render(cards, share_dir)
     except Exception as e:  # keep last-good PNGs

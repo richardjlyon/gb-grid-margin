@@ -56,13 +56,6 @@
       "label": "the longest run wind stayed below a tenth of capacity \u2014 2016-06-04 to 2016-06-13.",
       "kind": "settled",
       "png": "/share/longest-calm.png?v=b945963db4"
-    },
-    {
-      "slug": "warning",
-      "figure": "All clear",
-      "label": "No grid margin warning is in force in Britain right now.",
-      "kind": "warning",
-      "png": "/share/warning.png?v=93b0681f85"
     }
   ]
 }

@@ -159,6 +159,17 @@ class TestStore:
         with pytest.raises(ValueError, match="revision"):
             append_rows(revised, tmp_path)
 
+    def test_revision_update_tolerated(self, tmp_path):
+        """The daily append re-fetches still-settling days; on_revision='update'
+        absorbs Elexon's retrospective revision instead of crashing."""
+        append_rows(_day("2024-06-01", [1]), tmp_path)
+        revised = _day("2024-06-01", [1])
+        revised[0]["WIND"] = 9999
+        assert append_rows(revised, tmp_path, on_revision="update") == 1
+        from engine.history import read_store
+        back = read_store(tmp_path)
+        assert back[0]["WIND"] == 9999
+
 
 class TestExpectedRowCount:
     def test_plain_week_is_7x48(self):

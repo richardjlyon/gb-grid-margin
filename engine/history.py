@@ -128,16 +128,18 @@ def year_path(settlement_date: str, base_dir: Path = HISTORY_DIR) -> Path:
 _key = widestore.key  # retained: find_duplicates() uses it
 
 
-def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
+def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR,
+                on_revision: str = "raise") -> int:
     """Append wide rows to their per-year files, append-only and idempotent.
 
     A key (settlement_date, settlement_period) already present with identical values is
     skipped (re-running a day is a no-op). A key present with *different* values is a
-    settlement revision and raises — history is never silently overwritten. Returns the
-    number of rows actually written.
+    settlement revision; ``on_revision`` ("raise" | "update" | "skip") decides the policy
+    (see ``widestore.append_rows``). The daily append uses "update"; backfills "raise".
+    Returns the number of rows actually written.
     """
     return widestore.append_rows(
-        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir))
+        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir), on_revision)
 
 
 def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
@@ -288,7 +290,8 @@ def _group_by_day(rows: list) -> dict[str, list]:
 
 
 def build_range(
-    start: date, end: date, base_dir: Path = HISTORY_DIR, chunk_days: int = 31
+    start: date, end: date, base_dir: Path = HISTORY_DIR, chunk_days: int = 31,
+    on_revision: str = "raise"
 ) -> int:
     """Backfill/append the store over [start, end] inclusive, in monthly chunks.
 
@@ -308,7 +311,7 @@ def build_range(
             demand_by_day = _group_by_day(fetch_demand(d_from, chunk_end))
         for day in sorted(fuel_by_day):
             rows = pivot_day(fuel_by_day[day], demand_by_day.get(day, []))
-            written += append_rows(rows, base_dir)
+            written += append_rows(rows, base_dir, on_revision)
         chunk_start = chunk_end + timedelta(days=1)
     return written
 
@@ -339,7 +342,7 @@ def main(argv: list[str] | None = None) -> None:
     elif cmd == "append":
         end = latest_settled_day()
         start = end - timedelta(days=7)  # idempotent overlap absorbs any late settlement
-        n = build_range(start, end)
+        n = build_range(start, end, on_revision="update")  # absorb Elexon revisions
         print(f"append {start}..{end}: {n} rows written")
     elif cmd == "validate":
         rows = read_store()

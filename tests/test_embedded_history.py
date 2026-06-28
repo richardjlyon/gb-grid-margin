@@ -93,6 +93,15 @@ class TestStore:
         with pytest.raises(ValueError, match="revision"):
             append_rows(parse_records([_rec(1, 999, 200)]), tmp_path)
 
+    def test_revision_update_tolerated(self, tmp_path):
+        """NESO revises embedded estimates retrospectively; the daily append uses
+        on_revision='update' so the overlap window converges instead of crashing."""
+        append_rows(parse_records([_rec(1, 100, 200)]), tmp_path)
+        n = append_rows(parse_records([_rec(1, 999, 200)]), tmp_path, on_revision="update")
+        assert n == 1
+        from engine.embedded_history import read_store
+        assert read_store(tmp_path)[0]["embedded_wind_mw"] == 999
+
 
 class TestSolarCrosscheck:
     def test_daily_solar_mwh_sums_half_hours(self, tmp_path):

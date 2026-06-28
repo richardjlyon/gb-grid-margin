@@ -40,3 +40,39 @@ def test_revision_raises(tmp_path):
     widestore.append_rows([_row(1, 100, 200)], COLS, TEXT, pf)
     with pytest.raises(ValueError, match="revision"):
         widestore.append_rows([_row(1, 999, 200)], COLS, TEXT, pf)
+
+
+def test_revision_update_overwrites_in_place(tmp_path):
+    """on_revision='update' rewrites the revised cell (NESO/Elexon corrected it) and
+    counts it; the file converges to the source's latest settled value."""
+    pf = lambda d: _path_for(tmp_path, d)
+    widestore.append_rows([_row(1, 100, 200), _row(2, 300, 400)], COLS, TEXT, pf)
+    n = widestore.append_rows([_row(1, 999, 200)], COLS, TEXT, pf, on_revision="update")
+    assert n == 1
+    back = widestore.read_store(tmp_path, "store_*.csv", COLS, TEXT)
+    assert len(back) == 2  # no row duplicated by the rewrite
+    assert back[0]["a_mw"] == 999 and back[0]["b_mw"] == 200
+    assert back[1]["a_mw"] == 300  # untouched row preserved
+
+
+def test_revision_update_mixes_new_and_revised(tmp_path):
+    """A single append carrying both a revised existing row and a brand-new row."""
+    pf = lambda d: _path_for(tmp_path, d)
+    widestore.append_rows([_row(1, 100, 200)], COLS, TEXT, pf)
+    n = widestore.append_rows([_row(1, 111, 200), _row(2, 300, 400)],
+                              COLS, TEXT, pf, on_revision="update")
+    assert n == 2
+    back = widestore.read_store(tmp_path, "store_*.csv", COLS, TEXT)
+    assert [r["settlement_period"] for r in back] == [1, 2]
+    assert back[0]["a_mw"] == 111 and back[1]["a_mw"] == 300
+
+
+def test_revision_skip_keeps_stored(tmp_path):
+    """on_revision='skip' leaves the stored value and does not count the revised row."""
+    pf = lambda d: _path_for(tmp_path, d)
+    widestore.append_rows([_row(1, 100, 200)], COLS, TEXT, pf)
+    n = widestore.append_rows([_row(1, 999, 200), _row(2, 300, 400)],
+                              COLS, TEXT, pf, on_revision="skip")
+    assert n == 1  # only the genuinely new row counted
+    back = widestore.read_store(tmp_path, "store_*.csv", COLS, TEXT)
+    assert back[0]["a_mw"] == 100  # stored value retained

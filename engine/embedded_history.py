@@ -79,10 +79,13 @@ def year_path(settlement_date: str, base_dir: Path = HISTORY_DIR) -> Path:
     return Path(base_dir) / f"embedded_{settlement_date[:4]}.csv"
 
 
-def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR) -> int:
-    """Append wide rows to their per-year buckets, idempotent. Raises on revision."""
+def append_rows(rows: list[dict], base_dir: Path = HISTORY_DIR,
+                on_revision: str = "raise") -> int:
+    """Append wide rows to their per-year buckets, idempotent. ``on_revision``
+    ("raise" | "update" | "skip") sets the revision policy (see ``widestore.append_rows``);
+    the daily append uses "update" to absorb NESO's retrospective estimate revisions."""
     return widestore.append_rows(
-        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir))
+        rows, COLUMNS, _TEXT_COLUMNS, lambda sd: year_path(sd, base_dir), on_revision)
 
 
 def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
@@ -174,7 +177,8 @@ def fetch_pvlive(date_from: date, date_to: date) -> PvLiveSeries:
     return PvLiveSeries.model_validate(_get_json(f"{PVLIVE}/gsp/0?{q}"))
 
 
-def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR) -> int:
+def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR,
+                on_revision: str = "raise") -> int:
     """Backfill/append the embedded store over [start, end] inclusive, fetched per year."""
     rids = resource_ids()
     written = 0
@@ -185,7 +189,7 @@ def build_range(start: date, end: date, base_dir: Path = HISTORY_DIR) -> int:
             continue
         rows = [r for r in parse_records(fetch_year_records(rid))
                 if start.isoformat() <= r["settlement_date"] <= end.isoformat()]
-        written += append_rows(rows, base_dir)
+        written += append_rows(rows, base_dir, on_revision)
     return written
 
 
@@ -210,7 +214,8 @@ def main(argv: list[str] | None = None) -> None:
     elif cmd == "append":
         end = latest_settled_day()
         start = end - timedelta(days=NESO_LAG_DAYS + 7)  # overlap absorbs late settlement
-        print(f"append embedded {start}..{end}: {build_range(start, end)} rows written")
+        n = build_range(start, end, on_revision="update")  # absorb NESO revisions
+        print(f"append embedded {start}..{end}: {n} rows written")
     elif cmd == "validate":
         rows = read_store()
         if not rows:
