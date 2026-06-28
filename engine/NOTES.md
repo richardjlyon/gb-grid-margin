@@ -268,7 +268,18 @@ known-gap days, blanks, leap years) would expose.
   records instead — to avoid presenting a 2016-clustered figure as the headline — is an open
   presentation decision, not yet made.
 
-## 9. Share cards *(Stage 8, 2026-06-26)*
+## 9. Share cards *(Stage 8, 2026-06-26; redesigned v0.9, 2026-06-28)*
+
+**v0.9 update (2026-06-28):** the 8-card set was replaced by a minimal 3-artefact set — an evergreen
+**hero** OG card (the site `og:image`; carries no perishable number, fixed illustrative gauge), a live
+**reliability balance** card whose background is a green/amber/red traffic light from the live firm share
+(`firm_band`, cuts parity-locked to `site/render.js` RELIABILITY_RAMP 0.40/0.65), and a **recent-lull**
+card (most recent ≥3-day wind lull). The live card's gauge needle and headline derive from the same
+`firm_pct` (tested invariant); its stamp is a dated "live snapshot · …", never "right now". Each card's
+content hash is a cache-bust on the shared `/s/<slug>?v=<hash>` URL + stub `og:url` + `og:image`, so a
+re-rendered card forces a fresh social unfurl. The daily refresh cron now rebuilds the cards (cached
+Chromium, non-fatal) after the live-snapshot refresh and fires a Vercel deploy hook. The old per-source
+detail below is retained for history.
 
 `engine/sharecards.py` generates a set of 1200 × 630 OG PNG cards plus per-card unfurl stubs
 (`site/s/<slug>.html`) from the same `site/data/*.json` the dashboard reads — `latest.json`,
