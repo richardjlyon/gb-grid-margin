@@ -78,10 +78,10 @@ silently.
 
 ## Status
 
-The dashboard and engine are built and tested: three sections — the reliability gauge, the
-capacity trap, and wind unreliability — on the live and settled layers, with a full
-methodology page. Continuous deployment (a scheduled refresh job plus hosting) is the
-remaining piece before launch. Open methodology decisions are tracked in `engine/NOTES.md`.
+The dashboard and engine are built, tested, and live: three sections — the reliability gauge, the
+capacity trap, and wind unreliability — on the live and settled layers, with a full methodology
+page. The settled layer refreshes daily via a scheduled job that appends newly-settled half-hours,
+rebuilds the derived series, and publishes. Open methodology decisions are tracked in `engine/NOTES.md`.
 
 ## Licence
 

@@ -407,11 +407,16 @@ pipeline so both stores share one tested append-only/idempotent implementation).
 - **Lag + ragged edge.** NESO publishes embedded ~21 days in arrears and fills recent days raggedly,
   so the most recent days are partial (e.g. 2026-05-29 had 45/48 periods, 05-30 had 25/48). These are
   transient (they fill in), not permanent non-publications, so they are **not** recorded in a
-  known-gaps manifest the way §6's 77 Elexon holes are; instead the committed backfill is trimmed to
-  the last fully-complete day. **Committed edge: 2016-01-01 → 2026-05-28, 182,446 rows, validate
-  ok (0 unexplained, 0 dupes).** The daily-`append` cadence (a later stage) will extend the edge as
-  NESO completes each day; handling an embedded settlement *revision* on that path is deferred there
-  (the one-time backfill does not hit revisions, and the store's `append_rows` stays strict).
+  known-gaps manifest the way §6's 77 Elexon holes are; instead the store is trimmed to the last
+  fully-complete day. **Committed edge: 2016-01-01 → 2026-05-28, 182,446 rows, validate ok
+  (0 unexplained, 0 dupes).** The daily-`append` cadence (Stage 10) extends the edge as NESO completes
+  each day: `trim_ragged_edge` holds it at the last fully-complete day so a partial day never enters the
+  store (the gap gate would rightly reject it), and `append_rows(on_revision="update")` absorbs NESO's
+  retrospective revisions in the re-fetched overlap window — rewriting the cell, with git as the audit
+  trail. The one-time backfill stays strict (`on_revision="raise"`), where a revision is a real conflict
+  to surface. Consequence for freshness: the embedded-derived carpets sit a few days further back than
+  the ~21-day NESO lag whenever the most recent days are still partial — complete-and-correct in
+  preference to fresh-but-partial.
 - **Validation gate.** `validate` reuses §6's DST-aware period-count + duplicate checks
   (`history.validate_range`). `crosscheck` runs the PV_Live ±10% solar guard on a sample. Pure
   transforms are unit-tested in `tests/test_embedded_history.py`; the network fetch layer is thin and

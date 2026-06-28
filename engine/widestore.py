@@ -3,8 +3,9 @@
 Shared by the half-hourly history pipelines (settled FUELHH and embedded). One row per
 (settlement_date, settlement_period); a blank cell is None (series absent that period),
 kept distinct from a genuine 0. Re-appending an identical row is a no-op; a *different*
-value for an existing key is a settlement revision and raises — append-only history is
-never silently overwritten.
+value for an existing key is a settlement revision, handled per the `on_revision` policy
+of `append_rows` ("raise" by default for backfills; the daily append uses "update" to
+absorb NESO/Elexon revisions, with git as the audit trail).
 """
 
 from __future__ import annotations
