@@ -23,7 +23,7 @@ FIXTURE = REPO / "tests" / "fixtures" / "verdict_vectors.json"
 RUNNER = REPO / "site" / "parity_runner.mjs"
 JS_TESTS = [REPO / "site" / "verdict.test.mjs", REPO / "site" / "live.test.mjs",
             REPO / "site" / "render.test.mjs", REPO / "site" / "warnings.test.mjs",
-            REPO / "site" / "share.test.mjs"]
+            REPO / "site" / "share.test.mjs", REPO / "site" / "conditions.test.mjs"]
 
 VECTORS = json.loads(FIXTURE.read_text())
 
