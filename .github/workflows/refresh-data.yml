@@ -1,0 +1,65 @@
+name: Refresh settled data
+
+# Daily rebuild of the settled-data layer. Appends newly-settled half-hours to the
+# committed history stores (FUELHH + embedded), revalidates them, rebuilds every
+# site/data/*.json derived series, then commits and pushes. The push is what triggers
+# Vercel's git-integration production deploy — so this job IS the daily release.
+#
+# The live verdict layer is unaffected: the browser fetches Elexon directly, so the
+# dashboard is always current regardless of this cron. This only advances the settled
+# history and the derived cards behind it.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC daily — settled data lags days, so the hour is slack
+  workflow_dispatch: {}    # allow a manual run from the Actions tab
+
+permissions:
+  contents: write          # the job commits the refreshed data back to main
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync runtime deps (no dev — no Playwright needed for the data rebuild)
+        run: uv sync --no-dev
+
+      - name: Append newly-settled FUELHH history
+        run: uv run --no-dev python -m engine.history append
+
+      - name: Append newly-settled embedded solar/wind history
+        run: uv run --no-dev python -m engine.embedded_history append
+
+      - name: Validate history stores (fails the run on any NEW unexplained gap)
+        run: |
+          uv run --no-dev python -m engine.history validate
+          uv run --no-dev python -m engine.embedded_history validate
+
+      - name: Rebuild derived settled series (site/data/*.json)
+        run: uv run --no-dev python -m engine.derived build
+
+      - name: Refresh live fallback snapshot (non-fatal — live layer is primary)
+        run: |
+          uv run --no-dev python -m engine.build_site build \
+            || echo "::warning::live fallback rebuild failed; keeping last-good latest.json"
+
+      - name: Commit & push if the data changed
+        run: |
+          git config user.name "grid-margin-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/history site/data
+          if git diff --cached --quiet; then
+            echo "No data changes — nothing to publish."
+          else
+            git commit -m "data: daily settled refresh [skip ci]"
+            git push
+          fi
