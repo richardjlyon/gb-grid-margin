@@ -21,7 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from engine import capacity, embedded_history, reliability, wind_unreliability
+from engine import capacity, embedded_history, reliability, wind_live_run, wind_unreliability
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import GuardError, check_nameplate_sane, check_shares_sum_100
@@ -221,6 +221,9 @@ def build(out_dir: Path = SITE_DATA) -> int:
             print(f"wind unreliability build failed (GuardError): {e}", file=sys.stderr)
             return 1
         reliability_files.append(("wind_unreliability", wu_payload))
+
+        wlr_payload = wind_live_run.build_payload(rows, nameplate["wind_gw"] * 1000, generated)
+        reliability_files.append(("wind_live_run", wlr_payload))
     else:
         print("embedded store empty — skipping reliability_*.json + capacity_carpets.json "
               "(run embedded_history backfill)")

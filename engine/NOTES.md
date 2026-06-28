@@ -638,3 +638,40 @@ file agrees.
 **`reliability_all.json` removed.** The all-time toggle was removed with the 1-D stripe.
 `reliability_all.json` is no longer emitted by `engine.derived.build`. `reliability_year.json`
 (flat, rolling 12 months) is retained solely as the share-card source (§13).
+
+## 16. Live wind-run series — Grid Conditions panel *(2026-06-28)*
+
+`site/data/wind_live_run.json` is emitted by `engine.derived.build` (alongside the other
+reliability files) and powers the wind lamp in the Grid Conditions panel on the homepage.
+
+**Basis — transmission-only, not combined.** The combined daily CF used by Entry 03's carpet
+(§15 of wind unreliability) requires NESO embedded wind, which lags ~3 weeks at the live
+edge. A "current run" counter needs yesterday's settled figure, so the transmission-only lower
+bound is used here (Elexon FUELHH `WIND` column, mean MW per day ÷ DUKES total UK wind
+nameplate, annual-step). This matches the basis used by the stripe/counters (§12).
+
+**Threshold — `< 20%` transmission CF ≈ `< 25%` combined CF in day-count terms.** Both
+thresholds light ~43% of historical days. The transmission-only CF understates the true
+combined CF (embedded wind excluded from the numerator), so the threshold is set lower to
+reproduce the same day-count frequency. The panel labels the run length, not the raw CF, so
+an absolute CF claim is avoided.
+
+**Updates daily.** The cron (`refresh-data.yml`) runs `engine.derived build` after each
+FUELHH append, so the run counter advances by one day each morning with no additional step.
+
+**Imports 25% threshold derivation.** The Grid Conditions panel lights an amber imports lamp
+when net-import share of demand exceeds 25%. Derivation: net-import share = sum of signed
+`INT*` columns ÷ `INDO` demand, computed per half-hour from the history store. Over the last
+~12 months the median net-import share is ~13%; 25% falls near the 85th percentile (~16% of
+half-hours above that line). This is a high-usage signal — imports filling a material gap —
+not a routine baseline figure. Reproducible from the wide store with a short script.
+
+**Firm < 50% threshold.** The firm lamp on the Grid Conditions panel turns amber when the
+live firm share (reliable + imports) falls below 50%. This is the majority line: "weather
+plus imports are carrying more than half of demand." It trips amber before the verdict gauge's
+red zone (< 40% firm), giving an earlier warning at the panel level.
+
+**Recompute gate.** `tests/test_wind_live_run_gate.py` independently re-derives the daily
+transmission CF series from the raw FUELHH CSVs (no `engine.wind_live_run` import) and
+asserts that the published `wind_live_run.json` agrees on `recent[-40:]`, `as_of`, and
+`current_run_days`.
