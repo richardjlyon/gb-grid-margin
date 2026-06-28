@@ -120,6 +120,7 @@ a:hover { color: var(--red); }
 }
 .cond-cell:last-child { border-right: 0; }
 .cond-cell:hover .cond-legend { color: #cfcabd; }
+.cond-cell:hover { color: inherit; }
 .cond-led {
   width: 11px; height: 11px; border-radius: 50%; flex: none;
   background: #3b3a31; /* armed ember — powered, watching */
@@ -154,7 +155,7 @@ a:hover { color: var(--red); }
   .cond-head { width: 100%; flex-direction: row; gap: 6px; margin: 0; padding: 8px 0;
     border-right: 0; border-bottom: 1px solid var(--cond-line); }
   .cond-cell { flex: 1 1 45%; border-right: 0; }
-  .cond-cell:nth-child(odd) { border-right: 1px solid var(--cond-line); }
+  .cond-cell:nth-child(even) { border-right: 1px solid var(--cond-line); }
 }
 @media (prefers-reduced-motion: reduce) { .cond-led { transition: none; } }
 
