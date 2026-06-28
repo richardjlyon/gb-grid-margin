@@ -215,15 +215,15 @@ def live_balance_card(latest: dict) -> dict:
     band = firm_band(firm)
     if band == "green":
         figure = f"{int(firm + 0.5)}%"
-        label = ("of Britain's grid ran on firm power this morning — gas, nuclear and "
+        label = ("of Britain's grid ran on firm power — gas, nuclear and "
                  "biomass that answer on demand.")
     elif band == "red":
         figure = f"{int(100 - firm + 0.5)}%"
-        label = ("of Britain's grid leaned on weather and imports this morning — wind, "
+        label = ("of Britain's grid leaned on weather and imports — wind, "
                  "solar and interconnectors that fall away together.")
     else:  # amber
         figure = f"{int(firm + 0.5)}%"
-        label = ("of Britain's grid was firm power this morning — the rest depended on "
+        label = ("of Britain's grid was firm power — the rest depended on "
                  "weather and imports, in roughly equal measure.")
     return {
         "slug": "live-balance", "kind": "live", "band": band, "template": "card",
