@@ -98,38 +98,65 @@ a:hover { color: var(--red); }
   padding: 9px 0; border-bottom: 1px solid var(--rule); background: var(--paper);
 }
 
-/* ---------- the live warning light ---------- */
-.warnstrip { border-bottom: 1px solid var(--rule); background: var(--paper); }
-.warnstrip-inner {
-  display: flex; align-items: baseline; gap: 10px;
-  font-family: var(--mono); font-size: 0.78rem; padding: 9px 0; color: var(--slate);
+/* GRID CONDITIONS rail — a dark instrument band; austere + one warm amber accent */
+.conditions {
+  --cond-bg: #16181d; --cond-line: #23262c; --cond-dim: #7d7f86;
+  --cond-amber: #ffb347; --cond-amber-ink: #f0cd8c; --cond-red: #ff5158;
+  background: linear-gradient(#16181d, #101216);
+  border-top: 1px solid #000; border-bottom: 1px solid var(--cond-line);
+  font-family: var(--mono);
 }
-.wl-lamp {
-  flex: none; align-self: center; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--rule);  /* dormant: a dark, unlit bulb */
+.cond-rail { display: flex; align-items: stretch; padding: 0; }
+.cond-head {
+  flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: 11px 16px 11px 0; margin-right: 14px; border-right: 1px solid var(--cond-line);
 }
-.wl-text { line-height: 1.4; }
-.wl-text.wl-muted { color: var(--slate); }
-/* source + issued-at provenance on the lit banner: small, quiet, never competes with the notice */
-.wl-src { display: inline-block; font-size: 0.78em; opacity: 0.85; white-space: nowrap; }
-/* lit: the one red, a steady pulse, bold notice text */
-.warnstrip[data-status="in_force"] {
-  background: var(--red); border-bottom-color: var(--red-deep);
+.cond-t { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #cfcabd; }
+.cond-s { font-size: 9px; letter-spacing: .14em; color: #6c6e74; }
+.cond-cell {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-right: 1px solid var(--cond-line);
+  text-decoration: none; color: inherit;
 }
-.warnstrip[data-status="in_force"] .warnstrip-inner { color: #fff; }
-.warnstrip[data-status="in_force"] .wl-text strong { color: #fff; }
-.warnstrip[data-status="in_force"] .wl-lamp {
-  background: #fff; box-shadow: 0 0 0 0 rgba(255,255,255,0.9);
-  animation: warnpulse 1.4s ease-in-out infinite;
+.cond-cell:last-child { border-right: 0; }
+.cond-cell:hover .cond-legend { color: #cfcabd; }
+.cond-led {
+  width: 11px; height: 11px; border-radius: 50%; flex: none;
+  background: #3b3a31; /* armed ember — powered, watching */
+  box-shadow: inset 0 0 3px #000, 0 0 5px 1px rgba(207, 202, 189, .10), 0 0 0 1px #3a3a34;
 }
-@keyframes warnpulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.85); opacity: 1; }
-  70%  { box-shadow: 0 0 0 7px rgba(255,255,255,0); opacity: 0.7; }
-  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); opacity: 1; }
+.cond-txt { display: flex; flex-direction: column; min-width: 0; }
+.cond-legend {
+  font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--cond-dim); line-height: 1.25; white-space: nowrap;
 }
-@media (prefers-reduced-motion: reduce) {
-  .warnstrip[data-status="in_force"] .wl-lamp { animation: none; box-shadow: none; }
+.cond-status {
+  font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: #56585e;
+  margin-top: 3px; white-space: nowrap;
 }
+.cond-status b { font-variant-numeric: tabular-nums; font-weight: 600; }
+/* active (our computed condition) — amber */
+.cond-cell[data-state="active"] .cond-led {
+  background: var(--cond-amber); box-shadow: 0 0 10px 2px rgba(255, 179, 71, .75), 0 0 0 1px #6b4e1c;
+}
+.cond-cell[data-state="active"] .cond-legend { color: var(--cond-amber-ink); }
+.cond-cell[data-state="active"] .cond-status { color: #E8A13A; }
+/* in_force (official scarcity notice) — red, the only red on the panel */
+.cond-cell[data-state="in_force"] .cond-led {
+  background: var(--cond-red); box-shadow: 0 0 10px 2px rgba(214, 18, 31, .8), 0 0 0 1px #7d2228;
+}
+.cond-cell[data-state="in_force"] .cond-legend { color: #f0a9ad; }
+.cond-cell[data-state="in_force"] .cond-status { color: var(--cond-red); }
+/* unavailable — dim, no accent */
+.cond-cell[data-state="unavailable"] .cond-status { color: #56585e; font-style: italic; }
+@media (max-width: 720px) {
+  .cond-rail { flex-wrap: wrap; }
+  .cond-head { width: 100%; flex-direction: row; gap: 6px; margin: 0; padding: 8px 0;
+    border-right: 0; border-bottom: 1px solid var(--cond-line); }
+  .cond-cell { flex: 1 1 45%; border-right: 0; }
+  .cond-cell:nth-child(odd) { border-right: 1px solid var(--cond-line); }
+}
+@media (prefers-reduced-motion: reduce) { .cond-led { transition: none; } }
 
 /* ---------- the ledger: entries separated by a double rule ---------- */
 main { padding-bottom: 40px; }

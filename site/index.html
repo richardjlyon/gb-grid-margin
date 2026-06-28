@@ -36,10 +36,26 @@
 </header>
 <div class="clockstrip"><div class="container" id="clockstrip">Reading the grid…</div></div>
 
-<!-- the live warning light: lit only while a scarcity-class NESO notice (EMN/CMN/NISM) is in force -->
-<div class="warnstrip" id="warnstrip" data-status="loading">
-  <div class="container warnstrip-inner" id="warning-light" aria-live="polite">
-    <span class="wl-text wl-muted">Checking grid warnings…</span>
+<!-- GRID CONDITIONS — live reliability lamps; amber = our computed condition, red = official NESO notice -->
+<div class="conditions" id="conditions" data-loading aria-label="Live grid conditions">
+  <div class="container cond-rail">
+    <div class="cond-head"><span class="cond-t">GRID</span><span class="cond-s">CONDITIONS</span></div>
+    <a class="cond-cell" id="cond-wind" data-state="loading" href="#entry-wind" aria-label="Wind lull — loading">
+      <span class="cond-led" aria-hidden="true"></span>
+      <span class="cond-txt"><span class="cond-legend">Wind lull</span><span class="cond-status">…</span></span>
+    </a>
+    <a class="cond-cell" id="cond-firm" data-state="loading" href="#entry-verdict" aria-label="Weather-dependent majority — loading">
+      <span class="cond-led" aria-hidden="true"></span>
+      <span class="cond-txt"><span class="cond-legend">Weather-dep. majority</span><span class="cond-status">…</span></span>
+    </a>
+    <a class="cond-cell" id="cond-import" data-state="loading" href="#entry-verdict" aria-label="Heavy imports — loading">
+      <span class="cond-led" aria-hidden="true"></span>
+      <span class="cond-txt"><span class="cond-legend">Heavy imports</span><span class="cond-status">…</span></span>
+    </a>
+    <a class="cond-cell" id="cond-scarcity" data-state="loading" href="methodology.html#warnings" aria-label="Scarcity notice — loading">
+      <span class="cond-led" aria-hidden="true"></span>
+      <span class="cond-txt"><span class="cond-legend">Scarcity notice ◆</span><span class="cond-status">…</span></span>
+    </a>
   </div>
 </div>
 
