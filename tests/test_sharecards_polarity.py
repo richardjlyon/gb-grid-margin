@@ -101,3 +101,22 @@ def test_hero_card_is_evergreen():
     assert c["svg"]                       # illustrative gauge, fixed
     # carries no live figure/number
     assert "figure" not in c or not c.get("figure")
+
+
+def test_compose_card_sets_band_class_and_fills_tokens():
+    c = sharecards.live_balance_card(_mk(35.4))
+    html = sharecards.compose(c)
+    assert "{{" not in html                       # every token filled
+    assert 'class="card red"' in html             # band drives the body class
+    assert "65%" in html
+    assert "gridmargin.co.uk" in html
+    assert "EVERY FIGURE TRACES TO ELEXON" in html
+
+
+def test_compose_card_no_gauge_when_svg_none():
+    c = sharecards.recent_lull_card({
+        "lulls": [{"start": "2025-10-12", "end": "2025-10-14", "days": 3, "min_cf": 0.0393}],
+        "summary": {"counts": {"ge_3d": 45}}})
+    html = sharecards.compose(c)
+    assert "{{" not in html
+    assert 'class="card red"' in html

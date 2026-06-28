@@ -415,13 +415,23 @@ STUB_TEMPLATE = """<!DOCTYPE html>
 """
 
 
+def _compose_hero(card: dict) -> str:
+    raise NotImplementedError
+
+
 def compose(card: dict) -> str:
-    name = "sharecard-instrument.html" if card["template"] == "instrument" else "sharecard-stat.html"
+    tmpl = card["template"]
+    if tmpl == "hero":
+        return _compose_hero(card)
+    name = {"card": "sharecard-card.html",
+            "instrument": "sharecard-instrument.html",
+            "stat": "sharecard-stat.html"}.get(tmpl, "sharecard-stat.html")
     html = (TEMPLATES / name).read_text()
     html = (html
+            .replace("{{BAND}}", card.get("band", "ink"))
             .replace("{{THEME}}", card.get("theme", "ink"))
-            .replace("{{FIGURE}}", card["figure"])
-            .replace("{{LABEL}}", card["label"])
+            .replace("{{FIGURE}}", card.get("figure", ""))
+            .replace("{{LABEL}}", card.get("label", ""))
             .replace("{{STAMP}}", card.get("stamp", ""))
             .replace("{{CAVEAT}}", card.get("caveat") or "")
             .replace("{{SVG}}", card.get("svg") or ""))
