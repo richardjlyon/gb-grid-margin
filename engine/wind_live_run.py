@@ -9,6 +9,7 @@ lamp lights while we are in a run of consecutive sub-20% days; the run length is
 """
 from __future__ import annotations
 
+from datetime import date
 from itertools import groupby
 
 from engine.grid_engine import WIND
@@ -35,7 +36,6 @@ def daily_transmission_cf_series(rows: list[dict], wind_nameplate_mw: float) -> 
 
 
 def _adjacent(a: str, b: str) -> bool:
-    from datetime import date
     da, db = date.fromisoformat(a), date.fromisoformat(b)
     return (db - da).days == 1
 

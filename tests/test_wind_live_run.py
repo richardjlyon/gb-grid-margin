@@ -38,6 +38,17 @@ def test_current_run_zero_when_last_day_windy():
     assert wlr.current_run(series, 20)["current_run_days"] == 0
 
 
+def test_current_run_exact_boundary_not_a_lull():
+    # 20.0% is NOT a lull — strictly below 20 is required
+    series = [{"date": "2026-06-20", "cf_pct": 19.9},
+              {"date": "2026-06-21", "cf_pct": 20.0}]
+    assert wlr.current_run(series, 20)["current_run_days"] == 0
+
+
+def test_current_run_empty_series():
+    assert wlr.current_run([], 20) == {"as_of": None, "current_run_days": 0, "current_cf_pct": None}
+
+
 def test_current_run_breaks_on_calendar_gap():
     # a missing 06-20 means 06-19 and 06-21 are not adjacent → run is only the last day
     series = [{"date": "2026-06-19", "cf_pct": 10.0},
@@ -50,7 +61,7 @@ def test_build_payload_shape():
                           32082.0, "2026-06-24T06:00:00+00:00")
     assert p["threshold_pct"] == 20
     assert p["as_of"] == "2026-06-21"
-    assert p["current_run_days"] == 2           # 20.0% then 10.0%, both < 20, adjacent
+    assert p["current_run_days"] == 2           # ~15.0% then 10.0%, both < 20, adjacent
     assert p["current_cf_pct"] == 10.0
     assert p["recent"][-1] == {"date": "2026-06-21", "cf_pct": 10.0}
     assert "transmission" in p["basis"].lower()
