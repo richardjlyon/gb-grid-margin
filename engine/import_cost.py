@@ -54,7 +54,9 @@ def daily_import_value(
         price = price_by_key[key]
         imp = max(net_import_mw(row), 0.0)
         date = row["settlement_date"]
-        value_acc[date] += imp * 0.5 * price
+        # Floor per-SP contribution at £0: a negative system sell price on an import
+        # half-hour means the system is receiving money, not paying — no import cost.
+        value_acc[date] += max(imp * 0.5 * price, 0.0)
         mwh_acc[date] += imp * 0.5
 
     result = []
