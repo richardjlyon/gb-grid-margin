@@ -144,7 +144,7 @@ _EXPECTED_VALUE = 100_000.0
 def test_build_payload_provenance_keys_present():
     payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
     for key in ("basis", "source", "metric_label", "caveat", "generated_utc",
-                "range", "partial_years", "scale", "carpet", "events", "summary", "cited"):
+                "range", "partial_years", "scale", "carpet", "events", "summary"):
         assert key in payload, f"missing key: {key}"
 
 
@@ -154,16 +154,6 @@ def test_build_payload_exact_source_string():
         "Elexon FUELHH net interconnector flow × Elexon system (cash-out) price, "
         "settled, back to 2016"
     )
-
-
-def test_build_payload_exact_cited_dict():
-    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
-    assert payload["cited"] == {
-        "label": "Montel EnAppSys, via the Guardian",
-        "date": "2026-06-24",
-        "value_per_mwh": 1379,
-        "note": "emergency-import price; not reproducible from public data",
-    }
 
 
 def test_build_payload_exact_metric_label():

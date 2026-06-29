@@ -856,7 +856,7 @@ function drawImportCarpet(data) {
       `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
   }
 
-  // Annotation overlay — worked events + cited external figure
+  // Annotation overlay — worked events
   const annEl = $('import-carpet-annotations');
   if (annEl) annEl.innerHTML = _importAnnotationsHtml(data, years, doy, cols, cellH);
 }
@@ -902,22 +902,6 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
       `style="left:${colX(jun23idx)};top:${rowTop(idx2026)};transform:translateX(-50%) translateY(-100%)" ` +
       `aria-label="EMN June 2026">` +
       `<span class="import-ann-label">EMN · Jun 2026</span></div>`
-    );
-  }
-
-  // 3. Cited Montel figure — externally sourced, not reproducible from public data.
-  //    Placed BESIDE (to the right of) the Jun 2026 cells. Value comes from data.cited only.
-  const cited = data.cited;
-  const jun24idx = doy.indexOf('06-24');
-  if (cited && idx2026 >= 0 && jun24idx >= 0) {
-    const labelVal = `£${Number(cited.value_per_mwh).toLocaleString('en-GB')}/MWh`;
-    parts.push(
-      `<div class="import-annotation cited" ` +
-      `style="left:${colX(jun24idx + 3)};top:${rowTop(idx2026)};transform:translateY(-100%)" ` +
-      `aria-label="Cited external figure: ${esc(cited.label)}, ${labelVal}">` +
-      `<span class="import-cited-badge">CITED</span>` +
-      `<span class="import-cited-text">${labelVal} — ${esc(cited.label)}</span>` +
-      `</div>`
     );
   }
 

@@ -167,12 +167,6 @@ _CAVEAT = (
     "Net imported energy valued at the GB system (cash-out) price — not the "
     "contractual cost of the imports, which clear in the day-ahead auction."
 )
-_CITED = {
-    "label": "Montel EnAppSys, via the Guardian",
-    "date": "2026-06-24",
-    "value_per_mwh": 1379,
-    "note": "emergency-import price; not reproducible from public data",
-}
 
 
 def build_payload(
@@ -204,7 +198,6 @@ def build_payload(
         "carpet": carpet_matrix(daily),
         "events": events(daily),
         "summary": summary(daily),
-        "cited": _CITED,
     }
 
 
