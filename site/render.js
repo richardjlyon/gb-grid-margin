@@ -143,6 +143,15 @@ export function sourceArcModel(v) {
   };
 }
 
+// --- live import-spend rate -------------------------------------------------
+
+// Live import-spend rate: MW × £/MWh = £/hour. Export (net ≤ 0) → £0/h.
+// Parity-locked to engine/build_site.py:import_block — the Python golden test
+// asserts the same result for inputs (6890, 800) → 5512000 and (-500, 800) → 0.
+export function importRatePerHour(netMw, pricePerMwh) {
+  return Math.max(netMw, 0) * pricePerMwh;
+}
+
 // --- display formatting -----------------------------------------------------
 
 export const fmtPct = (x) => (Number.isFinite(x) ? `${x.toFixed(1)}%` : '—');

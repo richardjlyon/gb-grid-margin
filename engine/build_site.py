@@ -17,7 +17,7 @@ import json
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from engine import grid_engine
@@ -130,6 +130,57 @@ def emit_vectors() -> None:
           f"{len(embedded_cases)} embedded vectors → {FIXTURE.relative_to(REPO)}")
 
 
+def import_block(net_import_mw: float, import_pct: float,
+                 price_per_mwh, price_stamp) -> dict | None:
+    """Build the live import-spend block for latest.json.
+
+    Returns None when price is unavailable (published as JSON null).
+    rate_per_h = max(net_import_mw, 0) × price_per_mwh  [MW × £/MWh = £/h]
+    Parity-locked to site/render.js:importRatePerHour — same formula, same golden inputs.
+    """
+    if price_per_mwh is None:
+        return None
+    return {
+        "rate_per_h": max(net_import_mw, 0.0) * price_per_mwh,
+        "net_import_mw": net_import_mw,
+        "import_pct": import_pct,
+        "price_per_mwh": price_per_mwh,
+        "price_stamp": price_stamp,
+    }
+
+
+def _sp_start_hhmm(sp: int) -> str:
+    """HH:MM for the start of settlement period sp (1-indexed, 30-min half-hours)."""
+    minutes = (sp - 1) * 30
+    h, m = divmod(minutes, 60)
+    return f"{h:02d}:{m:02d}"
+
+
+def _price_stamp(settled_date: date, sp: int) -> str:
+    """Format the honest stamp: 'latest settled half-hour · DD Mon, HH:MM'."""
+    return (f"latest settled half-hour · "
+            f"{settled_date.strftime('%-d %b')}, {_sp_start_hhmm(sp)}")
+
+
+def fetch_latest_price() -> tuple:
+    """Return (price_per_mwh, price_stamp) for the most recent available settled SP.
+
+    Tries today then yesterday via system_price_history.fetch_day; takes the row with
+    the highest settlement_period. Degrades to (None, None) on any error — never raises.
+    """
+    from engine import system_price_history
+    try:
+        today = datetime.now(timezone.utc).date()
+        for day in [today, today - timedelta(days=1)]:
+            rows = system_price_history.fetch_day(day)
+            if rows:
+                best = max(rows, key=lambda r: r["settlement_period"])
+                return best["system_sell_price"], _price_stamp(day, best["settlement_period"])
+        return None, None
+    except Exception:
+        return None, None
+
+
 def _atomic_write(target: Path, text: str) -> None:
     """Write text to target atomically: temp file in the same dir, fsync, os.replace.
 
@@ -150,13 +201,14 @@ def _atomic_write(target: Path, text: str) -> None:
 
 
 def _payload(verdict: dict, snapshot: str, embedded: dict, pvlive: dict,
-             indo: int) -> dict:
+             indo: int, import_data=None) -> dict:
     age_min = abs(
         (datetime.fromisoformat(embedded["time"]) - datetime.fromisoformat(snapshot))
         .total_seconds()) / 60
     return {
         "schema_version": SCHEMA_VERSION,
         "verdict": verdict,
+        "import": import_data,
         "provenance": {
             "build_time_utc": datetime.now(timezone.utc).isoformat(),
             "snapshot": snapshot,
@@ -203,8 +255,20 @@ def build(target: Path = LATEST_JSON) -> int:
         print(f"build failed ({type(e).__name__}): {e}", file=sys.stderr)
         return 1
 
-    _atomic_write(target, json.dumps(_payload(verdict, snapshot, embedded, pvlive, indo),
-                                     indent=2) + "\n")
+    # Fetch the live system price (best-effort — failure yields import: null, not a build failure).
+    import_data = None
+    try:
+        price_per_mwh, price_stamp = fetch_latest_price()
+        import_data = import_block(
+            verdict["net_import_mw"], verdict["import_pct"],
+            price_per_mwh, price_stamp,
+        )
+    except Exception as e:
+        print(f"import price fetch failed ({type(e).__name__}): {e} — continuing", file=sys.stderr)
+
+    _atomic_write(target, json.dumps(
+        _payload(verdict, snapshot, embedded, pvlive, indo, import_data),
+        indent=2) + "\n")
     print(f"wrote {target}")
     return 0
 

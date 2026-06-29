@@ -7,6 +7,7 @@ import {
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor, windDroughtColor, droughtSpikes,
   droughtCaption, carpetMonthTicks,
+  importRatePerHour,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -236,4 +237,12 @@ test('carpetMonthTicks — 12 months, Jan at 0, ascending fractions', () => {
   assert.equal(t[0].label, 'J');
   assert.equal(t[0].frac, 0);
   for (let i = 1; i < 12; i++) assert.ok(t[i].frac > t[i - 1].frac && t[i].frac < 1);
+});
+
+test('importRatePerHour golden: 6890 MW × £800/MWh → £5,512,000/h', () => {
+  assert.equal(importRatePerHour(6890, 800), 5512000);
+});
+
+test('importRatePerHour export floor: negative net MW → £0/h', () => {
+  assert.equal(importRatePerHour(-500, 800), 0);
 });
