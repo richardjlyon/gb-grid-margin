@@ -52,6 +52,19 @@ jobs:
             git checkout -- data/history/embedded_*.csv
           fi
 
+      # System price (Elexon cash-out) store — best-effort, mirrors the embedded edge lesson:
+      # a ragged/incomplete recent day must NEVER abort the FUELHH → derived → deploy path.
+      # append uses on_revision="update" (absorbs late price revisions); on validate failure,
+      # revert to last-good so the import-cost layer just lags a cycle. The validate gate (which
+      # loads the price known-gaps manifest) failing on a NEW incomplete day IS the ragged-edge guard.
+      - name: Append + validate system-price store (best-effort, revert on failure)
+        run: |
+          uv run python -m engine.system_price_history append || true
+          if ! uv run python -m engine.system_price_history validate; then
+            echo "::warning::system-price store invalid (ragged Elexon edge) — reverting to last-good; FUELHH + derived still refresh"
+            git checkout -- data/history/system_price_20*.csv
+          fi
+
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
 
