@@ -125,8 +125,8 @@ def test_events_default_top_n_is_8():
 
 def test_scale_returns_documented_cap_and_legend():
     result = ic.scale(_DAILY)
-    assert result["cap_gbp"] == 10_000_000
-    assert result["legend"] == [1_000_000, 5_000_000, 10_000_000]
+    assert result["cap_gbp"] == 20_000_000
+    assert result["legend"] == [1_000_000, 5_000_000, 20_000_000]
 
 
 # ── build_payload + guard_payload ──────────────────────────────────────────────

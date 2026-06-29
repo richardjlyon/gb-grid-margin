@@ -707,6 +707,38 @@ on the modern API from this date; the full backfill (Task 2) populates 2016-01-0
 **CLI verbs.** `backfill [start] [end]` / `append` / `validate` — same shape as §6.
 `validate` reuses `history.expected_periods()` and `history.validate_range()`: a settlement
 day has 48/46/50 periods (same DST-aware rule), so the completeness check is identical.
-No `known_gaps.csv` manifest — unlike §6's 77 Elexon FUELHH non-publications, no permanent
-system-price holes have been observed; an incomplete day surfaces as unexplained and must be
-reviewed.
+**Known gaps.** Like §6, genuine Elexon non-publications are frozen in a manifest —
+`data/history/system_price_known_gaps.csv` (`settlement_date,actual,expected,shortfall,note`).
+The 2016→edge backfill (Task 2) surfaced **14** days where Elexon simply omits one to three
+settlement periods (absent from the `data[]` array, not null prices); `validate` loads the
+manifest so the gate passes on those documented holes but still fails on any NEW incomplete day.
+The store read glob is `system_price_20*.csv` so the manifest file isn't ingested as a year file.
+
+## 18. Import-cost panel — metric, negative-price floor, carpet scale *(Import-cost panel, 2026-06-28)*
+
+`engine/import_cost.py` joins the FUELHH net-interconnector flow (§6) to the system-price store
+(§17) on `(settlement_date, settlement_period)` and emits `site/data/import_cost.json` (a daily £
+carpet + dial inputs) via `engine.derived.build`.
+
+**Metric.** `import_value_£(sp) = max(net_import_mw(sp), 0) × 0.5h × system_sell_price(sp)`, summed
+to a daily £ (the carpet cell). `net_import_mw` is the case-insensitive sum of all `INT*` legs,
+identical to `grid_engine` so a JS port can't diverge. The figure is **net imported energy valued
+at the GB system (cash-out) price — NOT the contractual cost of the imports**, which clear in the
+day-ahead auction; the `metric_label`/`caveat` fields and the methodology page say so.
+
+**Negative-price floor (Richard's call, 2026-06-28).** GB system prices go negative in oversupply
+(2,742 positive-import half-hours over the record). The spec metric (no outer max) would then yield
+a *negative* £ cell, contradicting the non-negative guard. Resolution: floor each half-hour's
+contribution at £0 — `max(imp × 0.5 × price, 0)` — i.e. valued at **max(system price, 0)**: a
+negative cash-out price on an imported half-hour means no cost, not negative cost. Effect: +0.56% on
+the all-time total vs signed; the headline days are unaffected. `import_mwh` is left unfloored, so
+`mean_price = value / mwh` reflects realised cost.
+
+**Carpet colour scale.** `CAP_GBP = £20m` (`scale.cap_gbp`) is the sqrt-ramp saturation point, tuned
+to the real distribution (median £3.2m, p90 £10.8m, p99 £19.9m, **max £94.4m**): at £20m only ~1% of
+days saturate full-red and ~⅔ sit in the pale half, so the carpet reads as a pale field with red on
+the genuinely costly days. The cap is a **colour clamp only** — no datum is truncated; days above the
+cap (the long tail to £94.4m) all read deepest-red but are named explicitly by the on-carpet record
+marker, the caption, and the costliest-days list, so no figure is hidden. An earlier
+draft carried a cited £1,379/MWh emergency-import figure (Montel/Guardian); it was **dropped** — the
+panel shows only figures reproducible from Elexon/NESO/DUKES, never an unverifiable external number.

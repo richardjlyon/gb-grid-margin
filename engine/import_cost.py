@@ -14,8 +14,11 @@ from datetime import date, timedelta
 
 _ONE_DAY = timedelta(days=1)
 
-# Maximum daily import cost used by the sqrt visual ramp on the carpet.
-CAP_GBP = 10_000_000
+# Maximum daily import cost used by the sqrt visual ramp on the carpet. Tuned to the real
+# 2016→edge distribution (median £3.2m, p90 £10.8m, p99 £19.9m, max £94.4m): at £20m only ~1%
+# of days saturate full-red and ~⅔ sit in the pale half, so the carpet reads as a pale field with
+# red on the genuinely costly days rather than a wash of red. See engine/NOTES.md.
+CAP_GBP = 20_000_000
 
 
 def net_import_mw(row: dict) -> float:
@@ -138,12 +141,12 @@ def events(daily: list[dict], top_n: int = 8) -> list[dict]:
 def scale(daily: list[dict]) -> dict:  # noqa: ARG001 — daily reserved for future auto-ranging
     """Visual scale parameters for the carpet sqrt ramp.
 
-    cap_gbp is the documented module constant CAP_GBP (£10 m); cells above it are clamped.
-    legend lists the annotated tick marks on the colour bar.
+    cap_gbp is the documented module constant CAP_GBP (£20 m); cells above it are clamped.
+    legend lists the annotated tick marks on the colour bar (low, mid, and the cap).
     """
     return {
         "cap_gbp": CAP_GBP,
-        "legend": [1_000_000, 5_000_000, 10_000_000],
+        "legend": [1_000_000, 5_000_000, CAP_GBP],
     }
 
 
