@@ -2,8 +2,10 @@ from engine import import_cost as ic
 
 
 def test_net_import_sums_INT_legs_case_insensitive_blanks_zero():
-    row = {"INTFR": 1000, "intned": 500, "INTEW": -200, "WIND": 9999, "CCGT": 8000}
-    assert ic.net_import_mw(row) == 1300  # 1000 + 500 - 200; non-INT ignored
+    row = {"INTFR": 1000, "intned": 500, "INTEW": -200, "WIND": 9999, "CCGT": 8000,
+           "INTNED2": None, "intifa": ""}
+    # None/blank INT legs must contribute 0 (would TypeError without the guard).
+    assert ic.net_import_mw(row) == 1300  # 1000 + 500 - 200; non-INT ignored; None/"" -> 0
 
 def test_daily_value_sums_positive_import_mwh_times_price():
     # SP1: 2000 MW @ £100 -> 2000*0.5*100 = £100,000 ; SP2: export -300 -> £0

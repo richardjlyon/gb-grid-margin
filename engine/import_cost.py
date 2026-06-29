@@ -53,9 +53,11 @@ def daily_import_value(
 
     result = []
     for date in sorted(value_acc):
+        # mean_price divides the RAW accumulators (not the rounded output fields) so an
+        # independent recompute that divides raw sums cannot diverge by ±0.005.
+        mean_price = round(value_acc[date] / mwh_acc[date], 2) if mwh_acc[date] > 0 else None
         value_gbp = round(value_acc[date], 1)
         import_mwh = round(mwh_acc[date], 1)
-        mean_price = round(value_gbp / import_mwh, 2) if import_mwh > 0 else None
         result.append({
             "date": date,
             "value_gbp": value_gbp,
