@@ -701,34 +701,58 @@ async function updateScarcityLamp() {
   setLamp('cond-scarcity', l.state, _scarcityStatus(l), `Scarcity notice — ${_scarcityStatus(l).replace(/<[^>]+>/g, '')}`);
 }
 
-// ============================================================ wind unreliability (Entry 03)
-// Tasks 10–11 replace these stubs with real canvas drawing.
-function drawWindCarpet(data) {
-  window.__windData = data;
-  const cv = $('wind-carpet'); if (!cv) return;
-  const { years, doy, rows } = data.carpet;
+// ============================================================ shared years×day-of-year carpet drawer
+// Shared by Entry 03 (wind) and Entry 04 (import). DPR-aware.
+// cellColorFn: (cellValue) => [r,g,b]. opts: { cellH=22, yAxisId, xAxisId, hatchYears=[] }.
+function drawYearDoyCarpet(canvasId, carpet, cellColorFn, opts = {}) {
+  const { cellH = 22, yAxisId, xAxisId, hatchYears = [] } = opts;
+  const cv = $(canvasId); if (!cv) return;
+  const { years, doy, rows } = carpet ?? {};
+  if (!years || !doy || !rows) return;
   const cols = doy.length, nRows = years.length;
-  const cssW = cv.clientWidth || 960, cellH = 22, cssH = nRows * cellH;
+  const cssW = cv.clientWidth || 960, cssH = nRows * cellH;
   const dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
   const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
   const cw = cssW / cols;
+  const hatchSet = new Set(hatchYears.map(String));
   years.forEach((y, r) => {
     const row = rows[String(y)];
     if (!row) return;
     for (let c = 0; c < cols; c++) {
-      // Same colour language as the Entry 02 wind carpet: pale = low output (calm), deepening to
-      // blue at full output. Anchor 1.0 + DIAL_PALETTE.wind.fullRgb match Entry 02 exactly, so the
-      // two carpets read consistently. The "unreliability" emphasis lives in the red drought plot below.
-      const [rr, gg, bb] = carpetCellColor(row[c], 1, DIAL_PALETTE.wind.fullRgb);
+      const [rr, gg, bb] = cellColorFn(row[c]);
       ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
       ctx.fillRect(c * cw, r * cellH, Math.ceil(cw) + 0.5, cellH - 1);
     }
+    // Partial year: diagonal hatch over the whole row so "year to date" reads at a glance.
+    // Transparent enough that null (grey) cells are barely affected.
+    if (hatchSet.has(String(y))) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+      ctx.lineWidth = 0.8;
+      const y0 = r * cellH, h = cellH - 1;
+      ctx.beginPath();
+      for (let d = -h; d < cssW + h; d += 3) {
+        ctx.moveTo(d, y0); ctx.lineTo(d + h, y0 + h);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
   });
-  $('wind-carpet-y').innerHTML = years.map((_, i) =>
-    `<span>${years[i]}</span>`).join('');
-  $('wind-carpet-x').innerHTML = carpetMonthTicks().map((t) =>
+  const yAxisEl = yAxisId ? $(yAxisId) : null;
+  if (yAxisEl) yAxisEl.innerHTML = years.map((y) => `<span>${y}</span>`).join('');
+  const xAxisEl = xAxisId ? $(xAxisId) : null;
+  if (xAxisEl) xAxisEl.innerHTML = carpetMonthTicks().map((t) =>
     `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
+}
+
+// ============================================================ wind unreliability (Entry 03)
+function drawWindCarpet(data) {
+  window.__windData = data;
+  // Same colour as Entry 02 wind carpet: pale = low output (calm), deepening to blue at full output.
+  // Anchor 1.0 + DIAL_PALETTE.wind.fullRgb match Entry 02 exactly so the two carpets read consistently.
+  drawYearDoyCarpet('wind-carpet', data.carpet, (c) => carpetCellColor(c, 1, DIAL_PALETTE.wind.fullRgb),
+    { yAxisId: 'wind-carpet-y', xAxisId: 'wind-carpet-x' });
 }
 function drawDroughtPlot(data) {
   const cv = $('wind-drought'); if (!cv) return;
@@ -809,56 +833,19 @@ function drawImportDial(live) {
 }
 
 function drawImportCarpet(data) {
-  const cv = $('import-carpet'); if (!cv) return;
-  const { years, doy, rows } = data?.carpet ?? {};
-  if (!years || !doy || !rows) return;
+  const carpet = data?.carpet ?? {};
+  const { years, doy } = carpet;
   const capGbp = data.scale?.cap_gbp ?? 10e6;
-  const cols = doy.length, nRows = years.length;
-  const cssW = cv.clientWidth || 960, cellH = 22, cssH = nRows * cellH;
-  const dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
-  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
-  const cw = cssW / cols;
-  const partialSet = new Set((data.partial_years || []).map(String));
-
-  years.forEach((y, r) => {
-    const row = rows[String(y)];
-    if (!row) return;
-    for (let c = 0; c < cols; c++) {
-      const [rr, gg, bb] = importValueColor(row[c], capGbp);
-      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
-      ctx.fillRect(c * cw, r * cellH, Math.ceil(cw) + 0.5, cellH - 1);
-    }
-    // Partial year: diagonal hatch over the whole row so "year to date" reads at a glance.
-    // Transparent enough that null (grey) cells are barely affected.
-    if (partialSet.has(String(y))) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.32)';
-      ctx.lineWidth = 0.8;
-      const y0 = r * cellH, h = cellH - 1;
-      ctx.beginPath();
-      for (let d = -h; d < cssW + h; d += 3) {
-        ctx.moveTo(d, y0); ctx.lineTo(d + h, y0 + h);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
+  drawYearDoyCarpet('import-carpet', carpet, (c) => importValueColor(c, capGbp), {
+    yAxisId: 'import-carpet-y',
+    xAxisId: 'import-carpet-x',
+    hatchYears: data.partial_years || [],
   });
-
-  // Year labels on left axis
-  const yAxisEl = $('import-carpet-y');
-  if (yAxisEl) yAxisEl.innerHTML = years.map((y) => `<span>${y}</span>`).join('');
-
-  // Month ticks below carpet
-  const xAxisEl = $('import-carpet-x');
-  if (xAxisEl) {
-    xAxisEl.innerHTML = carpetMonthTicks().map((t) =>
-      `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
-  }
-
-  // Annotation overlay — worked events
+  // Annotation overlay — worked events (painted on top of the carpet)
   const annEl = $('import-carpet-annotations');
-  if (annEl) annEl.innerHTML = _importAnnotationsHtml(data, years, doy, cols, cellH);
+  if (annEl && years && doy) {
+    annEl.innerHTML = _importAnnotationsHtml(data, years, doy, doy.length, 22);
+  }
 }
 
 // Build the annotation overlay HTML for the import carpet.
@@ -908,9 +895,34 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
   return parts.join('');
 }
 
+// Shared ramp legend: a colour bar sampled from rampFracColorFn(t in [0,1])->[r,g,b],
+// flanked by loLabel/hiLabel, with marks [{label, frac}] positioned along it.
+// The last mark uses translateX(-100%) so it anchors at its right edge — never clips.
+function rampLegendHtml({ rampFracColorFn, marks, loLabel, hiLabel }) {
+  const N = 24;
+  const gradStops = Array.from({ length: N }, (_, i) => {
+    const t = i / (N - 1);
+    const [r, g, b] = rampFracColorFn(t);
+    return `rgb(${r},${g},${b}) ${(t * 100).toFixed(1)}%`;
+  });
+  const gradCss = `linear-gradient(to right, ${gradStops.join(', ')})`;
+  const marksHtml = marks.map((m, idx) => {
+    const isLast = idx === marks.length - 1;
+    const shift = isLast ? 'translateX(-100%)' : 'translateX(-50%)';
+    return `<span class="ramp-legend-mark" style="left:${(m.frac * 100).toFixed(2)}%;transform:${shift}">${esc(m.label)}</span>`;
+  }).join('');
+  return `<div class="ramp-legend" aria-hidden="true">
+      <span class="ramp-legend-lo">${esc(loLabel)}</span>
+      <div class="ramp-legend-bar-wrap">
+        <div class="ramp-legend-bar" style="background:${gradCss}"></div>
+        <div class="ramp-legend-marks">${marksHtml}</div>
+      </div>
+      <span class="ramp-legend-hi">${esc(hiLabel)}</span>
+    </div>`;
+}
+
 function renderImportCost(data, live) {
   const capGbp = data.scale?.cap_gbp ?? 10e6;
-  const stops = importLegendStops(capGbp);
 
   // Receipt: numbers when live import block is available, unavailable note otherwise.
   let receiptHtml;
@@ -930,11 +942,6 @@ function renderImportCost(data, live) {
     receiptHtml = `<p class="import-unavail">Price data unavailable — settled price feed not yet returned.</p>`;
   }
 
-  // Legend stops for the carpet colour key.
-  const legendHtml = stops.map((s) =>
-    `<span class="import-legend-stop" style="left:${(s.frac * 100).toFixed(2)}%">${esc(s.label)}</span>`
-  ).join('');
-
   $('import-body').innerHTML = `
     <div class="verdict-cols">
       <div class="import-dial-col">
@@ -951,12 +958,7 @@ function renderImportCost(data, live) {
           </div>
         </div>
         <div class="import-carpet-x" id="import-carpet-x"></div>
-        <div class="import-legend" aria-hidden="true">
-          <span class="import-legend-label">cheaper</span>
-          <div class="import-legend-bar"></div>
-          <div class="import-legend-stops">${legendHtml}</div>
-          <span class="import-legend-label">costlier</span>
-        </div>
+        ${rampLegendHtml({ rampFracColorFn: (t) => importValueColor(t * capGbp, capGbp), marks: importLegendStops(capGbp), loLabel: 'cheaper', hiLabel: 'costlier' })}
         <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
         <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
       </div>

@@ -528,14 +528,13 @@ main { padding-bottom: 40px; }
 .import-ann-label { font: 600 9px/1.2 var(--mono); color: var(--ink); white-space: nowrap;
   background: rgba(251,251,249,0.88); padding: 1px 3px; border-radius: 2px;
   border: 1px solid rgba(21,24,28,0.18); }
-.import-legend { position: relative; margin: 6px 0 4px; display: flex; flex-direction: column; gap: 2px; }
-.import-legend-bar {
-  height: 10px; border-radius: 2px;
-  background: linear-gradient(to right, #fbfbf9, #a8101b);
-}
-.import-legend-stops { position: relative; height: 1.2em; font: 500 11px var(--mono); color: var(--ink); }
-.import-legend-stop { position: absolute; transform: translateX(-50%); }
-.import-legend-label { font: 500 11px var(--mono); color: var(--slate); }
+/* shared ramp legend (import cost carpet, Entry 04) */
+.ramp-legend { margin: 6px 0 4px; display: flex; align-items: center; gap: 6px; }
+.ramp-legend-lo, .ramp-legend-hi { font: 500 11px var(--mono); color: var(--slate); white-space: nowrap; flex: none; }
+.ramp-legend-bar-wrap { position: relative; flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; }
+.ramp-legend-bar { height: 10px; border-radius: 2px; }
+.ramp-legend-marks { position: relative; height: 1.2em; font: 500 11px var(--mono); color: var(--ink); }
+.ramp-legend-mark { position: absolute; white-space: nowrap; }
 .import-rate-readout {
   font-family: var(--display); font-weight: 700;
   font-size: clamp(1.5rem, 4vw, 2.2rem);
