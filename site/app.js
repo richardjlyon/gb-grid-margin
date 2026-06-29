@@ -892,6 +892,27 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
     );
   }
 
+  // 3. Subtle dot markers on the 2nd–4th costliest days (events[1..3]).
+  //    events[0] is already the record marker above — skip it here.
+  const dotOffset = (cellH / 2 - 2.5).toFixed(1) + 'px'; // centres dot vertically in the cell
+  if (Array.isArray(data.events)) {
+    for (const ev of data.events.slice(1, 4)) {
+      if (!ev?.date) continue;
+      const [eYear, eMon, eDay] = ev.date.split('-');
+      const edoyStr = `${eMon}-${eDay}`;
+      const edoyIdx = doy.indexOf(edoyStr);
+      const eYearIdx = years.indexOf(Number(eYear));
+      if (edoyIdx < 0 || eYearIdx < 0) continue;
+      const eMon3 = new Date(ev.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' });
+      const eLabel = `${Number(eDay)} ${eMon3} ${eYear} · £${(ev.value_gbp / 1e6).toFixed(1)}m`;
+      parts.push(
+        `<div class="import-ann-dot" ` +
+        `style="left:${colX(edoyIdx)};top:${rowTop(eYearIdx)};transform:translateX(-50%) translateY(${dotOffset})" ` +
+        `title="${esc(eLabel)}" aria-label="${esc(eLabel)}"></div>`
+      );
+    }
+  }
+
   return parts.join('');
 }
 
@@ -921,8 +942,20 @@ function rampLegendHtml({ rampFracColorFn, marks, loLabel, hiLabel }) {
     </div>`;
 }
 
+// Format an events entry as 'D Mon YYYY £X.Xm' for the costliest-days list.
+function _fmtImportEvent(ev) {
+  const [y, , d] = ev.date.split('-');
+  const mon = new Date(ev.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' });
+  return `${Number(d)} ${mon} ${y} £${(ev.value_gbp / 1e6).toFixed(1)}m`;
+}
+
 function renderImportCost(data, live) {
   const capGbp = data.scale?.cap_gbp ?? 10e6;
+
+  // Costliest-days list (up to 8 events, degrades gracefully if data.events absent).
+  const costliestHtml = (Array.isArray(data.events) && data.events.length > 0)
+    ? `<p class="import-costliest">Costliest days since 2016: ${data.events.slice(0, 8).map(_fmtImportEvent).join(' · ')}</p>`
+    : '';
 
   // Receipt: numbers when live import block is available, unavailable note otherwise.
   let receiptHtml;
@@ -961,6 +994,7 @@ function renderImportCost(data, live) {
         ${rampLegendHtml({ rampFracColorFn: (t) => importValueColor(t * capGbp, capGbp), marks: importLegendStops(capGbp), loLabel: 'cheaper', hiLabel: 'costlier' })}
         <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
         <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
+        ${costliestHtml}
       </div>
     </div>`;
 

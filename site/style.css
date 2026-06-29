@@ -528,6 +528,11 @@ main { padding-bottom: 40px; }
 .import-ann-label { font: 600 9px/1.2 var(--mono); color: var(--ink); white-space: nowrap;
   background: rgba(251,251,249,0.88); padding: 1px 3px; border-radius: 2px;
   border: 1px solid rgba(21,24,28,0.18); }
+.import-ann-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ink); opacity: 0.65;
+  box-shadow: 0 0 0 1.5px rgba(251,251,249,0.6); pointer-events: none; }
+.import-costliest { font-family: var(--mono); font-size: 0.8125rem; color: var(--slate);
+  margin: 6px 0 0; letter-spacing: -0.01em; }
 /* shared ramp legend (import cost carpet, Entry 04) */
 .ramp-legend { margin: 6px 0 4px; display: flex; align-items: center; gap: 6px; }
 .ramp-legend-lo, .ramp-legend-hi { font: 500 11px var(--mono); color: var(--slate); white-space: nowrap; flex: none; }
