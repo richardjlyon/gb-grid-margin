@@ -872,16 +872,25 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
 
   const parts = [];
 
-  // 1. 12 Dec 2022 — reproducible from settled data (in data.events)
-  const dec12idx = doy.indexOf('12-12');
-  const idx2022 = years.indexOf(2022);
-  if (dec12idx >= 0 && idx2022 >= 0) {
-    parts.push(
-      `<div class="import-annotation" ` +
-      `style="left:${colX(dec12idx)};top:${rowTop(idx2022)};transform:translateX(-100%) translateY(-100%)" ` +
-      `aria-label="12 Dec 2022 notable import cost">` +
-      `<span class="import-ann-label">12 Dec 2022</span></div>`
-    );
+  // 1. Worst-day record — position and label derived entirely from data.summary.worst_day.
+  //    Never hardcoded — the date and value come from the engine output.
+  const wd = data.summary?.worst_day;
+  if (wd?.date) {
+    const [wYear, wMon, wDayNum] = wd.date.split('-');
+    const wdoyStr = `${wMon}-${wDayNum}`;
+    const wdoyIdx = doy.indexOf(wdoyStr);
+    const wYearIdx = years.indexOf(Number(wYear));
+    const wGbp = wd.value_gbp != null
+      ? `£${Math.round(wd.value_gbp / 1e6)}m` : '';
+    const wLabel = `Record: ${Number(wDayNum)} ${new Date(wd.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' })} ${wYear}${wGbp ? ' · ' + wGbp : ''}`;
+    if (wdoyIdx >= 0 && wYearIdx >= 0) {
+      parts.push(
+        `<div class="import-annotation" ` +
+        `style="left:${colX(wdoyIdx)};top:${rowTop(wYearIdx)};transform:translateX(-100%) translateY(-100%)" ` +
+        `aria-label="${esc(wLabel)}">` +
+        `<span class="import-ann-label">${esc(wLabel)}</span></div>`
+      );
+    }
   }
 
   // 2. 23 Jun 2026 — start of the EMN week
