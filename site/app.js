@@ -65,6 +65,7 @@ function arcPath(cx, cy, R, a, b, max) {
 // but the mean tick + needle stay so "now" still reads against the rolling-year average.
 function buildGauge(value, max, { armed = false, danger = null, reliable = null,
                                   calibration = null, label = 'gauge', dist = null, trackRamp = null,
+                                  ariaLabel = null,
                                   palette = { track: '#d7dbdf', band: '#b4bac1', core: '#7c838a' } } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
@@ -121,7 +122,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
     }
   }
   return `
-  <svg class="gauge" viewBox="-6 -12 232 130" role="img" aria-label="${esc(label)}: ${value.toFixed(1)} of ${max}">
+  <svg class="gauge" viewBox="-6 -12 232 130" role="img" aria-label="${esc(ariaLabel ?? `${label}: ${value.toFixed(1)} of ${max}`)}">
     ${trackArc}
     ${distArcs}
     ${seg(reliable, '#1f9d57')}
@@ -802,6 +803,7 @@ function drawImportDial(live) {
       trackRamp: (t) => importValueColor(t * capPerH, capPerH),
       calibration: null,
       label: 'live import-spend rate',
+      ariaLabel: `live import-spend rate: £${readoutM}m per hour`,
     })
     + `<p class="import-rate-readout">£${readoutM}m / hour</p>`;
 }

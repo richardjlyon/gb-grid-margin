@@ -510,7 +510,6 @@ main { padding-bottom: 40px; }
 .wind-drought + .wind-caption { margin-top: .5rem; }
 
 /* ---------- Entry 04 — import cost dial + carpet ---------- */
-.import-dial { width: 100%; display: block; }
 .import-receipt-line { font: 500 0.95rem/1.5 var(--display); margin: 8px 0 2px; }
 .import-stamp { display: block; font: 400 0.82rem/1.4 var(--mono); color: var(--slate); margin-top: 2px; }
 .import-unavail { font: 400 italic 0.95rem/1.5 var(--read); color: var(--slate); margin: 8px 0 0; }
