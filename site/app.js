@@ -796,7 +796,8 @@ function drawImportDial(live) {
 // TODO(Task 12): replace drawImportCarpet body with the real carpet drawing.
 function drawImportCarpet(data) {
   const cv = $('import-carpet'); if (!cv) return;
-  const { years } = data.carpet;
+  const { years } = data?.carpet ?? {};
+  if (!years) return;
   const cssW = cv.clientWidth || 960, cellH = 22, cssH = years.length * cellH;
   const dpr = window.devicePixelRatio || 1;
   cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
@@ -811,7 +812,7 @@ function renderImportCost(data, live) {
   // Receipt: numbers when live import block is available, unavailable note otherwise.
   let receiptHtml;
   if (live) {
-    const mw = Math.round(live.net_import_mw).toLocaleString('en-GB');
+    const mw = live.net_import_mw != null ? Math.round(live.net_import_mw).toLocaleString('en-GB') : '—';
     const pct = live.import_pct != null ? live.import_pct.toFixed(1) : '—';
     const price = live.price_per_mwh != null ? `£${live.price_per_mwh.toFixed(2)}/MWh` : '—';
     const stamp = live.price_stamp ? `<span class="import-stamp">${esc(live.price_stamp)}</span>` : '';

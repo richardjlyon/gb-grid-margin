@@ -516,7 +516,7 @@ main { padding-bottom: 40px; }
 .import-unavail { font: 400 italic 0.95rem/1.5 var(--read); color: var(--slate); margin: 8px 0 0; }
 .import-carpet-wrap { width: 100%; }
 .import-carpet { width: 100%; display: block; image-rendering: pixelated; }
-.import-legend { position: relative; margin: 6px 0 4px; }
+.import-legend { position: relative; margin: 6px 0 4px; display: flex; flex-direction: column; gap: 2px; }
 .import-legend-bar {
   height: 10px; border-radius: 2px;
   background: linear-gradient(to right, #fbfbf9, #a8101b);
@@ -524,4 +524,3 @@ main { padding-bottom: 40px; }
 .import-legend-stops { position: relative; height: 1.2em; font: 500 11px var(--mono); color: var(--ink); }
 .import-legend-stop { position: absolute; transform: translateX(-50%); }
 .import-legend-label { font: 500 11px var(--mono); color: var(--slate); }
-.import-legend { display: flex; flex-direction: column; gap: 2px; }
