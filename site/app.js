@@ -783,14 +783,27 @@ function renderWindUnreliability(data) {
 }
 
 // ============================================================ import cost (Entry 04)
-// TODO(Task 11): replace drawImportDial body with the real half-dial drawing.
 function drawImportDial(live) {
-  const cv = $('import-dial'); if (!cv) return;
-  const cssW = cv.clientWidth || 200, cssH = Math.round(cssW * 0.55);
-  const dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
-  cv.style.height = cssH + 'px';
-  // body intentionally empty — Task 11 fills this
+  const el = $('import-dial');
+  if (!el) return;
+
+  const capPerH = 5e6;  // £5m/hour cap
+
+  if (!live || !Number.isFinite(live.rate_per_h)) {
+    el.innerHTML = `<p class="import-unavail">Live import-spend rate unavailable.</p>`;
+    return;
+  }
+
+  const rate = live.rate_per_h;
+  const readoutM = (rate / 1e6).toFixed(1);
+
+  el.innerHTML =
+    buildGauge(rate, capPerH, {
+      trackRamp: (t) => importValueColor(t * capPerH, capPerH),
+      calibration: null,
+      label: 'live import-spend rate',
+    })
+    + `<p class="import-rate-readout">£${readoutM}m / hour</p>`;
 }
 
 // TODO(Task 12): replace drawImportCarpet body with the real carpet drawing.
@@ -835,8 +848,7 @@ function renderImportCost(data, live) {
   $('import-body').innerHTML = `
     <div class="verdict-cols">
       <div class="import-dial-col">
-        <canvas id="import-dial" class="import-dial" role="img"
-          aria-label="Import cost rate gauge — current GB interconnector spend rate."></canvas>
+        <div id="import-dial" class="gauge-block"></div>
         ${receiptHtml}
       </div>
       <div class="import-carpet-col">
