@@ -14,6 +14,7 @@ import {
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
+  importValueColor, importRateAngle, importLegendStops, importCostCaption,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -781,6 +782,82 @@ function renderWindUnreliability(data) {
   drawDroughtPlot(data);
 }
 
+// ============================================================ import cost (Entry 04)
+// TODO(Task 11): replace drawImportDial body with the real half-dial drawing.
+function drawImportDial(live) {
+  const cv = $('import-dial'); if (!cv) return;
+  const cssW = cv.clientWidth || 200, cssH = Math.round(cssW * 0.55);
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+  cv.style.height = cssH + 'px';
+  // body intentionally empty — Task 11 fills this
+}
+
+// TODO(Task 12): replace drawImportCarpet body with the real carpet drawing.
+function drawImportCarpet(data) {
+  const cv = $('import-carpet'); if (!cv) return;
+  const { years } = data.carpet;
+  const cssW = cv.clientWidth || 960, cellH = 22, cssH = years.length * cellH;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
+  cv.style.height = cssH + 'px';
+  // body intentionally empty — Task 12 fills this
+}
+
+function renderImportCost(data, live) {
+  const capGbp = data.scale?.cap_gbp ?? 10e6;
+  const stops = importLegendStops(capGbp);
+
+  // Receipt: numbers when live import block is available, unavailable note otherwise.
+  let receiptHtml;
+  if (live) {
+    const mw = Math.round(live.net_import_mw).toLocaleString('en-GB');
+    const pct = live.import_pct != null ? live.import_pct.toFixed(1) : '—';
+    const price = live.price_per_mwh != null ? `£${live.price_per_mwh.toFixed(2)}/MWh` : '—';
+    const stamp = live.price_stamp ? `<span class="import-stamp">${esc(live.price_stamp)}</span>` : '';
+    receiptHtml = `
+      <p class="import-receipt-line">
+        Net imports now: <strong class="num">${mw} MW</strong>
+        (<span class="num">${pct}%</span> of demand)
+        · at <strong class="num">${price}</strong>
+      </p>
+      ${stamp}`;
+  } else {
+    receiptHtml = `<p class="import-unavail">Price data unavailable — settled price feed not yet returned.</p>`;
+  }
+
+  // Legend stops for the carpet colour key.
+  const legendHtml = stops.map((s) =>
+    `<span class="import-legend-stop" style="left:${(s.frac * 100).toFixed(2)}%">${esc(s.label)}</span>`
+  ).join('');
+
+  $('import-body').innerHTML = `
+    <div class="verdict-cols">
+      <div class="import-dial-col">
+        <canvas id="import-dial" class="import-dial" role="img"
+          aria-label="Import cost rate gauge — current GB interconnector spend rate."></canvas>
+        ${receiptHtml}
+      </div>
+      <div class="import-carpet-col">
+        <div class="import-carpet-wrap">
+          <canvas id="import-carpet" class="import-carpet" role="img"
+            aria-label="Daily GB net import cost since 2016. One row per year, columns run January to December. Pale = cheap or no imports; deep red = expensive import day."></canvas>
+        </div>
+        <div class="import-legend" aria-hidden="true">
+          <span class="import-legend-label">cheaper</span>
+          <div class="import-legend-bar"></div>
+          <div class="import-legend-stops">${legendHtml}</div>
+          <span class="import-legend-label">costlier</span>
+        </div>
+        <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
+        <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
+      </div>
+    </div>`;
+
+  drawImportDial(live);
+  drawImportCarpet(data);
+}
+
 // ============================================================ orchestration
 async function refreshLive() {
   try {
@@ -820,6 +897,21 @@ async function main() {
   } catch (e) {
     $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
   }
+  // import cost (Entry 04) — two independent fetches: history carpet + live price block.
+  // Either can fail independently; the section still renders even with a null price block.
+  try {
+    const importData = await getJSON('data/import_cost.json');
+    let importLive = null;
+    try {
+      const latest = await getJSON('data/latest.json');
+      importLive = latest.import ?? null;
+    } catch (e) { /* price block unavailable — dial shows unavailable state */ }
+    window.__importData = importData;
+    window.__importLive = importLive;
+    renderImportCost(importData, importLive);
+  } catch (e) {
+    $('import-body').innerHTML = `<p class="warn">Import-cost data unavailable. ${esc(e.message || e)}</p>`;
+  }
   await refreshLive();
   setInterval(refreshLive, POLL_MS);
   updateScarcityLamp();
@@ -831,6 +923,7 @@ async function main() {
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
     if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
     if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
+    if (window.__importData) { drawImportCarpet(window.__importData); drawImportDial(window.__importLive); }
   }, 150); });
 }
 
