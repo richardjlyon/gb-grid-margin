@@ -115,8 +115,9 @@ def test_sample_days_match_independent_recompute():
     checked = 0
     for day in samples:
         published = _carpet_cell(payload, day)
-        if published is None:
-            continue  # day not in carpet (shouldn't happen for settled dates)
+        # All five are settled historical dates that are always present; a missing cell
+        # is a data regression, not a benign skip — fail loudly.
+        assert published is not None, f"{day}: sample day absent from carpet"
         indep = independent.get(day)
         assert indep is not None, f"{day}: day missing from independent recompute"
         assert published == indep, (
@@ -124,7 +125,7 @@ def test_sample_days_match_independent_recompute():
         )
         checked += 1
 
-    assert checked >= 4, f"expected >= 4 sample days checked, got {checked}"
+    assert checked == 5, f"expected all 5 sample days checked, got {checked}"
 
 
 def test_export_day_cell_is_zero_and_nonnegative():
