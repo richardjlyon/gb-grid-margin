@@ -288,3 +288,43 @@ export function carpetMonthTicks() {
   const cum = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];  // leap-year DOY of the 1st
   return cum.map((doy, i) => ({ label: _MONTHS[i][0], frac: doy / 366 }));
 }
+
+// --- the import-cost carpet + gauge helpers (Entry: imports) -----------------
+
+// Import-cost carpet cell colour: cheap (£0) → pale paper, expensive (at/above cap) → deep red.
+// sqrt-compressed so mid-range prices land in the visible portion of the ramp (not crowded at
+// the cheap end). Reuses the wind drought constants — same paper/deep-red convention (red = bad).
+// null → gap grey (distinct from £0).
+export function importValueColor(value_gbp, capGbp = 10e6) {
+  if (value_gbp == null) return _WIND_GAP.slice();
+  const t = Math.sqrt(Math.min(Math.max(value_gbp, 0), capGbp) / capGbp);
+  if (t <= 0) return _WIND_PAPER.slice();
+  if (t >= 1) return _WIND_DEEP.slice();
+  const A = _srgbToOklab(_WIND_PAPER), B = _srgbToOklab(_WIND_DEEP);
+  return _oklabToSrgb([0, 1, 2].map((k) => A[k] + (B[k] - A[k]) * t));
+}
+
+// Import spend rate → gauge needle angle. Right = expensive. Wraps the shared half-dial maths.
+export function importRateAngle(rate_per_h, capPerH = 5e6) {
+  return gaugeNeedleAngle(rate_per_h, capPerH);
+}
+
+// Three legend stops for the import-cost carpet key, positioned by the same sqrt transform as
+// importValueColor so the label marks land where the colour steps are.
+export function importLegendStops(capGbp) {
+  return [
+    { label: '£1m',  frac: Math.sqrt(1e6  / capGbp) },
+    { label: '£5m',  frac: Math.sqrt(5e6  / capGbp) },
+    { label: '£10m', frac: Math.sqrt(10e6 / capGbp) },
+  ];
+}
+
+// Neutral sceptic's-voice caption for the import-cost panel (British spelling, no catastrophising).
+export function importCostCaption(summary) {
+  const w = summary?.worst_day;
+  if (!w) return 'No import cost data on record.';
+  const [y, m, d] = w.date.split('-');
+  const mon = _MONTHS[+m - 1].slice(0, 3);
+  const gbpm = (w.value_gbp / 1e6).toFixed(1);
+  return `Since 2016 the costliest single day for imports was £${gbpm}m, on ${+d} ${mon} ${y}.`;
+}

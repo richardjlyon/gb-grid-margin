@@ -8,6 +8,7 @@ import {
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor, windDroughtColor, droughtSpikes,
   droughtCaption, carpetMonthTicks,
   importRatePerHour,
+  importValueColor, importRateAngle, importLegendStops, importCostCaption,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -245,4 +246,56 @@ test('importRatePerHour golden: 6890 MW × £800/MWh → £5,512,000/h', () => {
 
 test('importRatePerHour export floor: negative net MW → £0/h', () => {
   assert.equal(importRatePerHour(-500, 800), 0);
+});
+
+// --- import-cost carpet + gauge helpers (Task 9) --------------------------------
+
+test('importValueColor — paper at £0, deep red at/above cap, grey on null', () => {
+  assert.deepEqual(importValueColor(0), [251, 251, 249]);          // £0 → paper (cheap)
+  assert.deepEqual(importValueColor(10e6), [140, 12, 20]);         // at cap → deep red
+  assert.deepEqual(importValueColor(20e6), [140, 12, 20]);         // above cap → clamps to deep red
+  assert.deepEqual(importValueColor(null), [232, 232, 230]);       // null → gap grey
+});
+
+test('importValueColor — monotone: redness increases with cost (luminance falls)', () => {
+  const lum = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const [c1, c5, c10] = [1e6, 5e6, 10e6].map((v) => importValueColor(v));
+  assert.ok(lum(c1) > lum(c5), 'less expensive should be lighter');
+  assert.ok(lum(c5) > lum(c10), 'less expensive should be lighter');
+  assert.notDeepEqual(c1, c5);
+  assert.notDeepEqual(c5, c10);
+});
+
+test('importRateAngle — -90 at £0/h, +90 at/above cap, 0 at half-cap', () => {
+  assert.equal(importRateAngle(0), -90);
+  assert.equal(importRateAngle(5e6), 90);
+  assert.equal(importRateAngle(10e6), 90);   // clamps above cap
+  assert.equal(importRateAngle(2.5e6), 0);   // half-cap → straight up
+});
+
+test('importLegendStops — 3 stops, fracs strictly ascending in (0,1], labels £1m/£5m/£10m', () => {
+  const stops = importLegendStops(10e6);
+  assert.equal(stops.length, 3);
+  assert.equal(stops[0].label, '£1m');
+  assert.equal(stops[1].label, '£5m');
+  assert.equal(stops[2].label, '£10m');
+  assert.ok(stops[0].frac > 0 && stops[0].frac < 1, 'first frac in (0,1)');
+  assert.ok(stops[1].frac > stops[0].frac, 'fracs strictly ascending');
+  assert.ok(stops[2].frac > stops[1].frac, 'fracs strictly ascending');
+  assert.ok(Math.abs(stops[2].frac - 1.0) < 1e-9, '£10m at default cap → frac 1.0');
+  // sqrt transform: frac ≈ sqrt(1/10), sqrt(5/10), sqrt(10/10)
+  assert.ok(Math.abs(stops[0].frac - Math.sqrt(1 / 10)) < 1e-9, 'sqrt transform for £1m');
+  assert.ok(Math.abs(stops[1].frac - Math.sqrt(5 / 10)) < 1e-9, 'sqrt transform for £5m');
+});
+
+test('importCostCaption — contains £m figure and formatted date; fallback when summary missing', () => {
+  const s = { worst_day: { value_gbp: 94400000, date: '2021-09-09' } };
+  const txt = importCostCaption(s);
+  assert.ok(txt.includes('£94.4m'), `expected £94.4m in: "${txt}"`);
+  assert.ok(txt.includes('9 Sep 2021'), `expected "9 Sep 2021" in: "${txt}"`);
+  // fallback: null, undefined, empty object
+  const fb = importCostCaption(null);
+  assert.ok(typeof fb === 'string' && fb.length > 0, 'fallback should be a non-empty string');
+  const fb2 = importCostCaption({});
+  assert.ok(typeof fb2 === 'string' && fb2.length > 0, 'empty-object fallback should be non-empty');
 });
