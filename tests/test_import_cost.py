@@ -21,6 +21,16 @@ def test_daily_value_sums_positive_import_mwh_times_price():
     assert out == [{"date": "2026-06-23", "value_gbp": 100000.0, "import_mwh": 1000.0, "mean_price": 100.0}]
 
 
+# ── _doy_labels ────────────────────────────────────────────────────────────────
+
+def test_doy_labels_366_entries_includes_leap_day():
+    labels = ic._doy_labels()
+    assert len(labels) == 366
+    assert labels[0] == "01-01"
+    assert "02-29" in labels
+    assert labels[-1] == "12-31"
+
+
 # ── carpet_matrix ──────────────────────────────────────────────────────────────
 
 _DAILY = [
@@ -54,6 +64,9 @@ def test_carpet_matrix_missing_days_are_none():
     # 2025 has no entry on 2025-06-23; that slot must be None
     col_idx = doy.index("06-23")
     assert result["rows"]["2025"][col_idx] is None
+    # 2025 is NOT a leap year, so its 02-29 slot must also stay None
+    col_feb29 = doy.index("02-29")
+    assert result["rows"]["2025"][col_feb29] is None
 
 
 def test_carpet_matrix_years_sorted_and_complete():
