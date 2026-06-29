@@ -808,16 +808,111 @@ function drawImportDial(live) {
     + `<p class="import-rate-readout">£${readoutM}m / hour</p>`;
 }
 
-// TODO(Task 12): replace drawImportCarpet body with the real carpet drawing.
 function drawImportCarpet(data) {
   const cv = $('import-carpet'); if (!cv) return;
-  const { years } = data?.carpet ?? {};
-  if (!years) return;
-  const cssW = cv.clientWidth || 960, cellH = 22, cssH = years.length * cellH;
+  const { years, doy, rows } = data?.carpet ?? {};
+  if (!years || !doy || !rows) return;
+  const capGbp = data.scale?.cap_gbp ?? 10e6;
+  const cols = doy.length, nRows = years.length;
+  const cssW = cv.clientWidth || 960, cellH = 22, cssH = nRows * cellH;
   const dpr = window.devicePixelRatio || 1;
-  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr);
-  cv.style.height = cssH + 'px';
-  // body intentionally empty — Task 12 fills this
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const cw = cssW / cols;
+  const partialSet = new Set((data.partial_years || []).map(String));
+
+  years.forEach((y, r) => {
+    const row = rows[String(y)];
+    if (!row) return;
+    for (let c = 0; c < cols; c++) {
+      const [rr, gg, bb] = importValueColor(row[c], capGbp);
+      ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+      ctx.fillRect(c * cw, r * cellH, Math.ceil(cw) + 0.5, cellH - 1);
+    }
+    // Partial year: diagonal hatch over the whole row so "year to date" reads at a glance.
+    // Transparent enough that null (grey) cells are barely affected.
+    if (partialSet.has(String(y))) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+      ctx.lineWidth = 0.8;
+      const y0 = r * cellH, h = cellH - 1;
+      ctx.beginPath();
+      for (let d = -h; d < cssW + h; d += 3) {
+        ctx.moveTo(d, y0); ctx.lineTo(d + h, y0 + h);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+
+  // Year labels on left axis
+  const yAxisEl = $('import-carpet-y');
+  if (yAxisEl) yAxisEl.innerHTML = years.map((y) => `<span>${y}</span>`).join('');
+
+  // Month ticks below carpet
+  const xAxisEl = $('import-carpet-x');
+  if (xAxisEl) {
+    xAxisEl.innerHTML = carpetMonthTicks().map((t) =>
+      `<span style="left:${(t.frac * 100).toFixed(2)}%">${t.label}</span>`).join('');
+  }
+
+  // Annotation overlay — worked events + cited external figure
+  const annEl = $('import-carpet-annotations');
+  if (annEl) annEl.innerHTML = _importAnnotationsHtml(data, years, doy, cols, cellH);
+}
+
+// Build the annotation overlay HTML for the import carpet.
+// Annotations sit inside .import-carpet-wrap (position:relative) so left/top are
+// relative to the canvas. transform shifts each label so it doesn't cover its cell.
+function _importAnnotationsHtml(data, years, doy, cols, cellH) {
+  // x as % of canvas width, anchored at the left edge of doyIdx column
+  const colX = (doyIdx) => ((doyIdx / cols) * 100).toFixed(2) + '%';
+  // y in px at the top of yearIdx row
+  const rowTop = (yearIdx) => (yearIdx * cellH) + 'px';
+
+  const parts = [];
+
+  // 1. 12 Dec 2022 — reproducible from settled data (in data.events)
+  const dec12idx = doy.indexOf('12-12');
+  const idx2022 = years.indexOf(2022);
+  if (dec12idx >= 0 && idx2022 >= 0) {
+    parts.push(
+      `<div class="import-annotation" ` +
+      `style="left:${colX(dec12idx)};top:${rowTop(idx2022)};transform:translateX(-100%) translateY(-100%)" ` +
+      `aria-label="12 Dec 2022 notable import cost">` +
+      `<span class="import-ann-label">12 Dec 2022</span></div>`
+    );
+  }
+
+  // 2. 23 Jun 2026 — start of the EMN week
+  const jun23idx = doy.indexOf('06-23');
+  const idx2026 = years.indexOf(2026);
+  if (jun23idx >= 0 && idx2026 >= 0) {
+    parts.push(
+      `<div class="import-annotation" ` +
+      `style="left:${colX(jun23idx)};top:${rowTop(idx2026)};transform:translateX(-50%) translateY(-100%)" ` +
+      `aria-label="EMN June 2026">` +
+      `<span class="import-ann-label">EMN · Jun 2026</span></div>`
+    );
+  }
+
+  // 3. Cited Montel figure — externally sourced, not reproducible from public data.
+  //    Placed BESIDE (to the right of) the Jun 2026 cells. Value comes from data.cited only.
+  const cited = data.cited;
+  const jun24idx = doy.indexOf('06-24');
+  if (cited && idx2026 >= 0 && jun24idx >= 0) {
+    const labelVal = `£${Number(cited.value_per_mwh).toLocaleString('en-GB')}/MWh`;
+    parts.push(
+      `<div class="import-annotation cited" ` +
+      `style="left:${colX(jun24idx + 3)};top:${rowTop(idx2026)};transform:translateY(-100%)" ` +
+      `aria-label="Cited external figure: ${esc(cited.label)}, ${labelVal}">` +
+      `<span class="import-cited-badge">CITED</span>` +
+      `<span class="import-cited-text">${labelVal} — ${esc(cited.label)}</span>` +
+      `</div>`
+    );
+  }
+
+  return parts.join('');
 }
 
 function renderImportCost(data, live) {
@@ -854,10 +949,15 @@ function renderImportCost(data, live) {
         ${receiptHtml}
       </div>
       <div class="import-carpet-col">
-        <div class="import-carpet-wrap">
-          <canvas id="import-carpet" class="import-carpet" role="img"
-            aria-label="Daily GB net import cost since 2016. One row per year, columns run January to December. Pale = cheap or no imports; deep red = expensive import day."></canvas>
+        <div class="import-carpet-cell">
+          <div class="import-yaxis" id="import-carpet-y"></div>
+          <div class="import-carpet-wrap">
+            <canvas id="import-carpet" class="import-carpet" role="img"
+              aria-label="Daily GB net import cost since 2016. One row per year, columns run January to December. Pale = cheap or no imports; deep red = expensive import day."></canvas>
+            <div class="import-carpet-annotations" id="import-carpet-annotations" aria-hidden="true"></div>
+          </div>
         </div>
+        <div class="import-carpet-x" id="import-carpet-x"></div>
         <div class="import-legend" aria-hidden="true">
           <span class="import-legend-label">cheaper</span>
           <div class="import-legend-bar"></div>
