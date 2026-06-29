@@ -179,6 +179,12 @@ def test_build_payload_exact_caveat():
     )
 
 
+def test_build_payload_worst_day_equals_expected_value():
+    # The single fixture day is the worst day: 1000 MW × 0.5 h × £200 = £100,000
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    assert payload["summary"]["worst_day"]["value_gbp"] == _EXPECTED_VALUE
+
+
 def test_build_payload_passes_guard():
     payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
     ic.guard_payload(payload)  # must not raise
@@ -221,5 +227,29 @@ def test_guard_payload_raises_on_empty_caveat():
     from engine.guards import GuardError
     payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
     payload["caveat"] = ""
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_empty_metric_label():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    payload["metric_label"] = ""
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_nonpositive_cap_gbp():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    payload["scale"]["cap_gbp"] = 0
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_nonpositive_legend_entry():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    payload["scale"]["legend"][0] = 0
     with pytest.raises(GuardError):
         ic.guard_payload(payload)

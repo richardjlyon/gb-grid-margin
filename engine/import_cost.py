@@ -147,7 +147,7 @@ def scale(daily: list[dict]) -> dict:  # noqa: ARG001 — daily reserved for fut
 
 # ── payload + guard ───────────────────────────────────────────────────────────
 
-from engine.guards import GuardError, require  # noqa: E402
+from engine.guards import require  # noqa: E402
 
 _BASIS = (
     "Daily GB net import value = sum over settled half-hours of max(net interconnector "
