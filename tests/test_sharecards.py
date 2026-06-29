@@ -1,5 +1,24 @@
 from pathlib import Path
+
+import pytest
+
 from engine import sharecards
+
+
+def _chromium_installed():
+    """True only if Playwright's Chromium binary is present.
+
+    The parity CI workflow is deliberately browser-free, so the render test
+    skips there rather than failing; it still runs locally where Chromium is
+    installed.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as p:
+            return Path(p.chromium.executable_path).exists()
+    except Exception:
+        return False
 
 
 def test_module_constants():
@@ -149,6 +168,8 @@ def test_warning_card_article_by_notice_type():
     assert nism["label"].startswith("A Notice of Insufficient System Margin")
 
 
+@pytest.mark.skipif(not _chromium_installed(),
+                    reason="Playwright Chromium not installed (browser-free parity CI)")
 def test_render_writes_1200x630_pngs(tmp_path):
     cards = [
         {"slug": "stat", "theme": "ink", "template": "stat", "figure": "75% firm",
