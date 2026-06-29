@@ -28,6 +28,7 @@ from engine import widestore
 
 BASE = "https://data.elexon.co.uk/bmrs/api/v1"
 HISTORY_DIR = Path("data/history")
+KNOWN_GAPS_PATH = HISTORY_DIR / "system_price_known_gaps.csv"
 
 # settlement_date is text (ISO date string).
 # system_sell_price is stored as text to preserve float precision (£/MWh can be fractional);
@@ -94,7 +95,7 @@ def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
     system_sell_price is returned as float (stored as text in the CSV to preserve
     decimal precision; converted back to float on read).
     """
-    rows = widestore.read_store(base_dir, "system_price_*.csv", COLUMNS, _TEXT_COLUMNS)
+    rows = widestore.read_store(base_dir, "system_price_20*.csv", COLUMNS, _TEXT_COLUMNS)
     for r in rows:
         if r["system_sell_price"] is not None:
             r["system_sell_price"] = float(r["system_sell_price"])
@@ -141,7 +142,8 @@ def validate_store(rows: list[dict], start: date, end: date) -> dict:
     settlement periods follow the same UK half-hourly convention as FUELHH.
     """
     from engine import history
-    return history.validate_range(rows, start, end, known_gaps={})
+    known_gaps = history.load_known_gaps(KNOWN_GAPS_PATH)
+    return history.validate_range(rows, start, end, known_gaps=known_gaps)
 
 
 # --- CLI ---------------------------------------------------------------------

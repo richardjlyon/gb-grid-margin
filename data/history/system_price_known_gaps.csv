@@ -1,0 +1,15 @@
+settlement_date,actual,expected,shortfall,note
+2016-01-03,47,48,1,elexon-non-publication
+2018-10-18,47,48,1,elexon-non-publication
+2018-12-12,46,48,2,elexon-non-publication
+2019-01-01,47,48,1,elexon-non-publication
+2019-08-23,47,48,1,elexon-non-publication
+2019-09-17,47,48,1,elexon-non-publication
+2019-10-02,47,48,1,elexon-non-publication
+2019-11-23,47,48,1,elexon-non-publication
+2021-01-07,47,48,1,elexon-non-publication
+2022-05-31,46,48,2,elexon-non-publication
+2022-10-22,46,48,2,elexon-non-publication
+2023-01-17,47,48,1,elexon-non-publication
+2023-01-22,45,48,3,elexon-non-publication
+2023-03-18,46,48,2,elexon-non-publication
