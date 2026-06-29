@@ -248,6 +248,10 @@ test('importRatePerHour export floor: negative net MW → £0/h', () => {
   assert.equal(importRatePerHour(-500, 800), 0);
 });
 
+test('importRatePerHour negative price: 6890 MW × −£50/MWh → £0/h (floor)', () => {
+  assert.equal(importRatePerHour(6890, -50), 0);
+});
+
 // --- import-cost carpet + gauge helpers (Task 9) --------------------------------
 
 test('importValueColor — paper at £0, deep red at/above cap, grey on null', () => {

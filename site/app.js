@@ -14,7 +14,7 @@ import {
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
-  importValueColor, importRateAngle, importLegendStops, importCostCaption,
+  importValueColor, importLegendStops, importCostCaption,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -868,7 +868,7 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
     const wdoyIdx = doy.indexOf(wdoyStr);
     const wYearIdx = years.indexOf(Number(wYear));
     const wGbp = wd.value_gbp != null
-      ? `£${Math.round(wd.value_gbp / 1e6)}m` : '';
+      ? `£${(wd.value_gbp / 1e6).toFixed(1)}m` : '';
     const wLabel = `Record: ${Number(wDayNum)} ${new Date(wd.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' })} ${wYear}${wGbp ? ' · ' + wGbp : ''}`;
     if (wdoyIdx >= 0 && wYearIdx >= 0) {
       parts.push(

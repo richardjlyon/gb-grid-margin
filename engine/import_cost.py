@@ -176,15 +176,18 @@ def build_payload(
     fuelhh_rows: list[dict],
     price_rows: list[dict],
     generated_utc: str,
-) -> dict:
+) -> dict | None:
     """Assemble the full import-cost JSON payload from raw store rows.
 
     Calls daily_import_value once and feeds all downstream helpers so every
     derived field is computed from the same daily series.
+    Returns None when the joined daily series is empty (e.g. price store not yet built).
     """
     from engine.derived import partial_years  # deferred to break circular import
 
     daily = daily_import_value(fuelhh_rows, price_rows)
+    if not daily:
+        return None
     dates = [d["date"] for d in daily]
     return {
         "basis": _BASIS,

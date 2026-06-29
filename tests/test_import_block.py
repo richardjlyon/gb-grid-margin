@@ -33,3 +33,10 @@ def test_import_block_passthrough_fields():
     assert blk["import_pct"] == 19.1
     assert blk["price_per_mwh"] == 800.0
     assert blk["price_stamp"] == stamp
+
+
+def test_import_block_negative_price_floor():
+    """Negative system price with positive import → £0/h — matches JS importRatePerHour(6890, -50)."""
+    blk = import_block(6890.0, 19.1, -50.0, "latest settled half-hour · 27 Jun, 14:00")
+    assert blk is not None
+    assert blk["rate_per_h"] == 0.0

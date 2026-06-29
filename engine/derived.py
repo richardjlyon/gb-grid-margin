@@ -228,12 +228,14 @@ def build(out_dir: Path = SITE_DATA) -> int:
     # Import cost: net interconnector flow × system (cash-out) price, daily £ carpet.
     price_rows = system_price_history.read_store()
     ic_payload = import_cost.build_payload(rows, price_rows, generated)
-    try:
-        import_cost.guard_payload(ic_payload)
-    except GuardError as e:
-        print(f"import cost build failed (GuardError): {e}", file=sys.stderr)
-        return 1
-    reliability_files.append(("import_cost", ic_payload))
+    if ic_payload is None:
+        print("system-price store empty — skipping import_cost.json", file=sys.stderr)
+    else:
+        try:
+            import_cost.guard_payload(ic_payload)
+        except GuardError as e:
+            print(f"import cost build failed (GuardError): {e}", file=sys.stderr); return 1
+        reliability_files.append(("import_cost", ic_payload))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("ytd_shares", ytd), ("nameplate", nameplate),

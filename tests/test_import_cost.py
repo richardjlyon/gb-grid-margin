@@ -243,3 +243,8 @@ def test_guard_payload_raises_on_nonpositive_legend_entry():
     payload["scale"]["legend"][0] = 0
     with pytest.raises(GuardError):
         ic.guard_payload(payload)
+
+
+def test_build_payload_empty_returns_none():
+    """Empty fuelhh/price stores → None (price store not yet built)."""
+    assert ic.build_payload([], [], "t") is None

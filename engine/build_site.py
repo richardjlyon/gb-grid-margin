@@ -141,7 +141,7 @@ def import_block(net_import_mw: float, import_pct: float,
     if price_per_mwh is None:
         return None
     return {
-        "rate_per_h": max(net_import_mw, 0.0) * price_per_mwh,
+        "rate_per_h": max(max(net_import_mw, 0.0) * price_per_mwh, 0.0),
         "net_import_mw": net_import_mw,
         "import_pct": import_pct,
         "price_per_mwh": price_per_mwh,

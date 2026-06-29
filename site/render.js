@@ -149,7 +149,7 @@ export function sourceArcModel(v) {
 // Parity-locked to engine/build_site.py:import_block — the Python golden test
 // asserts the same result for inputs (6890, 800) → 5512000 and (-500, 800) → 0.
 export function importRatePerHour(netMw, pricePerMwh) {
-  return Math.max(netMw, 0) * pricePerMwh;
+  return Math.max(Math.max(netMw, 0) * pricePerMwh, 0);
 }
 
 // --- display formatting -----------------------------------------------------
