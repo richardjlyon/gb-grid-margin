@@ -172,9 +172,13 @@ def fetch_latest_price() -> tuple:
     try:
         today = datetime.now(timezone.utc).date()
         for day in [today, today - timedelta(days=1)]:
-            rows = system_price_history.fetch_day(day)
+            # Short timeout: this is best-effort and must never hold the build long.
+            rows = system_price_history.fetch_day(day, timeout=15)
             if rows:
                 best = max(rows, key=lambda r: r["settlement_period"])
+                # system_sell_price IS the single GB cash-out/imbalance price: since Ofgem P305
+                # (Nov 2015) GB runs a SINGLE imbalance price, so sell == buy == "the system
+                # price" — the correct figure for net imports valued at the GB system price.
                 return best["system_sell_price"], _price_stamp(day, best["settlement_period"])
         return None, None
     except Exception:

@@ -104,16 +104,20 @@ def read_store(base_dir: Path = HISTORY_DIR) -> list[dict]:
 
 # --- Elexon fetch ------------------------------------------------------------
 
-def _get_json(url: str):
+def _get_json(url: str, timeout: float = 120):
     req = urllib.request.Request(url, headers={"User-Agent": "grid-gauge/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.load(r)
 
 
-def fetch_day(day: date) -> list[dict]:
-    """Fetch and parse system prices for a single settlement date."""
+def fetch_day(day: date, timeout: float = 120) -> list[dict]:
+    """Fetch and parse system prices for a single settlement date.
+
+    ``timeout`` bounds the socket wait (default 120 for backfill/append; the live
+    best-effort price lookup passes a short timeout so the build is never held long).
+    """
     url = f"{BASE}/balancing/settlement/system-prices/{day.isoformat()}"
-    return parse_day(_get_json(url))
+    return parse_day(_get_json(url, timeout))
 
 
 def build_range(
