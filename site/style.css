@@ -16,6 +16,8 @@
   --rule-soft: #eaecee;   /* intra-table rules, the stripe's pale (windy) end */
   --red:       #d6121f;   /* debit red — THE accent: headline, armed needle, failures */
   --red-deep:  #a8101b;   /* deep debit — failing body ink at small sizes, sub-5% ticks */
+  --green:     #1b6e45;   /* the one reliable-green: firm group, gauge inner arc, receipt pass rows */
+  --export:    #c2188f;   /* the one export-magenta: net-export surplus (matches the gauge import slice) */
   --heading:   var(--red);/* section-headline colour (Entry 01's red) — one knob for all headlines */
   --hatch:     #c9c6c0;   /* known-gap days only (never white, never red) */
   --hatch-bg:  #edebe6;
@@ -54,48 +56,63 @@ a:hover { color: var(--red); }
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
+/* skip-to-content: off-screen until focused, then pinned top-left over the masthead */
+.skip-link {
+  position: absolute; left: 8px; top: -48px; z-index: 100;
+  font-family: var(--display); font-size: 0.8125rem; letter-spacing: 0.04em;
+  background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: var(--radius);
+  text-decoration: none; transition: top 0.12s ease;
+}
+.skip-link:focus { top: 8px; color: var(--paper); }
+
 /* ---------- masthead ---------- */
-.masthead { background: var(--paper); border-bottom: 2px solid var(--ink); }
+/* set in ledger ink — flows into the dark GRID WARNINGS rail below it (homepage) and bookends the
+   dark footer. The 1px black base seams cleanly against the rail's matching top edge. */
+.masthead { background: var(--ink); border-bottom: 1px solid #000; }
 .masthead-inner {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 10px 24px; flex-wrap: wrap; padding: 16px 0 14px;
 }
 .brand {
   margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.5rem;
-  letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink);
+  letter-spacing: 0.02em; text-transform: uppercase; color: var(--paper);
   display: flex; align-items: center;
 }
 .brand a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; }
+/* live snapshot stamp, under the wordmark (filled by app.js on the homepage; hidden elsewhere).
+   Indented by the container's gutter so it lines up under the GRID WARNINGS rail label below —
+   the masthead row itself sits flush to the container edge (.masthead-inner zeroes that padding). */
+.masthead-snapshot {
+  display: block; margin-top: 4px; padding-left: 22px; font-family: var(--mono); font-size: 0.72rem;
+  letter-spacing: .03em; color: #cfcabd; white-space: nowrap;
+}
+.masthead-snapshot:empty { display: none; }
 .brand-tick {
   width: 10px; height: 10px; border-radius: 2px; background: var(--red);
   margin-right: 11px; flex: none; animation: tick 2s steps(1) infinite;
 }
 @keyframes tick { 50% { opacity: 0.28; } }
-.brand-strap {
-  font-family: var(--read); font-style: italic; font-size: 1rem;
-  color: var(--slate); margin: 2px 0 0;
-}
 .masthead nav { display: flex; gap: 18px; flex-wrap: wrap; }
 .masthead nav a {
   font-family: var(--display); font-size: 0.8125rem; font-weight: 500;
-  text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink);
+  text-transform: uppercase; letter-spacing: 0.12em; color: #c9ccd1;
   text-decoration: none; padding-bottom: 2px; border-bottom: 1px solid transparent;
 }
-.masthead nav a:hover { color: var(--ink); border-bottom-color: var(--red); }
-.masthead nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--rule); }
+.masthead nav a:hover { color: var(--paper); border-bottom-color: #ff5158; }
+.masthead nav a[aria-current="page"] { color: var(--paper); border-bottom-color: rgba(255, 255, 255, 0.4); }
 .live-dot {
   font-family: var(--display); font-size: 0.8125rem; font-weight: 500;
-  letter-spacing: 0.12em; color: var(--red); display: inline-flex; align-items: center; gap: 6px;
+  letter-spacing: 0.12em; color: #ff5158; display: inline-flex; align-items: center; gap: 6px;
 }
 .live-dot::before {
-  content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--red);
+  content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff5158;
   animation: pulse 2s ease-in-out infinite;
 }
 @keyframes pulse { 50% { opacity: 0.3; } }
 
 /* GRID CONDITIONS rail — a dark instrument band; austere + one warm amber accent */
 .conditions {
-  --cond-bg: #16181d; --cond-line: #23262c; --cond-dim: #7d7f86;
+  --cond-bg: #16181d; --cond-line: #23262c; --cond-dim: #9a9da3;
   --cond-amber: #ffb347; --cond-amber-ink: #f0cd8c; --cond-red: #ff5158;
   background: linear-gradient(#16181d, #101216);
   border-top: 1px solid #000; border-bottom: 1px solid var(--cond-line);
@@ -107,10 +124,6 @@ a:hover { color: var(--red); }
   padding: 9px 0 8px; border-bottom: 1px solid var(--cond-line);
 }
 .cond-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #cfcabd; }
-.cond-snapshot {
-  font-size: 0.72rem; letter-spacing: .03em; color: #cfcabd;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 .cond-rail { display: flex; align-items: stretch; }
 .cond-cell:first-child { padding-left: 0; }
 .cond-cell {
@@ -132,7 +145,7 @@ a:hover { color: var(--red); }
   color: var(--cond-dim); line-height: 1.25; white-space: nowrap;
 }
 .cond-status {
-  font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: #56585e;
+  font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #9398a0;
   margin-top: 3px; white-space: nowrap;
 }
 .cond-status b { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -159,7 +172,7 @@ a:hover { color: var(--red); }
 .cond-cell[data-state="in_force"] .cond-legend { color: #f0a9ad; }
 .cond-cell[data-state="in_force"] .cond-status { color: var(--cond-red); }
 /* unavailable — dim, no accent */
-.cond-cell[data-state="unavailable"] .cond-status { color: #56585e; font-style: italic; }
+.cond-cell[data-state="unavailable"] .cond-status { color: #9398a0; font-style: italic; }
 @media (max-width: 720px) {
   .cond-band-head { flex-wrap: wrap; gap: 2px 14px; }
   .cond-rail { flex-wrap: wrap; }
@@ -237,7 +250,7 @@ main { padding-bottom: 40px; }
   letter-spacing: -0.02em; line-height: 1; display: block;
 }
 .stamp-val.red { color: var(--red); }
-.stamp-val.reliable { color: #1b6e45; }     /* reliable group — green, matches the receipt + inner arc */
+.stamp-val.reliable { color: var(--green); } /* reliable group — green, matches the receipt + inner arc */
 .stamp-val.unreliable { color: var(--red); }/* unreliable group — red */
 .stamp-label {
   font-family: var(--display); font-size: 0.72rem; letter-spacing: 0.11em;
@@ -247,7 +260,7 @@ main { padding-bottom: 40px; }
   font-family: var(--display); font-size: 0.74rem; letter-spacing: 0.04em;
   text-align: center; margin: 4px 0 0; color: var(--slate);
 }
-.ssline.export { color: #c2188f; }   /* magenta — the exported surplus */
+.ssline.export { color: var(--export); }   /* magenta — the exported surplus */
 .receipt .export-row td { color: var(--slate); font-style: italic; border-top: 1px dashed #cfd4d8; }
 
 /* ---------- the receipt table ---------- */
@@ -281,35 +294,10 @@ main { padding-bottom: 40px; }
   text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink);
 }
 .receipt tr.group.fail td.fuel, .receipt tr.group.fail td.n { color: var(--red-deep); }
-.receipt tr.group.pass td.fuel, .receipt tr.group.pass td.n { color: #1b6e45; }   /* reliable = green */
+.receipt tr.group.pass td.fuel, .receipt tr.group.pass td.n { color: var(--green); }   /* reliable = green */
 .receipt tr.group + tr td { padding-top: 5px; }
 .receipt td.fuel { padding-left: 16px; }
 .receipt tr.group td.fuel, .receipt tr.total td.fuel { padding-left: 8px; }
-
-/* ---------- punch line (capacity trap) ---------- */
-.duel-punch { font-family: var(--read); font-size: 1.05rem; margin: 12px 0 0; max-width: 34em; }
-.duel-punch strong { color: var(--red); }
-
-/* ---------- the wind stripe ---------- */
-.stripe-wrap { margin: 12px 0 0; }
-.stripe-meanrow {
-  display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 8px;
-  font-family: var(--mono); font-size: 0.7rem; color: var(--slate);
-}
-.stripe-meanrow b { color: var(--ink); font-weight: 600; }
-#stripe-canvas { width: 100%; height: 160px; display: block; border: 1px solid var(--rule); background: var(--paper); }
-.stripe-axis {
-  display: flex; justify-content: space-between; margin: 5px 2px 0;
-  font-family: var(--mono); font-size: 0.68rem; color: var(--slate);
-}
-.stripe-legend {
-  display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0;
-  font-family: var(--display); font-size: 0.64rem; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--slate); align-items: center;
-}
-.swatch { display: inline-block; width: 14px; height: 10px; vertical-align: -1px; margin-right: 5px; border: 1px solid var(--rule); }
-.tick-mark { display: inline-block; width: 2px; height: 11px; background: var(--red); vertical-align: -2px; margin-right: 5px; }
-.tick-mark.deep { background: var(--red-deep); height: 14px; }
 
 /* ---------- the reliability stripe (Entry 01, under the gauge) ---------- */
 .rel-strip { margin: 18px 0 2px; }
@@ -341,12 +329,6 @@ main { padding-bottom: 40px; }
 .rel-months span { position: absolute; transform: translateX(-50%); font-family: var(--mono); font-size: 0.62rem; color: var(--slate); }
 .rel-years { position: relative; height: 13px; }
 .rel-years span { position: absolute; padding-left: 3px; border-left: 1px solid var(--ink); font-family: var(--display); font-size: 0.68rem; font-weight: 600; color: var(--ink); }
-.rel-toggle { display: flex; gap: 0; }
-.rel-toggle button { font: 0.62rem var(--display); text-transform: uppercase; letter-spacing: 0.04em;
-  padding: 3px 8px; border: 1px solid var(--rule); background: var(--paper); color: var(--slate); cursor: pointer; }
-.rel-toggle button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.rel-toggle button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
-.rel-toggle button:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
 @media (max-width: 640px) { .rel-head { flex-direction: column; align-items: stretch; } .rel-key { text-align: left; } .rel-key-ticks, .rel-key-wrap { width: 100%; } }
 
 /* ---------- the self-writing tally ---------- */
@@ -366,7 +348,6 @@ main { padding-bottom: 40px; }
 /* sub-5% days carry a second, non-colour signal: taller + a foot, so they are
    distinguishable from sub-10% strokes without relying on the red alone. */
 .mark.sub5 { background: var(--red); height: 18px; border-bottom: 2px solid var(--red-deep); }
-.mark-gap { display: inline-block; width: 9px; }
 
 /* ---------- records ---------- */
 .records { margin: 18px 0 0; font-family: var(--read); }
@@ -374,12 +355,12 @@ main { padding-bottom: 40px; }
 .records .rec b { font-family: var(--mono); font-weight: 600; color: var(--ink); }
 
 /* ---------- footer ---------- */
-.footer { border-top: 2px solid var(--ink); background: var(--paper); padding: 28px 0 44px; margin-top: 8px; }
-.footer .freshness { font-family: var(--mono); font-size: 0.78rem; color: var(--slate); }
-.footer .links { font-family: var(--display); font-size: 0.875rem; letter-spacing: 0.01em; color: var(--ink); margin: 10px 0 0; }
-.footer .links a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 2px; }
-.footer .links a:hover { color: var(--red); text-decoration-color: var(--red); }
-.footer .trace { font-family: var(--read); font-style: normal; font-size: 0.9rem; color: var(--slate); margin: 10px 0 0; }
+/* set in ledger ink (not pure black) — bookends the dark GRID WARNINGS rail at the top */
+.footer { background: var(--ink); color: #c9ccd1; padding: 30px 0 46px; margin-top: 8px; }
+.footer .links { font-family: var(--display); font-size: 0.875rem; letter-spacing: 0.01em; color: var(--paper); margin: 0; }
+.footer .links a { color: var(--paper); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.32); text-underline-offset: 2px; }
+.footer .links a:hover { color: #ff5158; text-decoration-color: #ff5158; }   /* brand red, lifted for the dark ground (matches the rail's on-dark red) */
+.footer .trace { font-family: var(--read); font-style: normal; font-size: 0.9rem; color: #9aa0a6; margin: 10px 0 0; }
 
 /* ---------- mode badge / fallback states ---------- */
 .modebadge {
@@ -405,9 +386,9 @@ main { padding-bottom: 40px; }
 @media (max-width: 640px) {
   body { font-size: 1rem; }
   .container { padding: 0 16px; }
+  .masthead-snapshot { padding-left: 16px; }   /* track the narrower gutter so it stays under GRID WARNINGS */
   .receipt .bar-cell { display: none; }
   .tally td.marks { display: none; }
-  #stripe-canvas { height: 130px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -417,12 +398,12 @@ main { padding-bottom: 40px; }
 
 /* ---------- share buttons + gallery ---------- */
 .share-row { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-.share-btn { font:500 13px "Spline Sans Mono",monospace; letter-spacing:.04em;
+.share-btn { font:500 13px var(--mono); letter-spacing:.04em;
   padding:6px 12px; border:1px solid var(--rule); border-radius:999px; color:var(--ink);
   text-decoration:none; }
 .share-btn:hover { border-color:var(--red); color:var(--red); }
 .action-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-.action-btn { font:500 13px "Spline Sans Mono",monospace; letter-spacing:.04em;
+.action-btn { font:500 13px var(--mono); letter-spacing:.04em;
   padding:6px 12px; border:1px solid var(--rule); border-radius:5px; background:none;
   color:var(--ink); cursor:pointer; text-decoration:none; }
 .action-btn:hover { border-color:var(--red); color:var(--red); }
@@ -457,7 +438,7 @@ main { padding-bottom: 40px; }
 /* numeric markers under the box: the 9-in-10 ends (in the source hue) and the average (ink) */
 .carpet-legend .cl-nums { position: absolute; top: 100%; left: 0; right: 0; margin-top: 14px; height: 0.8em; }
 .carpet-legend .cl-num { position: absolute; transform: translateX(-50%); white-space: nowrap;
-  font: 600 0.72rem/1 'Spline Sans Mono', monospace; letter-spacing: 0; text-transform: none; }
+  font: 600 0.72rem/1 var(--mono); letter-spacing: 0; text-transform: none; }
 .carpet-legend .cl-num-avg { color: var(--ink); }
 
 /* the source label (Wind / Solar) sits in the gauge column, with the rolling-year average alongside */
@@ -482,10 +463,10 @@ main { padding-bottom: 40px; }
 .carpet-cell { grid-column: 2; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .carpet-stage { flex: 0 0 auto; display: flex; gap: 6px; height: var(--carpet-h, 150px); }
 .carpet-yaxis { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: space-between;
-  font: 500 12px/1 'Spline Sans Mono', monospace; color: #565e66; }
+  font: 500 12px/1 var(--mono); color: var(--slate); }
 .carpet { flex: 1 1 0; min-width: 0; height: 100%; display: block; image-rendering: pixelated;
   box-sizing: border-box; border: 1px solid var(--rule); }
-.carpet-xaxis { position: relative; height: 14px; margin: 3px 0 0; font: 500 12px/1 'Spline Sans Mono', monospace; color: #565e66; }
+.carpet-xaxis { position: relative; height: 14px; margin: 3px 0 0; font: 500 12px/1 var(--mono); color: var(--slate); }
 .carpet-xaxis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 .carpet-xaxis b { color: var(--ink); font-weight: 600; }
 
@@ -500,8 +481,8 @@ main { padding-bottom: 40px; }
    wind/solar dial height and the carpet beside it bottom-aligns to the dial baseline. */
 .trap-gauge-extra { grid-column: 1; min-width: 0; }
 
-.gauge .g-pct { font: 600 11px 'Spline Sans Mono', monospace; fill: #15181c; }
-.gauge .g-mw { font: 500 9px 'Spline Sans Mono', monospace; fill: #565e66; }
+.gauge .g-pct { font: 600 11px var(--mono); fill: var(--ink); }
+.gauge .g-mw { font: 500 9px var(--mono); fill: var(--slate); }
 /* The trap dials fill their 1/3 column; the calibration text is enlarged for legibility. */
 .trap-gauge-cell .gauge { width: 100%; max-width: 380px; }
 .trap-gauge-cell .gauge .g-pct { font-size: 11px; }
@@ -541,30 +522,29 @@ main { padding-bottom: 40px; }
 .import-carpet-x span { position: absolute; transform: translateX(-50%); }
 .import-carpet-annotations { position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none; overflow: visible; }
-.import-annotation { position: absolute; pointer-events: none;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.import-ann-label { font: 600 9px/1.2 var(--mono); color: var(--ink); white-space: nowrap;
-  background: rgba(251,251,249,0.88); padding: 1px 3px; border-radius: 2px;
-  border: 1px solid rgba(21,24,28,0.18); }
 .import-ann-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%;
   background: var(--ink); opacity: 0.65;
   box-shadow: 0 0 0 1.5px rgba(251,251,249,0.6); pointer-events: none; }
-.import-costliest { font-family: var(--mono); font-size: 0.8125rem; color: var(--slate);
-  margin: 6px 0 0; letter-spacing: -0.01em; }
+/* costliest import days — a minimal two-column table (date · cost) under the carpet */
+.costliest-table { border-collapse: collapse; margin: 16px 0 0; font: 0.8125rem var(--mono); color: var(--slate); }
+.costliest-table caption { text-align: left; padding-bottom: 6px; font-size: 0.7rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--slate); white-space: nowrap; }
+.costliest-table td { padding: 4px 0; border-bottom: 1px solid var(--rule-soft); }
+.costliest-table td.n { padding-left: 36px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
 .import-rate-readout {
   font-family: var(--display); font-weight: 700;
   font-size: clamp(1.5rem, 4vw, 2.2rem);
   letter-spacing: -0.02em; line-height: 1;
   text-align: center; margin: 8px 0 0; color: var(--red);
 }
-.import-rate-unit { font-size: 0.5em; font-weight: 600; color: var(--slate); letter-spacing: 0; }
 .import-rate-sub { font: 500 0.72rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--slate); text-align: center; margin: 3px 0 0; }
 
-/* the detail-page back crumb */
-.crumb { font: 500 0.9rem var(--display); margin: 0 0 1.5rem; }
-.crumb a { color: var(--slate); text-decoration-color: var(--rule); }
-.crumb a:hover { color: var(--red); }
+/* "Daily cost since 2016" — no dial: the carpet spans full width, the box-plot legend above it.
+   Reset the legend out of its old two-column grid placement so it sits full-width over the carpet. */
+.import-full { margin-top: 6px; }
+/* extra bottom room so the legend's box-plot value markers clear the full-width carpet below */
+.import-full .carpet-legend { grid-column: auto; align-self: auto; margin: 4px 0 30px; }
 
 /* Methodology — generated source cards (engine/methodology.py). One card per provenance unit,
    grouped by section. Scannable replacement for dense per-figure source prose. */

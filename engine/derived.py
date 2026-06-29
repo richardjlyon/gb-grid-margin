@@ -21,7 +21,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from engine import (capacity, embedded_history, import_cost, methodology, reliability,
+from engine import (capacity, chrome, embedded_history, import_cost, methodology, reliability,
                     solar_overcast, sources, system_price_history, wind_unreliability)
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
@@ -292,6 +292,9 @@ def build(out_dir: Path = SITE_DATA) -> int:
     # Regenerate the methodology page's source cards from the same registry (build-time, static).
     methodology.build(sources_payload)
     print("regenerated site/methodology.html source cards")
+
+    # Keep the shared page chrome (masthead/nav, footer, head assets) single-sourced across pages.
+    chrome.build()
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("ytd_shares", ytd), ("nameplate", nameplate),

@@ -16,36 +16,33 @@
             property="og:description"
             content="Every figure, every denominator, every disclosed bias."
         />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap"
-            rel="stylesheet"
-        />
-        <link rel="stylesheet" href="style.css" />
-        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://gridmargin.co.uk/methodology.html" />
+        <meta property="og:image" content="https://gridmargin.co.uk/share/hero.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <link rel="canonical" href="https://gridmargin.co.uk/methodology.html" />
+        <!-- chrome:fonts -->
+        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="fonts.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" type="image/svg+xml" href="favicon.svg">
     </head>
     <body>
+        <a class="skip-link" href="#main">Skip to content</a>
         <header class="masthead">
             <div class="container masthead-inner">
                 <div>
-                    <p class="brand">
-                        <a href="/"
-                            ><span class="brand-tick" aria-hidden="true"></span
-                            >GB Grid Margin</a
-                        >
-                    </p>
+                    <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
+                    <span class="masthead-snapshot" id="clockstrip"></span>
                 </div>
-                <nav aria-label="Primary">
-                    <a href="methodology.html" aria-current="page"
-                        >Methodology</a
-                    ><a href="share.html">Share</a
-                    ><a href="about.html">About</a>
-                </nav>
+                <nav aria-label="Primary"><a href="methodology.html" aria-current="page">Methodology</a><a href="share.html">Share</a><a href="about.html">About</a><span class="live-dot" id="live-dot" aria-live="polite" hidden></span></nav>
             </div>
         </header>
 
-        <main class="container prose">
+        <main id="main" class="container prose">
             <h1>Methodology &amp; Sources</h1>
             <p class="lede">
                 Every figure traces to a settled or live figure from Elexon,
@@ -170,7 +167,7 @@
     <article class="source-card" data-unit="lamps-computed" id="src-lamps-computed">
       <div class="source-card__head"><h3>Computed lamps — UNRELIABLE · WIND LULL · HEAVY IMPORTS</h3><span class="cadence cadence--live">live</span></div>
       <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://bmrs.elexon.co.uk/generation-by-fuel-type" rel="noopener">Elexon FUELINST (live)</a>, <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a>, <a href="https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage" rel="noopener">DESNZ GB interconnector capacity</a>, <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6" rel="noopener">DUKES 2025, Table 6.2 (UK nameplate, end-2024)</a></p>
-      <p class="source-card__basis"><span class="k">Basis</span> Each computed lamp goes amber when the live reading leaves the usual half — the P25–P75 box of that panel's own rolling-year distribution — on the concerning side: UNRELIABLE when firm share &lt; P25, WIND LULL when wind CF &lt; P25, HEAVY IMPORTS when import share of capacity &gt; P75. The rail reads in one language: each active lamp shows its source's share of national demand (the verdict-receipt basis), even where it trips on a different distribution. The threshold is the box-plot beside the panel.</p>
+      <p class="source-card__basis"><span class="k">Basis</span> Each computed lamp goes amber when the live reading leaves the usual half — the P25–P75 box of that panel's own rolling-year distribution — on the concerning side: UNRELIABLE when firm share of demand &lt; P25, WIND LULL when wind capacity factor (wind ÷ DUKES nameplate) &lt; P25, HEAVY IMPORTS when net imports ÷ interconnector capacity &gt; P75. Each active lamp shows the reading most telling for its condition: WIND LULL the live wind capacity factor itself (the same wind ÷ nameplate it trips on); UNRELIABLE the weather-and-imports share of demand; HEAVY IMPORTS the net-import share of supply. The threshold is the box-plot beside the panel.</p>
       <ul class="source-card__caveats"><li>The amber lamps are this site's own reading of live conditions, not an official statement of system state. Only the red SCARCITY NOTICE carries an authoritative NESO source.</li></ul>
       <p class="source-card__more"><a href="#conditions">→ full method</a></p>
     </article>
@@ -570,10 +567,10 @@
                     falls below the <strong>25th percentile</strong> of the
                     &#8220;Wind and solar is mostly idle&#8221; dial's
                     distribution, so the lamp trips exactly when that dial sits
-                    in its low quarter. Like the other rail lamps it then
-                    <em>reads</em> wind's share of national demand &#8212; the
-                    same basis as the receipt above &#8212; so the rail speaks
-                    one language and the figure matches the verdict. How long
+                    in its low quarter, and it then <em>reads</em> that
+                    capacity factor itself &#8212; the very wind &#247; nameplate
+                    it trips on &#8212; so the number is the lull measure directly,
+                    with no demand term to apportion or de-rate. How long
                     such calms <em>last</em> is the drought plot in &#8220;When
                     the wind stops, it stops for days&#8221;. &#8220;Nominal&#8221;
                     otherwise.
@@ -997,20 +994,8 @@
 
         <footer class="footer">
             <div class="container">
-                <p class="links">
-                    Made by
-                    <a href="https://theenergytrap.org">Richard Lyon</a> ·
-                    <a href="methodology.html">Methodology &amp; sources</a> ·
-                    <a href="share.html">Share cards</a> ·
-                    <a href="about.html">About this site</a> ·
-                    <a href="https://github.com/richardjlyon/gb-grid-margin"
-                        >Source &amp; data</a
-                    >
-                </p>
-                <p class="trace">
-                    Every figure traces to Elexon, NESO and DUKES. No modelled
-                    numbers.
-                </p>
+                <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; Sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Github</a></p>
+                <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
             </div>
         </footer>
     </body>

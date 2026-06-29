@@ -14,10 +14,18 @@ import {
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
-  importValueColor, importCostCaption, fmtRatePerH, importRateCalibration,
+  importValueColor, importCostCaption, fmtRatePerH,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
+
+// Brand inks, single-sourced from the CSS custom properties (style.css :root) so the gauge drawing
+// can never drift from the page palette. Same getComputedStyle pattern as the mono-font read below.
+const _cssVar = (name, fallback) => (getComputedStyle(document.body).getPropertyValue(name).trim() || fallback);
+const INK = _cssVar('--ink', '#15181c');
+const RED = _cssVar('--red', '#d6121f');
+const GREEN = _cssVar('--green', '#1b6e45');
+const SLATE = _cssVar('--slate', '#565e66');
 const POLL_MS = 5 * 60 * 1000;
 
 
@@ -72,10 +80,10 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
   for (let v = 0; v <= max; v += max / 4) {   // ticks at 0/25/50/75/100, aligned with the labels
     const [ox, oy] = arcPoint(cx, cy, R + 3, v, max);
     const [ix, iy] = arcPoint(cx, cy, R - 6, v, max);
-    ticks.push(`<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="#565e66" stroke-width="1.4"/>`);
+    ticks.push(`<line x1="${ox.toFixed(1)}" y1="${oy.toFixed(1)}" x2="${ix.toFixed(1)}" y2="${iy.toFixed(1)}" stroke="${SLATE}" stroke-width="1.4"/>`);
   }
   const [nx, ny] = arcPoint(cx, cy, R - 12, Math.min(value, max), max);
-  const needleColor = armed ? '#d6121f' : '#15181c';
+  const needleColor = armed ? RED : INK;
   const seg = (band, color) => band
     ? `<path d="${arcPath(cx, cy, R, band[0], band[1], max)}" fill="none" stroke="${color}" stroke-width="7"/>`
     : '';
@@ -88,7 +96,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
     const c = Number.isFinite(dist.mean) ? dist.mean : dist.p50;   // central tick = the average (load factor)
     const [mx1, my1] = arcPoint(cx, cy, R + 5, c, max);
     const [mx2, my2] = arcPoint(cx, cy, R - 5, c, max);
-    median = `<line x1="${mx1.toFixed(1)}" y1="${my1.toFixed(1)}" x2="${mx2.toFixed(1)}" y2="${my2.toFixed(1)}" stroke="#15181c" stroke-width="2.2"/>`;
+    median = `<line x1="${mx1.toFixed(1)}" y1="${my1.toFixed(1)}" x2="${mx2.toFixed(1)}" y2="${my2.toFixed(1)}" stroke="${INK}" stroke-width="2.2"/>`;
   }
   // Base arc: a single quiet track, or a green->amber->red gradient (drawn as contiguous segments,
   // since SVG strokes can't follow an arc with a gradient) when trackRamp is given.
@@ -126,7 +134,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
     ${trackArc}
     ${distArcs}
     ${seg(reliable, '#1f9d57')}
-    ${seg(danger, '#d6121f')}
+    ${seg(danger, RED)}
     ${ticks.join('')}
     ${median}
     ${cal}
@@ -176,7 +184,7 @@ function buildSourceArc(model, { armed = false } = {}) {
   }
   if (model.exportMw > 0) {                                   // surplus spills beyond the demand arc
     svg += band(model.arcTotal + GAP / 2, total, COL_EXPORT);
-    svg += tick(model.arcTotal, '#15181c', 16, 2.2);         // "demand met" divider
+    svg += tick(model.arcTotal, INK, 16, 2.2);               // "demand met" divider
   }
   // Inner group-indicator arc, set in a little from the outer ring: green = reliable share of demand,
   // red = unreliable share. The outer ring now carries per-source colours, so this is the two-colour
@@ -185,11 +193,11 @@ function buildSourceArc(model, { armed = false } = {}) {
   const Ri = 66, IGAP = total * 0.006;
   const inner = (v0, v1, color) =>
     `<path d="${arcPath(cx, cy, Ri, v0, v1, total)}" fill="none" stroke="${color}" stroke-width="7"/>`;
-  if (firmMw > IGAP) svg += inner(0, firmMw - IGAP / 2, '#1b6e45');                       // reliable (green)
-  if (model.arcTotal - firmMw > IGAP) svg += inner(firmMw + IGAP / 2, model.arcTotal, '#d6121f'); // unreliable (red)
+  if (firmMw > IGAP) svg += inner(0, firmMw - IGAP / 2, GREEN);                            // reliable (green)
+  if (model.arcTotal - firmMw > IGAP) svg += inner(firmMw + IGAP / 2, model.arcTotal, RED); // unreliable (red)
   // Needle points at the firm boundary; shortened to sit just inside the inner arc.
   const [nx, ny] = arcPoint(cx, cy, Ri - 6, firmMw, total);
-  const ncol = armed ? '#d6121f' : '#15181c';
+  const ncol = armed ? RED : INK;
   svg += `<line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${ncol}" stroke-width="3" stroke-linecap="round"/><circle cx="${cx}" cy="${cy}" r="5" fill="${ncol}"/>`;
   return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="Source mix — share of demand, firm ${model.firmPct}%">${svg}</svg>`;
 }
@@ -496,10 +504,11 @@ function renderMetricBlock(cfg) {
       ${cfg.keyNote ?? ''}`;
 }
 
-// A quiet reading under a live dial: the live flow in MW and its share of national demand. It is the
-// only place the §02/§03 panels show the live MW, and the demand figure reconciles the capacity-factor
-// dial with the §01 receipt. A 2px metric-hue tick (--now-rgb); no hairline, no box.
-function dialNowLine(kind, mw, demandMw) {
+// A quiet reading under a live dial: the live flow in MW and its share of `denom`, labelled `noun`.
+// The only place the §02/§03 panels print the live MW. §02 (wind/solar) reads its share of CAPACITY
+// (nameplate) — the same capacity factor as the dial/carpet/legend/WIND-LULL lamp, so the panel speaks
+// one basis; §03 imports reads its share of demand (the exposure). A 2px metric-hue tick (--now-rgb).
+function dialNowLine(kind, mw, denom, noun) {
   const rgb = (DIAL_PALETTE[kind] || {}).fullRgb;
   if (!rgb) return '';
   const tint = `--now-rgb:${rgb[0]},${rgb[1]},${rgb[2]}`;
@@ -507,11 +516,11 @@ function dialNowLine(kind, mw, demandMw) {
     const ex = Math.round(-mw).toLocaleString('en-GB');
     return `<p class="dial-now" style="${tint}">Exporting <strong class="num">${ex} MW</strong> · cables reversed</p>`;
   }
-  if (!Number.isFinite(mw) || !demandMw) return '';
+  if (!Number.isFinite(mw) || !denom) return '';
   const mwTxt = Math.round(mw).toLocaleString('en-GB');
-  const demandPct = Math.round(mw / demandMw * 100);
+  const pct = Math.round(mw / denom * 100);
   return `<p class="dial-now" style="${tint}"><strong class="num">${mwTxt} MW</strong>`
-    + ` · <span class="dial-now-sub"><span class="num">${demandPct}%</span> of demand</span></p>`;
+    + ` · <span class="dial-now-sub"><span class="num">${pct}%</span> of ${noun}</span></p>`;
 }
 
 // Entry 02: one block per source (wind, then solar). A single colour legend sits above each. No
@@ -523,7 +532,6 @@ function renderTrap(v) {
   const windCapMw = g.wind_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000);
   const solarCapMw = g.solar_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.solar_gw : 18.28) * 1000);
   const has = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
-  const demandMw = Number.isFinite(v.national_demand_mw) ? v.national_demand_mw : null;
   const cfgFor = (kind, label, sourceMw, capMw) => {
     const days = has ? CAPACITY[kind].days : null;
     const dist = has ? distForDays(CAPACITY[kind], days) : null;
@@ -532,7 +540,7 @@ function renderTrap(v) {
       sat: has ? CAPACITY.sat[kind] : 1, days, dist,
       liveCf: capMw ? (sourceMw / capMw) : 0,
       keyNote: '',   // the shared box-plot key is shown once, under the Entry-01 reliability block
-      gaugeExtra: dialNowLine(kind, sourceMw, demandMw),   // live MW + share of demand under the dial
+      gaugeExtra: dialNowLine(kind, sourceMw, capMw, 'capacity'),   // live MW + capacity factor (matches the dial/lamp)
     };
   };
   // Wind and solar are two distinct methodological groups: each its own block + "Sources & method →",
@@ -720,11 +728,11 @@ function setLamp(id, state, statusHtml, aria) {
 
 function _windStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
-  // The lamp TRIPS on wind capacity factor (< P25 of the §02 dial), but the READING is wind's share of
-  // national demand — the same basis as the §01 receipt and the other rail lamps, so the rail speaks
-  // one language and the number agrees with the receipt. Nominal: just "Nominal" (no number needed).
+  // A lull IS a capacity-factor story, so the lamp READS the live wind capacity factor itself — the
+  // very wind ÷ nameplate it trips on, against the §02 dial's P25. No demand term, so nothing to
+  // apportion or de-rate and it cannot disagree with the receipt. Nominal: just "Nominal".
   return l.state === 'active'
-    ? `<b>${_round(l.demandPct)}%</b> of demand`
+    ? `<b>${_round(l.cfPct)}%</b> of capacity`
     : 'Nominal';
 }
 function _firmStatus(l) {
@@ -791,12 +799,8 @@ function updateComputedLamps(verdict) {
   const windCf = verdict ? (verdict.wind_mw / windNameplateMw) * 100 : NaN;
   const windDist = (CAPACITY && CAPACITY.wind) ? distForDays(CAPACITY.wind, CAPACITY.wind.days) : null;
   const wind = ov.wind || windLullLamp(windCf, windDist ? windDist.p25 : NaN);
-  // Trip is on capacity factor (above), but the lamp READS wind's share of supply (demand) — the same
-  // basis as the §01 receipt and the other rail lamps — so attach that for _windStatus.
-  const windDemandPct = (verdict && Number.isFinite(verdict.wind_mw)
-    && Number.isFinite(verdict.national_demand_mw) && verdict.national_demand_mw > 0)
-    ? (verdict.wind_mw / verdict.national_demand_mw) * 100 : NaN;
-  if (!ov.wind && Number.isFinite(windDemandPct)) wind.demandPct = windDemandPct;
+  // The lamp both trips on and READS the wind capacity factor (windCf, carried as wind.cfPct) — no
+  // demand term, so no apportionment/export question and nothing to attach here.
   // firm share P25: the reliability carpet stores UNRELIABLE share, so firm = 100 − unreliable and
   // P25(firm) = 100 − P75(unreliable).
   const uDist = REL_CARPET ? distForDays(REL_CARPET, REL_CARPET.days) : null;
@@ -937,7 +941,7 @@ function drawDroughtPlot(data) {
   const rec = data.summary?.record_lull;
   if (rec) {
     const rx = ((Date.parse(rec.start) - x0ms) / Math.max(1, x1ms - x0ms)) * cssW;
-    ctx.fillStyle = '#15181c';
+    ctx.fillStyle = INK;
     ctx.fillText(`${rec.days} days`, Math.min(cssW - 48, rx + 4),
       Math.max(12, plotH - (rec.days / maxDays) * plotH - 4));
   }
@@ -956,7 +960,7 @@ function renderWindUnreliability(data) {
     <canvas id="wind-drought" class="wind-drought" role="img"
       aria-label="${esc(droughtCaption(data.summary))}"></canvas>
     <p class="wind-caption">${esc(droughtCaption(data.summary))}</p>
-    <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#wind-unreliability">→ method</a></p>`;
+    ${entryFooter('wind')}`;
   drawWindCarpet(data);
   drawDroughtPlot(data);
 }
@@ -978,9 +982,9 @@ function drawImportCarpet(data) {
   }
 }
 
-// Build the annotation overlay HTML for the import carpet.
-// Annotations sit inside .import-carpet-wrap (position:relative) so left/top are
-// relative to the canvas. transform shifts each label so it doesn't cover its cell.
+// Build the dot-marker overlay for the import carpet: one subtle spot per costliest day, with no
+// text labels — so the carpet stays clean and the spots correspond one-to-one with the table below.
+// Dots sit inside .import-carpet-wrap (position:relative) so left/top are relative to the canvas.
 function _importAnnotationsHtml(data, years, doy, cols, cellH) {
   // x as % of canvas width, anchored at the left edge of doyIdx column
   const colX = (doyIdx) => ((doyIdx / cols) * 100).toFixed(2) + '%';
@@ -989,44 +993,11 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
 
   const parts = [];
 
-  // 1. Worst-day record — position and label derived entirely from data.summary.worst_day.
-  //    Never hardcoded — the date and value come from the engine output.
-  const wd = data.summary?.worst_day;
-  if (wd?.date) {
-    const [wYear, wMon, wDayNum] = wd.date.split('-');
-    const wdoyStr = `${wMon}-${wDayNum}`;
-    const wdoyIdx = doy.indexOf(wdoyStr);
-    const wYearIdx = years.indexOf(Number(wYear));
-    const wGbp = wd.value_gbp != null
-      ? `£${(wd.value_gbp / 1e6).toFixed(1)}m` : '';
-    const wLabel = `Record: ${Number(wDayNum)} ${new Date(wd.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' })} ${wYear}${wGbp ? ' · ' + wGbp : ''}`;
-    if (wdoyIdx >= 0 && wYearIdx >= 0) {
-      parts.push(
-        `<div class="import-annotation" ` +
-        `style="left:${colX(wdoyIdx)};top:${rowTop(wYearIdx)};transform:translateX(-100%) translateY(-100%)" ` +
-        `aria-label="${esc(wLabel)}">` +
-        `<span class="import-ann-label">${esc(wLabel)}</span></div>`
-      );
-    }
-  }
-
-  // 2. 23 Jun 2026 — start of the EMN week
-  const jun23idx = doy.indexOf('06-23');
-  const idx2026 = years.indexOf(2026);
-  if (jun23idx >= 0 && idx2026 >= 0) {
-    parts.push(
-      `<div class="import-annotation" ` +
-      `style="left:${colX(jun23idx)};top:${rowTop(idx2026)};transform:translateX(-50%) translateY(-100%)" ` +
-      `aria-label="EMN June 2026">` +
-      `<span class="import-ann-label">EMN · Jun 2026</span></div>`
-    );
-  }
-
-  // 3. Subtle dot markers on the 2nd–4th costliest days (events[1..3]).
-  //    events[0] is already the record marker above — skip it here.
+  // A spot on each of the eight costliest days listed in the table (events[0..7]); events[0] is the
+  // record day (data.summary.worst_day). Each dot carries the date + £ as a hover/aria tooltip.
   const dotOffset = (cellH / 2 - 2.5).toFixed(1) + 'px'; // centres dot vertically in the cell
   if (Array.isArray(data.events)) {
-    for (const ev of data.events.slice(1, 4)) {
+    for (const ev of data.events.slice(0, 8)) {
       if (!ev?.date) continue;
       const [eYear, eMon, eDay] = ev.date.split('-');
       const edoyStr = `${eMon}-${eDay}`;
@@ -1047,24 +1018,32 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
 }
 
 // Format an events entry as 'D Mon YYYY £X.Xm' for the costliest-days list.
-function _fmtImportEvent(ev) {
-  const [y, , d] = ev.date.split('-');
-  const mon = new Date(ev.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' });
-  return `${Number(d)} ${mon} ${y} £${(ev.value_gbp / 1e6).toFixed(1)}m`;
-}
-
 // The live net-imports receipt under the import dial (shared by the homepage rate panel and the
 // detail-page daily panel): MW imported, share of demand, and the system price, or an honest
 // feed-state note when the live block is absent (the dial still reads £0, never a placeholder).
-function _importReceiptHtml(live) {
-  if (!live) return `<p class="import-unavail">Live import rate not yet returned — dial shows £0.</p>`;
-  const mw = live.net_import_mw != null ? Math.round(live.net_import_mw).toLocaleString('en-GB') : '—';
-  const pct = live.import_pct != null ? live.import_pct.toFixed(1) : '—';
-  const price = live.price_per_mwh != null ? `£${live.price_per_mwh.toFixed(2)}/MWh` : '—';
-  const stamp = live.price_stamp ? `<span class="import-stamp">${esc(live.price_stamp)}</span>` : '';
-  return `
+// The receipt under the import-page dials shows two distinct readings, never conflated: the LIVE net
+// imports right now (the same instantaneous figure the homepage Imports panel shows), and the latest
+// SETTLED half-hour — which is what the £ valuation prices, since only settled half-hours carry a
+// system price. `settled` is the build-snapshot import block; `liveVerdict` is the live verdict.
+function _importReceiptHtml(settled, liveVerdict) {
+  let liveLine = '';
+  if (liveVerdict && Number.isFinite(liveVerdict.net_import_mw)) {
+    const lmw = Math.round(liveVerdict.net_import_mw).toLocaleString('en-GB');
+    const lpct = (Number.isFinite(liveVerdict.national_demand_mw) && liveVerdict.national_demand_mw > 0)
+      ? `(<span class="num">${(liveVerdict.net_import_mw / liveVerdict.national_demand_mw * 100).toFixed(1)}%</span> of demand)`
+      : '';
+    liveLine = `<p class="import-receipt-line">Live now: <strong class="num">${lmw} MW</strong> ${lpct}</p>`;
+  }
+  if (!settled) {
+    return liveLine || `<p class="import-unavail">Live import rate not yet returned — dial shows £0.</p>`;
+  }
+  const mw = settled.net_import_mw != null ? Math.round(settled.net_import_mw).toLocaleString('en-GB') : '—';
+  const pct = settled.import_pct != null ? settled.import_pct.toFixed(1) : '—';
+  const price = settled.price_per_mwh != null ? `£${settled.price_per_mwh.toFixed(2)}/MWh` : '—';
+  const stamp = settled.price_stamp ? `<span class="import-stamp">${esc(settled.price_stamp)}</span>` : '';
+  return `${liveLine}
       <p class="import-receipt-line">
-        Net imports now: <strong class="num">${mw} MW</strong>
+        Latest settled half-hour: <strong class="num">${mw} MW</strong>
         (<span class="num">${pct}%</span> of demand)
         · at <strong class="num">${price}</strong>
       </p>
@@ -1074,29 +1053,35 @@ function _importReceiptHtml(live) {
 // Import-page money analysis — the rolling-year spend RATE (£/h): a linear, ring-calibrated dial (NO
 // big value call-out) beside the rolling-year hour×date rate carpet, with the same box-plot legend.
 // Lives on import.html (#import-rate-body); the homepage shows the power/capacity sibling instead.
-function renderImportRate(data, live) {
+function renderImportRate(data, live, liveVerdict) {
   window.__importRateData = data;
   const cap = data.cap_per_h || 1e6;
   const dist = data.distribution || null;            // raw £/h percentiles {p10..p90, mean}
   const pal = IMPORT_DIAL_PALETTE;
   const P = (v) => Math.max(0, Math.min(100, (Math.max(v, 0) / cap) * 100));   // linear £/h -> bar %
 
-  // Live "now" = the current import-spend rate (£/h) from the build snapshot; 0 (needle hard left)
-  // when there is no live rate — there is ALWAYS a dial, never a placeholder.
+  // Live "now" = the current import-spend rate (£/h) from the build snapshot; £0 when Britain was
+  // exporting (the £ value floors at zero) or when there is no live rate.
   const liveRate = (live && Number.isFinite(live.rate_per_h)) ? Math.max(0, live.rate_per_h) : 0;
 
-  // The dial: wind/solar chrome — % ticks inner, £/h outer, the central-tendency band + mean tick
-  // painted on, needle at the live rate. Linear scale to the year's rate cap (no big call-out).
-  const nd = (k) => (dist ? Math.max(0, dist[k]) / cap : 0);
-  const dialDist = dist
-    ? { p10: nd('p10'), p25: nd('p25'), p50: nd('p50'), p75: nd('p75'), p90: nd('p90'), mean: nd('mean') }
-    : null;
-  const gaugeHtml = buildGauge(Math.min(liveRate / cap, 1), 1, {
-    dist: dialDist, palette: pal, calibration: importRateCalibration(cap), calUnit: '',
-    label: 'import spend rate now',
-    ariaLabel: `import spend rate now: ${fmtRatePerH(liveRate)}`
-      + (dist ? `; a typical half-hour averages ${fmtRatePerH(dist.mean)}` : ''),
-  });
+  // No dial here. A £/h spend rate is unbounded and signed, so a half-dial (which reads as a bounded
+  // fraction of a fixed full-scale) is the wrong instrument — its 0–100% ring is meaningless and it
+  // only restates the horizontal bar + box-plot to the right. The left column leads with the rate
+  // itself, read against the year's typical (mean); the live + settled receipt hangs below it.
+  const typical = dist && Number.isFinite(dist.mean) ? Math.max(0, dist.mean) : null;
+  let rateSub;
+  if (liveRate <= 0) {
+    rateSub = 'no import spend — Britain was a net exporter';
+  } else if (typical && typical > 0) {
+    const r = liveRate / typical;
+    rateSub = r >= 1.15 ? `${r.toFixed(1)}× the year's typical ${fmtRatePerH(typical)}`
+            : r <= 0.85 ? `below the year's typical ${fmtRatePerH(typical)}`
+            : "about the year's typical rate";
+  } else {
+    rateSub = 'latest settled half-hour';
+  }
+  const gaugeHtml = `<p class="import-rate-readout">${fmtRatePerH(liveRate)}</p>`
+    + `<p class="import-rate-sub">${rateSub}</p>`;
 
   // Legend bar sampled from the SAME linear carpet ramp (carpetCellColor) so a position's colour
   // matches the carpet cell of the rate that sits there. £/h formatting, box-plot on the rate dist.
@@ -1113,12 +1098,11 @@ function renderImportRate(data, live) {
     <div class="trap-grid">
       ${renderMetricBlock({
         kind: 'import', label: 'Spend rate', palette: pal, days: data.days,
-        gaugeHtml, gaugeExtra: _importReceiptHtml(live), legendHtml,
+        gaugeHtml, gaugeExtra: _importReceiptHtml(live, liveVerdict), legendHtml,
         carpetAria: 'GB import-spend rate, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Pale = little or no import spend; deepening red = paying more to import.',
-        gaugeSrc: 'Elexon FUELINST net imports × settled system price (build snapshot)',
-        carpetSrc: data.source, methodAnchor: 'import-cost',
       })}
-    </div>`;
+    </div>
+    ${entryFooter('imports')}`;
   syncBlockHeights();
   drawCarpetCanvas('carpet-import', data.days, cap, pal.fullRgb, { keepWorstHigh: true });
 }
@@ -1145,7 +1129,7 @@ function renderImportPower(data, verdict) {
         liveCf: capMw ? liveNet / capMw : 0,
         unitNoun: 'interconnector capacity',
         legendLabels: { lo: 'No imports', hi: 'Full capacity' },
-        gaugeExtra: dialNowLine('import', netRaw, demandMw),   // live net imports + share of demand
+        gaugeExtra: dialNowLine('import', netRaw, demandMw, 'demand'),   // live net imports + share of demand (exposure)
         gaugeLabel: 'Imports — net imports as a share of interconnector capacity',
         carpetAria: 'Net imports as a share of GB interconnector capacity, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Pale = little or no import; deepening magenta = leaning harder on imports.',
       })}
@@ -1180,30 +1164,10 @@ function renderImportCost(data, live) {
     return `£${m.toFixed(1)}m`;
   };
 
-  // Live "now" = the current instantaneous import-spend rate projected to a day (£/h x 24h), so it
-  // sits on the same £/day axis as the historical distribution. Zero (needle hard left) when there
-  // is no live rate — there is ALWAYS a dial, never a placeholder.
+  // Today's run-rate (the current £/h projected over 24h) — only used to mark the "now" caret on the
+  // legend scale; this section has no dial (the spend-rate section above carries the live receipt).
   const liveRateH = (live && Number.isFinite(live.rate_per_h)) ? Math.max(0, live.rate_per_h) : 0;
   const runRate = liveRateH * 24;
-
-  // The dial: wind/solar-style — grey track, the central-tendency band (p10-p90, p25-p75) and the
-  // mean tick painted on it, needle at the live run-rate. All values pre-normalised onto the sqrt
-  // scale (max = 1) so the skewed distribution stays readable while the scale still reaches £94m.
-  const nd = (k) => (dist ? norm(dist[k]) : 0);
-  const dialDist = dist
-    ? { p10: nd('p10'), p25: nd('p25'), p50: nd('p50'), p75: nd('p75'), p90: nd('p90'), mean: nd('mean') }
-    : null;
-  const gaugeHtml = buildGauge(norm(runRate), 1, {
-    dist: dialDist, palette: pal, calibration: null,
-    label: 'import spend at the current rate',
-    ariaLabel: `import spend at the current rate: ${fmtGbp(runRate)} a day`
-      + (dist ? `; a typical day averages ${fmtGbp(dist.mean)}` : ''),
-  })
-    + `<p class="import-rate-readout">${fmtGbp(runRate)} <span class="import-rate-unit">/ day</span></p>`
-    + `<p class="import-rate-sub">at the current import rate</p>`;
-
-  // Receipt under the dial: the live net-imports line, or an honest feed-state note (dial stays at £0).
-  const receiptHtml = _importReceiptHtml(live);
 
   // The carpet (year x day-of-year) markup — painted by drawImportCarpet after insertion.
   const carpetHtml = `
@@ -1229,23 +1193,29 @@ function renderImportCost(data, live) {
   const legendHtml = legendFor('import', runRate, pal, dist, null, null, null,
     { scale: { posFn: P, fmt: fmtGbp }, barCss, lo: 'cheaper', hi: 'costlier' });
 
-  // Caption, source line and costliest-days list — stacked under the carpet (column 2).
+  // Caption, source line and costliest-days table — stacked under the full-width carpet.
   const costliestHtml = (Array.isArray(data.events) && data.events.length > 0)
-    ? `<p class="import-costliest">Costliest days since 2016: ${data.events.slice(0, 8).map(_fmtImportEvent).join(' · ')}</p>`
+    ? `<table class="costliest-table">
+        <caption>Costliest days since 2016</caption>
+        <tbody>${data.events.slice(0, 8).map((ev) => {
+          const [y, , d] = ev.date.split('-');
+          const mon = new Date(ev.date + 'T12:00Z').toLocaleString('en-GB', { month: 'short' });
+          return `<tr><td>${Number(d)} ${mon} ${y}</td><td class="n">£${(ev.value_gbp / 1e6).toFixed(1)}m</td></tr>`;
+        }).join('')}</tbody>
+      </table>`
     : '';
   const stripExtra = `
       <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
-      <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
       ${costliestHtml}`;
 
+  // No dial in this section — the daily-cost carpet spans full width, the box-plot legend above it.
   $('import-detail-body').innerHTML = `
-    <div class="trap-grid">
-      ${renderMetricBlock({
-        kind: 'import', label: 'Imports',
-        gaugeHtml, gaugeExtra: receiptHtml,
-        legendHtml, carpetHtml, stripExtra,
-      })}
-    </div>`;
+    <div class="import-full">
+      ${legendHtml}
+      ${carpetHtml}
+      ${stripExtra}
+    </div>
+    ${entryFooter('imports')}`;
 
   drawImportCarpet(data);
 }
@@ -1258,7 +1228,6 @@ async function refreshLive() {
     updateComputedLamps(state.verdict);
     updateImportPowerPanel(state.verdict);
     $('clockstrip').textContent = `${state.lastUpdated}`;
-    $('freshness').textContent = state.lastUpdated;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
     dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
     dot.hidden = state.mode === 'live';
@@ -1314,6 +1283,15 @@ async function main() {
     catch (e) { return null; }   // price block unavailable — the dial reads £0, never a placeholder
   };
 
+  // The live verdict — the SAME instantaneous net-imports figure the homepage Imports needle shows —
+  // gives the import page its "Live now" line, beside the settled half-hour the £ valuation prices.
+  // Computed once here; if the live layer is unavailable the receipt falls back to the settled line.
+  let importLiveVerdict = null;
+  if ($('import-detail-body') || $('import-rate-body')) {
+    try { importLiveVerdict = (await resolveState({}, () => Date.now())).verdict ?? null; }
+    catch (e) { /* live verdict unavailable — the receipt shows the settled line only */ }
+  }
+
   // Import-cost detail (import.html, #import-detail-body) — the all-time daily £ carpet + £94m record.
   if ($('import-detail-body')) {
     try {
@@ -1329,7 +1307,7 @@ async function main() {
   if ($('import-rate-body')) {
     try {
       const rateData = await getJSON('data/import_rate.json');
-      renderImportRate(rateData, await importLive());
+      renderImportRate(rateData, await importLive(), importLiveVerdict);
     } catch (e) {
       $('import-rate-body').innerHTML = `<p class="warn">Import-rate data unavailable. ${esc(e.message || e)}</p>`;
     }

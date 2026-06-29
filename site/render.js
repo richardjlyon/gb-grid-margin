@@ -322,19 +322,6 @@ export function fmtRatePerH(gbpPerH) {
   return `£${Math.round(gbpPerH)}/h`;
 }
 
-// Import-rate dial calibration: the SAME 0/25/50/75/100 tick model as gaugeCalibration so the dial
-// chrome matches Wind/Sun (% on the inner ring), but the outer labels are £/h figures — £0 at the
-// floor, £cap/h at the ceiling, the mid figure at 50%. Pass calUnit:'' to buildGauge so it does not
-// append " MW" to these labels.
-export function importRateCalibration(capPerH) {
-  return [0, 25, 50, 75, 100].map((pct) => ({
-    pct,
-    frac: pct / 100,
-    label_pct: `${pct}%`,
-    label_mw: fmtRatePerH((capPerH * pct) / 100),
-  }));
-}
-
 // Neutral sceptic's-voice caption for the import-cost panel (British spelling, no catastrophising).
 export function importCostCaption(summary) {
   const w = summary?.worst_day;

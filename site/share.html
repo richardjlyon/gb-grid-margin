@@ -4,17 +4,31 @@
 <meta name="description" content="Ready-to-share 1200×630 cards carrying Grid Margin's live reliability figures, regenerated on every update. Free to share with credit to gridmargin.co.uk. Every figure traces to an official source.">
 <meta property="og:title" content="Grid Margin — share cards">
 <meta property="og:description" content="A media kit for the numbers — regenerated on every update, every figure sourced.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gridmargin.co.uk/share.html">
+<meta property="og:image" content="https://gridmargin.co.uk/share/hero.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://gridmargin.co.uk/share.html">
+<!-- chrome:fonts -->
+        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="fonts.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head><body>
-<header class="masthead"><div class="container masthead-inner">
-  <div><p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p></div>
-  <nav aria-label="Primary"><a href="methodology.html">Methodology</a><a href="share.html" aria-current="page">Share</a><a href="about.html">About</a></nav>
-</div></header>
-<main class="container share-page">
+<a class="skip-link" href="#main">Skip to content</a>
+        <header class="masthead">
+            <div class="container masthead-inner">
+                <div>
+                    <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
+                    <span class="masthead-snapshot" id="clockstrip"></span>
+                </div>
+                <nav aria-label="Primary"><a href="methodology.html">Methodology</a><a href="share.html" aria-current="page">Share</a><a href="about.html">About</a><span class="live-dot" id="live-dot" aria-live="polite" hidden></span></nav>
+            </div>
+        </header>
+<main id="main" class="container share-page">
   <h1 class="headline ink">Share cards</h1>
   <p class="def">A media kit for sharing the numbers. Regenerated on every update, so whatever you download carries the latest figures. Free to share — please credit gridmargin.co.uk. Every figure traces to an official source.</p>
   <div id="gallery" class="card-gallery"></div>
@@ -36,8 +50,10 @@ try {
   root.innerHTML = `<p class="warn">Share cards unavailable. ${e.message || e}</p>`;
 }
 </script>
-<footer class="footer"><div class="container">
-  <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Source &amp; data</a></p>
-  <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
-</div></footer>
+<footer class="footer">
+            <div class="container">
+                <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; Sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Github</a></p>
+                <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+            </div>
+        </footer>
 </body></html>

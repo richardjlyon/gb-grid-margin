@@ -655,15 +655,17 @@ for imports a **high** reading is the worry (`> P75`). The rule is self-updating
 with the rolling year) and self-documenting (the band is already on screen). The official scarcity
 lamp is exempt — it is a NESO notice, not a computed band.
 
-**Wind lull — trips on live wind CF `< P25`, displays share of demand.** The lamp lights on the
-*live* wind capacity factor — live wind output (Elexon FUELINST + NESO embedded) ÷ DUKES total UK
-wind nameplate, the figure the Entry-02 capacity dial points to — against the **P25** of that dial's
-box-plot (the left edge of the usual half: becalmed more than three-quarters of the year). But like
-the imports lamp (trip on one basis, read another) it **displays wind's share of national demand**
-(`wind_mw ÷ national_demand`), not the capacity factor, so the rail speaks one language — every active
-lamp reads share-of-demand, the §01 receipt basis — and the lamp's number matches the receipt's wind
-row. (Earlier it read "X% of installed capacity", which sat one or two points off the receipt's
-demand-share and read as a contradiction.) **No run-length is shown:**
+**Wind lull — trips on AND displays live wind CF `< P25`.** The lamp lights on the *live* wind
+capacity factor — live wind output (Elexon FUELINST + NESO embedded) ÷ DUKES total UK wind nameplate,
+the figure the Entry-02 capacity dial points to — against the **P25** of that dial's box-plot (the
+left edge of the usual half: becalmed more than three-quarters of the year), and it **displays that
+capacity factor itself** ("X% of capacity"). A lull is a capacity-factor story — whether the wind is
+blowing enough to use its plant — so the CF is the honest reading; it has no demand term, so there is
+nothing to apportion or de-rate and the "does it match the receipt?" question does not arise. (It was
+briefly displayed as wind's share of demand to echo the §01 receipt — but the receipt counts a net
+export off weather generation first, so its apportioned wind sat a point or two *below* the raw lamp
+during exports. A category error: the receipt measures wind *meeting demand*, the lamp measures
+whether the wind is *blowing*.) **No run-length is shown:**
 a "Day N of a run" counter would need *settled* daily CF, but complete settled FUELHH lags ~5 days,
 so it can never reflect the current day — it would contradict the live dial (the exact bug that
 motivated this design). The lull-*duration* story ("when the wind stops, it stops for days") is told

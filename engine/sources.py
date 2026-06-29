@@ -213,10 +213,12 @@ REGISTRY: dict[str, dict] = {
         "feeds": [_ELEXON_FUELINST, _NESO_EMBEDDED_FORECAST, _DESNZ_INTERCONNECTORS, _DUKES_62],
         "basis": ("Each computed lamp goes amber when the live reading leaves the usual half — the "
                   "P25–P75 box of that panel's own rolling-year distribution — on the concerning side: "
-                  "UNRELIABLE when firm share < P25, WIND LULL when wind CF < P25, HEAVY IMPORTS when "
-                  "import share of capacity > P75. The rail reads in one language: each active lamp "
-                  "shows its source's share of national demand (the verdict-receipt basis), even where "
-                  "it trips on a different distribution. The threshold is the box-plot beside the panel."),
+                  "UNRELIABLE when firm share of demand < P25, WIND LULL when wind capacity factor "
+                  "(wind ÷ DUKES nameplate) < P25, HEAVY IMPORTS when net imports ÷ interconnector "
+                  "capacity > P75. Each active lamp shows the reading most telling for its condition: "
+                  "WIND LULL the live wind capacity factor itself (the same wind ÷ nameplate it trips "
+                  "on); UNRELIABLE the weather-and-imports share of demand; HEAVY IMPORTS the net-import "
+                  "share of supply. The threshold is the box-plot beside the panel."),
         "caveats": [
             "The amber lamps are this site's own reading of live conditions, not an official statement "
             "of system state. Only the red SCARCITY NOTICE carries an authoritative NESO source.",

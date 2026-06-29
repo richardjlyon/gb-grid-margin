@@ -9,7 +9,7 @@ import {
   droughtCaption, carpetMonthTicks,
   importRatePerHour,
   importValueColor, importRateAngle, importCostCaption,
-  fmtRatePerH, importRateCalibration,
+  fmtRatePerH,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -209,17 +209,6 @@ test('fmtRatePerH — £/h spend rate, self-describing, scales k/m', () => {
   assert.equal(fmtRatePerH(3_000_000), '£3.0m/h');
   assert.equal(fmtRatePerH(12_000_000), '£12m/h');
   assert.equal(fmtRatePerH(500), '£500/h');
-});
-
-test('importRateCalibration — % inner ring, £/h outer ring, ends £0 and £cap/h', () => {
-  const t = importRateCalibration(3_000_000);
-  assert.equal(t.length, 5);
-  assert.deepEqual(t.map((x) => x.pct), [0, 25, 50, 75, 100]);
-  assert.equal(t[0].label_pct, '0%');
-  assert.equal(t[4].label_pct, '100%');
-  assert.equal(t[0].label_mw, '£0');
-  assert.equal(t[2].label_mw, '£1.5m/h');   // 50% of £3m/h
-  assert.equal(t[4].label_mw, '£3.0m/h');
 });
 
 test('windDroughtColor — windy is pale, calm is deep red, null is grey, monotonic', () => {

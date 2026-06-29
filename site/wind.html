@@ -7,32 +7,38 @@
 <meta name="description" content="The whole GB wind record since 2016: how much the fleet delivered each day, and how long the calm spells ran. When the wind stops, it stops for days. Every figure traces to Elexon and NESO.">
 <meta property="og:title" content="Wind unreliability since 2016 — Grid Margin">
 <meta property="og:description" content="The whole GB wind record since 2016 — daily output and the length of every calm. Every figure traces to Elexon and NESO.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gridmargin.co.uk/wind.html">
+<meta property="og:image" content="https://gridmargin.co.uk/share/hero.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://gridmargin.co.uk/wind.html">
+<!-- chrome:fonts -->
+        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="fonts.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" type="image/svg+xml" href="favicon.svg">
 </head>
 <body>
 
-<header class="masthead">
-  <div class="container masthead-inner">
-    <div>
-      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
-    </div>
-    <nav aria-label="Primary">
-      <a href="methodology.html">Methodology</a>
-      <a href="share.html">Share</a>
-      <a href="about.html">About</a>
-    </nav>
-  </div>
-</header>
+<a class="skip-link" href="#main">Skip to content</a>
+        <header class="masthead">
+            <div class="container masthead-inner">
+                <div>
+                    <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
+                    <span class="masthead-snapshot" id="clockstrip"></span>
+                </div>
+                <nav aria-label="Primary"><a href="methodology.html">Methodology</a><a href="share.html">Share</a><a href="about.html">About</a><span class="live-dot" id="live-dot" aria-live="polite" hidden></span></nav>
+            </div>
+        </header>
 
-<main class="container">
-  <p class="crumb"><a href="/">← Back to the live dashboard</a></p>
+<main id="main" class="container">
+  <h1 class="visually-hidden">GB wind unreliability since 2016</h1>
 
   <section class="entry" id="entry-wind" aria-labelledby="h-wind">
-    <p class="eyebrow">Wind unreliability · the full record</p>
+    <p class="eyebrow">01 · Wind unreliability · the full record</p>
     <h2 class="headline ink" id="h-wind">When the wind stops, it stops for days</h2>
     <p class="def">Two views of the whole wind record since 2016: how much the fleet delivered each day, and how long the calm spells ran. The calms cluster — and they fall in the still, cold spells when demand is highest and solar is weakest.</p>
     <div id="wind-body"><p class="def">Reading the wind record…</p></div>
@@ -40,15 +46,11 @@
 </main>
 
 <footer class="footer">
-  <div class="container">
-    <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> ·
-      <a href="methodology.html">Methodology &amp; sources</a> ·
-      <a href="share.html">Share cards</a> ·
-      <a href="about.html">About this site</a> ·
-      <a href="https://github.com/richardjlyon/gb-grid-margin">Source &amp; data</a></p>
-    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
-  </div>
-</footer>
+            <div class="container">
+                <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; Sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Github</a></p>
+                <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+            </div>
+        </footer>
 
 <script type="module" src="app.js"></script>
 </body>
