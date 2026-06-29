@@ -309,17 +309,6 @@ export function importRateAngle(rate_per_h, capPerH = 5e6) {
   return gaugeNeedleAngle(rate_per_h, capPerH);
 }
 
-// Legend marks for the import-cost carpet key: low (£1m), mid (£5m) and the cap itself, so the
-// top mark always lands at the red end (frac 1.0) whatever cap the engine emits — no mark can fall
-// off the bar. frac uses the SAME sqrt transform as importValueColor, so the marks sit exactly
-// where the colours do.
-export function importLegendStops(capGbp) {
-  return [1e6, 5e6, capGbp].map((v) => ({
-    label: `£${Math.round(v / 1e6)}m`,
-    frac: Math.sqrt(v / capGbp),
-  }));
-}
-
 // Neutral sceptic's-voice caption for the import-cost panel (British spelling, no catastrophising).
 export function importCostCaption(summary) {
   const w = summary?.worst_day;

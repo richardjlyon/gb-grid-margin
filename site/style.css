@@ -481,6 +481,9 @@ main { padding-bottom: 40px; }
 .trap-src { margin: 6px 0 0; }
 .trap-src-gauge { grid-column: 1; }
 .trap-src-strip { grid-column: 2; }
+/* Entry 04 caption + source + costliest list, stacked under the carpet (column 2). Declared before
+   the narrow-width media query below so that query can collapse it to column 1 like the other cells. */
+.trap-extra { grid-column: 2; min-width: 0; }
 
 .gauge .g-pct { font: 600 11px 'Spline Sans Mono', monospace; fill: #15181c; }
 .gauge .g-mw { font: 500 9px 'Spline Sans Mono', monospace; fill: #565e66; }
@@ -490,7 +493,7 @@ main { padding-bottom: 40px; }
 .trap-gauge-cell .gauge .g-mw { font-size: 9px; }
 @media (max-width: 900px) {
   .trap-grid, .trap-grid.gauge-only { grid-template-columns: 1fr; }
-  .trap-label, .carpet-legend, .trap-gauge-cell, .carpet-cell, .trap-src-gauge, .trap-src-strip { grid-column: 1; }
+  .trap-label, .carpet-legend, .trap-gauge-cell, .carpet-cell, .trap-src-gauge, .trap-src-strip, .trap-extra { grid-column: 1; }
 }
 
 /* ---------- Entry 03 — wind unreliability carpet ---------- */
@@ -533,16 +536,12 @@ main { padding-bottom: 40px; }
   box-shadow: 0 0 0 1.5px rgba(251,251,249,0.6); pointer-events: none; }
 .import-costliest { font-family: var(--mono); font-size: 0.8125rem; color: var(--slate);
   margin: 6px 0 0; letter-spacing: -0.01em; }
-/* shared ramp legend (import cost carpet, Entry 04) */
-.ramp-legend { margin: 6px 0 4px; display: flex; align-items: center; gap: 6px; }
-.ramp-legend-lo, .ramp-legend-hi { font: 500 11px var(--mono); color: var(--slate); white-space: nowrap; flex: none; }
-.ramp-legend-bar-wrap { position: relative; flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; }
-.ramp-legend-bar { height: 10px; border-radius: 2px; }
-.ramp-legend-marks { position: relative; height: 1.2em; font: 500 11px var(--mono); color: var(--ink); }
-.ramp-legend-mark { position: absolute; white-space: nowrap; }
 .import-rate-readout {
   font-family: var(--display); font-weight: 700;
   font-size: clamp(1.5rem, 4vw, 2.2rem);
   letter-spacing: -0.02em; line-height: 1;
   text-align: center; margin: 8px 0 0; color: var(--red);
 }
+.import-rate-unit { font-size: 0.5em; font-weight: 600; color: var(--slate); letter-spacing: 0; }
+.import-rate-sub { font: 500 0.72rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--slate); text-align: center; margin: 3px 0 0; }

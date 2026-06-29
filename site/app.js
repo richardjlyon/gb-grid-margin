@@ -14,7 +14,7 @@ import {
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
-  importValueColor, importLegendStops, importCostCaption,
+  importValueColor, importCostCaption,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -300,6 +300,10 @@ const DIAL_PALETTE = {
 // to the wind/solar band greys); full = the gauge's unreliable red.
 const REL_PALETTE = { track: '#e3d2d4', band: '#cda9ad', core: '#b3565d', full: '#d6121f', fullRgb: [214, 18, 31] };
 
+// Import-cost dial/legend — the cost-red family (cheaper = pale, costlier = deep red). Track and
+// distribution bands tinted red so the central-tendency box reads as "cost" without a gradient track.
+const IMPORT_DIAL_PALETTE = { track: '#e8dcda', band: '#d3a8a2', core: '#b15c52', full: '#8c0c14', fullRgb: [140, 12, 20] };
+
 // Entry 02 source lines + the box-whisker key note, lifted to module scope so the shared
 // renderMetricBlock references them by name rather than closing over renderTrap.
 const WIND_GAUGE_SRC = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 wind nameplate';
@@ -339,7 +343,41 @@ function numsRow(marks) {
 // gradient for the bar, {lo,hi} are the end labels ("Reliable" / "Unreliable" rather than the default
 // "No output" / "Full output"). The box-plot then draws in neutral slate/ink so it reads cleanly over
 // the coloured ramp instead of competing with it.
-function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp) {
+function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp, opts = {}) {
+  // Value-scale variant (Entry 04 import cost): the SAME .carpet-legend skeleton and the SAME
+  // central-tendency box-plot as wind/solar — p10–p90 whisker, p25–p75 usual half, mean tick, and a
+  // live "now" caret — but positioned on a non-linear (sqrt) £ scale via opts.scale.posFn so the
+  // costliest day on record (£94m) stays on-scale without crushing the cheap-day box into a sliver.
+  // Numbers are £-formatted (opts.scale.fmt) instead of percentages.
+  if (opts.scale) {
+    const P = opts.scale.posFn, fmt = opts.scale.fmt;   // £ -> 0..100 bar position / display string
+    const d = dist;   // raw £ percentiles {p10,p25,p50,p75,p90,mean}
+    const nowPos = P(cf);   // cf is the raw live £ value here
+    let box = '';
+    if (d) {
+      box = `
+        <span class="cl-box" aria-hidden="true" title="typical day: average ${fmt(d.mean)}, usual half ${fmt(d.p25)}–${fmt(d.p75)}, 9-in-10 ${fmt(d.p10)}–${fmt(d.p90)}">
+          <span class="cl-box-line" style="left:${P(d.p10).toFixed(1)}%; width:${(P(d.p90) - P(d.p10)).toFixed(1)}%; background:${pal.band}"></span>
+          <span class="cl-box-iqr" style="left:${P(d.p25).toFixed(1)}%; width:${(P(d.p75) - P(d.p25)).toFixed(1)}%; background:${pal.core}"></span>
+          <span class="cl-box-avg" style="left:${P(d.mean).toFixed(1)}%"></span>
+        </span>
+        ${numsRow([
+          { pos: P(d.p10), txt: fmt(d.p10), color: pal.core, pr: 1 },
+          { pos: P(d.mean), txt: fmt(d.mean), cls: 'cl-num-avg', pr: 2 },
+          { pos: P(d.p90), txt: fmt(d.p90), color: pal.core, pr: 1 },
+        ])}`;
+    }
+    return `
+    <div class="carpet-legend">
+      <span class="cl-lab">${esc(opts.lo)}</span>
+      <span class="cl-bar-wrap">
+        <span class="cl-bar" style="background:${opts.barCss}" aria-hidden="true"></span>
+        <span class="cl-now" style="left:${nowPos.toFixed(1)}%" title="At the current rate: ${fmt(cf)} a day">now</span>
+        ${box}
+      </span>
+      <span class="cl-lab">${esc(opts.hi)}</span>
+    </div>`;
+  }
   const noun = unitNoun || 'capacity';
   const boxBand = ramp ? '#9aa3ab' : pal.band, boxCore = ramp ? '#4b535b' : pal.core;
   const barCss = ramp ? ramp.css : `linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})`;
@@ -412,7 +450,9 @@ function avgFromDays(days) {
 // nameplate and series. Returns the HTML string; the CALLER paints the carpet canvas afterwards.
 function renderMetricBlock(cfg) {
   const pal = cfg.palette;
-  const hasCarpet = !!(cfg.days && cfg.days.length);
+  // A block has a carpet either via the default hour×month series (cfg.days) or via a pluggable
+  // carpet markup string (cfg.carpetHtml — Entry 04's year×day-of-year carpet, painted by the caller).
+  const hasCarpet = !!cfg.carpetHtml || !!(cfg.days && cfg.days.length);
   // A traffic-light block (reliability) supplies cfg.rampFn; the dial track, the carpet and the legend
   // bar then share that one ramp. The legend bar samples it at 0/25/50/75/100% so the CSS gradient
   // matches the OKLab canvas ramp; cfg.rampLabels relabels the bar ends (Reliable / Unreliable).
@@ -423,32 +463,39 @@ function renderMetricBlock(cfg) {
     lo: cfg.rampLabels ? cfg.rampLabels.lo : 'No output',
     hi: cfg.rampLabels ? cfg.rampLabels.hi : 'Full output',
   } : null;
-  const gauge = buildGauge((cfg.liveCf ?? 0) * 100, 100, {
+  // The dial: the default %-of-capacity gauge, or a caller-supplied gauge string (Entry 04's
+  // £-rate ramp dial, which has its own scale and readout). cfg.gaugeExtra hangs under the dial
+  // (Entry 04's live-imports receipt line).
+  const gauge = cfg.gaugeHtml != null ? cfg.gaugeHtml : buildGauge((cfg.liveCf ?? 0) * 100, 100, {
     label: cfg.gaugeLabel ?? `${cfg.label} output as a share of installed capacity`,
     calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
     trackRamp: cfg.rampFn || null,
   });
   const avgNote = cfg.avgNote ? `<span class="trap-avg">${cfg.avgNote}</span>` : '';
-  const srcP = (cls, txt) =>
-    `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#${cfg.methodAnchor}">→ method</a></p>`;
-  const strip = hasCarpet ? `
-      <div class="carpet-cell">
+  const srcP = (cls, txt) => txt
+    ? `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#${cfg.methodAnchor}">→ method</a></p>`
+    : '';
+  const defaultCarpet = `
         <div class="carpet-stage">
           <div class="carpet-yaxis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
           <canvas id="carpet-${cfg.kind}" class="carpet" role="img"
             aria-label="${esc(cfg.carpetAria ?? `${cfg.label} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity.`)}"></canvas>
         </div>
-        <div class="carpet-xaxis" id="carpet-${cfg.kind}-x"></div>
+        <div class="carpet-xaxis" id="carpet-${cfg.kind}-x"></div>`;
+  const strip = hasCarpet ? `
+      <div class="carpet-cell">
+        ${cfg.carpetHtml ?? defaultCarpet}
       </div>
       ${srcP('trap-src-gauge', cfg.gaugeSrc)}
-      ${srcP('trap-src-strip', cfg.carpetSrc)}`
+      ${srcP('trap-src-strip', cfg.carpetSrc)}
+      ${cfg.stripExtra ? `<div class="trap-extra">${cfg.stripExtra}</div>` : ''}`
     : srcP('trap-src-gauge', cfg.gaugeSrc);
   return `
-      <p class="trap-label">${esc(cfg.label)}${avgNote}</p>
-      ${hasCarpet ? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp) : ''}
-      <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
+      ${cfg.label ? `<p class="trap-label">${esc(cfg.label)}${avgNote}</p>` : ''}
+      ${hasCarpet ? (cfg.legendHtml ?? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp)) : ''}
+      <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div>${cfg.gaugeExtra ?? ''}</div>
       ${strip}
-      ${cfg.keyNote}`;
+      ${cfg.keyNote ?? ''}`;
 }
 
 // Entry 02: one block per source (wind, then solar). A single colour legend sits above each. No
@@ -808,30 +855,6 @@ function renderWindUnreliability(data) {
 }
 
 // ============================================================ import cost (Entry 04)
-function drawImportDial(live) {
-  const el = $('import-dial');
-  if (!el) return;
-
-  const capPerH = 5e6;  // £5m/hour cap
-
-  if (!live || !Number.isFinite(live.rate_per_h)) {
-    el.innerHTML = `<p class="import-unavail">Live import-spend rate unavailable.</p>`;
-    return;
-  }
-
-  const rate = live.rate_per_h;
-  const readoutM = (rate / 1e6).toFixed(1);
-
-  el.innerHTML =
-    buildGauge(rate, capPerH, {
-      trackRamp: (t) => importValueColor(t * capPerH, capPerH),
-      calibration: null,
-      label: 'live import-spend rate',
-      ariaLabel: `live import-spend rate: £${readoutM}m per hour`,
-    })
-    + `<p class="import-rate-readout">£${readoutM}m / hour</p>`;
-}
-
 function drawImportCarpet(data) {
   const carpet = data?.carpet ?? {};
   const { years, doy } = carpet;
@@ -916,32 +939,6 @@ function _importAnnotationsHtml(data, years, doy, cols, cellH) {
   return parts.join('');
 }
 
-// Shared ramp legend: a colour bar sampled from rampFracColorFn(t in [0,1])->[r,g,b],
-// flanked by loLabel/hiLabel, with marks [{label, frac}] positioned along it.
-// The last mark uses translateX(-100%) so it anchors at its right edge — never clips.
-function rampLegendHtml({ rampFracColorFn, marks, loLabel, hiLabel }) {
-  const N = 24;
-  const gradStops = Array.from({ length: N }, (_, i) => {
-    const t = i / (N - 1);
-    const [r, g, b] = rampFracColorFn(t);
-    return `rgb(${r},${g},${b}) ${(t * 100).toFixed(1)}%`;
-  });
-  const gradCss = `linear-gradient(to right, ${gradStops.join(', ')})`;
-  const marksHtml = marks.map((m, idx) => {
-    const isLast = idx === marks.length - 1;
-    const shift = isLast ? 'translateX(-100%)' : 'translateX(-50%)';
-    return `<span class="ramp-legend-mark" style="left:${(m.frac * 100).toFixed(2)}%;transform:${shift}">${esc(m.label)}</span>`;
-  }).join('');
-  return `<div class="ramp-legend" aria-hidden="true">
-      <span class="ramp-legend-lo">${esc(loLabel)}</span>
-      <div class="ramp-legend-bar-wrap">
-        <div class="ramp-legend-bar" style="background:${gradCss}"></div>
-        <div class="ramp-legend-marks">${marksHtml}</div>
-      </div>
-      <span class="ramp-legend-hi">${esc(hiLabel)}</span>
-    </div>`;
-}
-
 // Format an events entry as 'D Mon YYYY £X.Xm' for the costliest-days list.
 function _fmtImportEvent(ev) {
   const [y, , d] = ev.date.split('-');
@@ -950,14 +947,44 @@ function _fmtImportEvent(ev) {
 }
 
 function renderImportCost(data, live) {
-  const capGbp = data.scale?.cap_gbp ?? 10e6;
+  const capGbp = data.scale?.cap_gbp ?? 20e6;
+  const dist = data.distribution || null;
+  const pal = IMPORT_DIAL_PALETTE;
 
-  // Costliest-days list (up to 8 events, degrades gracefully if data.events absent).
-  const costliestHtml = (Array.isArray(data.events) && data.events.length > 0)
-    ? `<p class="import-costliest">Costliest days since 2016: ${data.events.slice(0, 8).map(_fmtImportEvent).join(' · ')}</p>`
-    : '';
+  // One shared non-linear (sqrt) £/day scale for the dial, legend and carpet, capped at the record
+  // day so the £94m extreme is on-scale. norm maps £ -> 0..1 along the scale; P -> 0..100 bar %.
+  const norm = (v) => Math.sqrt(Math.min(Math.max(v, 0), capGbp) / capGbp);
+  const P = (v) => Math.max(0, Math.min(100, norm(v) * 100));
+  const fmtGbp = (v) => {
+    const m = v / 1e6;
+    if (m >= 1000) return `£${(m / 1000).toFixed(1)}bn`;
+    if (m >= 10) return `£${Math.round(m)}m`;
+    return `£${m.toFixed(1)}m`;
+  };
 
-  // Receipt: numbers when live import block is available, unavailable note otherwise.
+  // Live "now" = the current instantaneous import-spend rate projected to a day (£/h x 24h), so it
+  // sits on the same £/day axis as the historical distribution. Zero (needle hard left) when there
+  // is no live rate — there is ALWAYS a dial, never a placeholder.
+  const liveRateH = (live && Number.isFinite(live.rate_per_h)) ? Math.max(0, live.rate_per_h) : 0;
+  const runRate = liveRateH * 24;
+
+  // The dial: wind/solar-style — grey track, the central-tendency band (p10-p90, p25-p75) and the
+  // mean tick painted on it, needle at the live run-rate. All values pre-normalised onto the sqrt
+  // scale (max = 1) so the skewed distribution stays readable while the scale still reaches £94m.
+  const nd = (k) => (dist ? norm(dist[k]) : 0);
+  const dialDist = dist
+    ? { p10: nd('p10'), p25: nd('p25'), p50: nd('p50'), p75: nd('p75'), p90: nd('p90'), mean: nd('mean') }
+    : null;
+  const gaugeHtml = buildGauge(norm(runRate), 1, {
+    dist: dialDist, palette: pal, calibration: null,
+    label: 'import spend at the current rate',
+    ariaLabel: `import spend at the current rate: ${fmtGbp(runRate)} a day`
+      + (dist ? `; a typical day averages ${fmtGbp(dist.mean)}` : ''),
+  })
+    + `<p class="import-rate-readout">${fmtGbp(runRate)} <span class="import-rate-unit">/ day</span></p>`
+    + `<p class="import-rate-sub">at the current import rate</p>`;
+
+  // Receipt under the dial: the live net-imports line, or an honest feed-state note (dial stays at £0).
   let receiptHtml;
   if (live) {
     const mw = live.net_import_mw != null ? Math.round(live.net_import_mw).toLocaleString('en-GB') : '—';
@@ -972,16 +999,11 @@ function renderImportCost(data, live) {
       </p>
       ${stamp}`;
   } else {
-    receiptHtml = `<p class="import-unavail">Price data unavailable — settled price feed not yet returned.</p>`;
+    receiptHtml = `<p class="import-unavail">Live import rate not yet returned — dial shows £0.</p>`;
   }
 
-  $('import-body').innerHTML = `
-    <div class="verdict-cols">
-      <div class="import-dial-col">
-        <div id="import-dial" class="gauge-block"></div>
-        ${receiptHtml}
-      </div>
-      <div class="import-carpet-col">
+  // The carpet (year x day-of-year) markup — painted by drawImportCarpet after insertion.
+  const carpetHtml = `
         <div class="import-carpet-cell">
           <div class="import-yaxis" id="import-carpet-y"></div>
           <div class="import-carpet-wrap">
@@ -990,15 +1012,39 @@ function renderImportCost(data, live) {
             <div class="import-carpet-annotations" id="import-carpet-annotations" aria-hidden="true"></div>
           </div>
         </div>
-        <div class="import-carpet-x" id="import-carpet-x"></div>
-        ${rampLegendHtml({ rampFracColorFn: (t) => importValueColor(t * capGbp, capGbp), marks: importLegendStops(capGbp), loLabel: 'cheaper', hiLabel: 'costlier' })}
-        <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
-        <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
-        ${costliestHtml}
-      </div>
+        <div class="import-carpet-x" id="import-carpet-x"></div>`;
+
+  // The legend: the shared legendFor box-plot, on the sqrt £ scale. The bar samples the carpet ramp
+  // at t^2 (positions are sqrt, importValueColor is sqrt) so bar colour at each position matches the
+  // carpet cell of the value that sits there.
+  const N = 24;
+  const barCss = `linear-gradient(to right, ${Array.from({ length: N }, (_, i) => {
+    const t = i / (N - 1);
+    const [r, g, b] = importValueColor(t * t * capGbp, capGbp);
+    return `rgb(${r},${g},${b}) ${(t * 100).toFixed(1)}%`;
+  }).join(', ')})`;
+  const legendHtml = legendFor('import', runRate, pal, dist, null, null, null,
+    { scale: { posFn: P, fmt: fmtGbp }, barCss, lo: 'cheaper', hi: 'costlier' });
+
+  // Caption, source line and costliest-days list — stacked under the carpet (column 2).
+  const costliestHtml = (Array.isArray(data.events) && data.events.length > 0)
+    ? `<p class="import-costliest">Costliest days since 2016: ${data.events.slice(0, 8).map(_fmtImportEvent).join(' · ')}</p>`
+    : '';
+  const stripExtra = `
+      <p class="wind-caption">${esc(importCostCaption(data.summary))}</p>
+      <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
+      ${costliestHtml}`;
+
+  $('import-body').innerHTML = `
+    <div class="trap-grid">
+      ${renderMetricBlock({
+        kind: 'import', label: 'Imports',
+        avgNote: dist ? `averages ${fmtGbp(dist.mean)} a day over the record` : '',
+        gaugeHtml, gaugeExtra: receiptHtml,
+        legendHtml, carpetHtml, stripExtra,
+      })}
     </div>`;
 
-  drawImportDial(live);
   drawImportCarpet(data);
 }
 
@@ -1067,7 +1113,7 @@ async function main() {
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
     if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
     if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
-    if (window.__importData) { drawImportCarpet(window.__importData); drawImportDial(window.__importLive); }
+    if (window.__importData) drawImportCarpet(window.__importData);
   }, 150); });
 }
 

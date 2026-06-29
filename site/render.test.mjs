@@ -8,7 +8,7 @@ import {
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor, windDroughtColor, droughtSpikes,
   droughtCaption, carpetMonthTicks,
   importRatePerHour,
-  importValueColor, importRateAngle, importLegendStops, importCostCaption,
+  importValueColor, importRateAngle, importCostCaption,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -275,26 +275,6 @@ test('importRateAngle — -90 at £0/h, +90 at/above cap, 0 at half-cap', () => 
   assert.equal(importRateAngle(5e6), 90);
   assert.equal(importRateAngle(10e6), 90);   // clamps above cap
   assert.equal(importRateAngle(2.5e6), 0);   // half-cap → straight up
-});
-
-test('importLegendStops — cap-aware: low/mid/cap marks, top mark at frac 1.0', () => {
-  const stops = importLegendStops(10e6);
-  assert.equal(stops.length, 3);
-  assert.equal(stops[0].label, '£1m');
-  assert.equal(stops[1].label, '£5m');
-  assert.equal(stops[2].label, '£10m');
-  assert.ok(stops[0].frac > 0 && stops[0].frac < 1, 'first frac in (0,1)');
-  assert.ok(stops[1].frac > stops[0].frac, 'fracs strictly ascending');
-  assert.ok(stops[2].frac > stops[1].frac, 'fracs strictly ascending');
-  assert.ok(Math.abs(stops[2].frac - 1.0) < 1e-9, 'top mark (the cap) → frac 1.0');
-  // sqrt transform: frac ≈ sqrt(1/10), sqrt(5/10), sqrt(10/10)
-  assert.ok(Math.abs(stops[0].frac - Math.sqrt(1 / 10)) < 1e-9, 'sqrt transform for £1m');
-  assert.ok(Math.abs(stops[1].frac - Math.sqrt(5 / 10)) < 1e-9, 'sqrt transform for £5m');
-  // The top mark tracks the cap (no mark can fall off the bar): cap £20m → label £20m at frac 1.0.
-  const s20 = importLegendStops(20e6);
-  assert.equal(s20[2].label, '£20m');
-  assert.ok(Math.abs(s20[2].frac - 1.0) < 1e-9, '£20m cap → top mark frac 1.0');
-  assert.ok(Math.abs(s20[0].frac - Math.sqrt(1 / 20)) < 1e-9, '£1m under a £20m cap');
 });
 
 test('importCostCaption — contains £m figure and formatted date; fallback when summary missing', () => {

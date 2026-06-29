@@ -9,16 +9,16 @@ net_import_mw logic is identical to engine/grid_engine.py:193 so a future JS por
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from datetime import date, timedelta
 
 _ONE_DAY = timedelta(days=1)
 
-# Maximum daily import cost used by the sqrt visual ramp on the carpet. Tuned to the real
-# 2016→edge distribution (median £3.2m, p90 £10.8m, p99 £19.9m, max £94.4m): at £20m only ~1%
-# of days saturate full-red and ~⅔ sit in the pale half, so the carpet reads as a pale field with
-# red on the genuinely costly days rather than a wash of red. See engine/NOTES.md.
-CAP_GBP = 20_000_000
+# Floor for the sqrt visual ramp / dial scale. The live cap is computed from the data
+# (_cap_for) so the scale always REACHES the costliest day on record (£94.4m) rather than
+# clipping it; this floor only matters for tiny fixtures. See engine/NOTES.md.
+CAP_FLOOR_GBP = 20_000_000
 
 
 def net_import_mw(row: dict) -> float:
@@ -136,17 +136,50 @@ def events(daily: list[dict], top_n: int = 8) -> list[dict]:
     return [{"date": r["date"], "value_gbp": r["value_gbp"]} for r in ranked[:top_n]]
 
 
+# ── distribution ──────────────────────────────────────────────────────────────
+
+def distribution(daily: list[dict]) -> dict | None:
+    """Daily-cost distribution (p10/p25/p50/p75/p90 + mean) over the whole record.
+
+    Drives the central-tendency box-plot on BOTH the dial and the legend (the same
+    percentile method as site/app.js distForDays: vals[min(n-1, floor(p·n))]).
+    Returns None for an empty series.
+    """
+    vals = sorted(d["value_gbp"] for d in daily)
+    n = len(vals)
+    if n == 0:
+        return None
+    q = lambda p: vals[min(n - 1, int(p * n))]  # noqa: E731
+    return {
+        "p10": q(0.10), "p25": q(0.25), "p50": q(0.50),
+        "p75": q(0.75), "p90": q(0.90),
+        "mean": round(sum(vals) / n, 1),
+    }
+
+
 # ── scale ─────────────────────────────────────────────────────────────────────
 
-def scale(daily: list[dict]) -> dict:  # noqa: ARG001 — daily reserved for future auto-ranging
-    """Visual scale parameters for the carpet sqrt ramp.
+def _cap_for(daily: list[dict]) -> int:
+    """Scale cap = next £10 m above the costliest day, floored at CAP_FLOOR_GBP.
 
-    cap_gbp is the documented module constant CAP_GBP (£20 m); cells above it are clamped.
-    legend lists the annotated tick marks on the colour bar (low, mid, and the cap).
+    Computed from the data so the sqrt ramp / dial scale always CONTAINS the record
+    day (currently £94.4 m → £100 m) instead of clipping it at a fixed £20 m.
     """
+    mx = max((d["value_gbp"] for d in daily), default=0.0)
+    return max(CAP_FLOOR_GBP, int(math.ceil(mx / 10_000_000) * 10_000_000))
+
+
+def scale(daily: list[dict]) -> dict:
+    """Visual scale parameters for the sqrt ramp shared by carpet, legend and dial.
+
+    cap_gbp is data-driven (_cap_for) so it reaches the record day; cells above it clamp.
+    legend lists reference tick marks spanning to the cap.
+    """
+    cap = _cap_for(daily)
     return {
-        "cap_gbp": CAP_GBP,
-        "legend": [1_000_000, 5_000_000, CAP_GBP],
+        "cap_gbp": cap,
+        # reference ticks below the cap, then the cap itself (always ascending, all ≤ cap)
+        "legend": [t for t in (1_000_000, 10_000_000, 50_000_000) if t < cap] + [cap],
     }
 
 
@@ -201,6 +234,7 @@ def build_payload(
         },
         "partial_years": partial_years(dates),
         "scale": scale(daily),
+        "distribution": distribution(daily),
         "carpet": carpet_matrix(daily),
         "events": events(daily),
         "summary": summary(daily),
@@ -227,6 +261,16 @@ def guard_payload(payload: dict) -> None:
             f"guard_payload: scale.cap_gbp {sc['cap_gbp']} is not positive")
     for v in sc["legend"]:
         require(v > 0, f"guard_payload: scale.legend entry {v} is not positive")
+
+    # distribution must be present, non-negative and monotonic (the box-plot is load-bearing).
+    dist = payload.get("distribution")
+    require(dist is not None, "guard_payload: distribution is missing")
+    assert dist is not None  # require() raised on None; this narrows for the type-checker
+    order = [dist["p10"], dist["p25"], dist["p50"], dist["p75"], dist["p90"]]
+    require(all(a <= b for a, b in zip(order, order[1:])),
+            f"guard_payload: distribution percentiles not ascending: {order}")
+    require(all(v >= 0 for v in (*order, dist["mean"])),
+            "guard_payload: distribution has a negative value")
 
     max_cell: float | None = None
     for yr, row in payload["carpet"]["rows"].items():

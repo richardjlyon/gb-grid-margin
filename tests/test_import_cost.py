@@ -123,10 +123,32 @@ def test_events_default_top_n_is_8():
 
 # ── scale ──────────────────────────────────────────────────────────────────────
 
-def test_scale_returns_documented_cap_and_legend():
+def test_scale_floor_when_max_below_floor():
+    # _DAILY max is £8m (< £20m floor) → cap stays at the floor; legend ascends, all ≤ cap.
     result = ic.scale(_DAILY)
     assert result["cap_gbp"] == 20_000_000
-    assert result["legend"] == [1_000_000, 5_000_000, 20_000_000]
+    assert result["legend"] == [1_000_000, 10_000_000, 20_000_000]
+    assert result["legend"] == sorted(result["legend"])
+    assert max(result["legend"]) == result["cap_gbp"]
+
+
+def test_scale_cap_reaches_record_day():
+    # A £94.4m record day must round the cap UP to the next £10m (£100m), not clip at £20m.
+    daily = _DAILY + [{"date": "2021-09-09", "value_gbp": 94_384_157.9,
+                       "import_mwh": 1.0, "mean_price": 1.0}]
+    result = ic.scale(daily)
+    assert result["cap_gbp"] == 100_000_000
+    assert result["cap_gbp"] >= 94_384_157.9   # the record is on-scale, not clipped
+    assert result["legend"] == [1_000_000, 10_000_000, 50_000_000, 100_000_000]
+
+
+def test_distribution_percentiles_ascending_with_mean():
+    d = ic.distribution(_DAILY)
+    assert d is not None
+    assert d["p10"] <= d["p25"] <= d["p50"] <= d["p75"] <= d["p90"]
+    # mean of the 5 _DAILY values (0.5+3+1+8+2 = 14.5m / 5 = 2.9m)
+    assert d["mean"] == 2_900_000.0
+    assert ic.distribution([]) is None
 
 
 # ── build_payload + guard_payload ──────────────────────────────────────────────
@@ -144,7 +166,8 @@ _EXPECTED_VALUE = 100_000.0
 def test_build_payload_provenance_keys_present():
     payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
     for key in ("basis", "source", "metric_label", "caveat", "generated_utc",
-                "range", "partial_years", "scale", "carpet", "events", "summary"):
+                "range", "partial_years", "scale", "distribution", "carpet",
+                "events", "summary"):
         assert key in payload, f"missing key: {key}"
 
 
