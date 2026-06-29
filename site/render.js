@@ -309,6 +309,32 @@ export function importRateAngle(rate_per_h, capPerH = 5e6) {
   return gaugeNeedleAngle(rate_per_h, capPerH);
 }
 
+// £/h spend-rate display string for the homepage import dial ring, legend and receipt. Self-
+// describing (carries the "/h"), so the figure needs no "per hour" qualifier alongside it.
+export function fmtRatePerH(gbpPerH) {
+  if (!Number.isFinite(gbpPerH)) return '—';
+  if (gbpPerH <= 0) return '£0';
+  const m = gbpPerH / 1e6;
+  if (m >= 10) return `£${Math.round(m)}m/h`;
+  if (m >= 1) return `£${m.toFixed(1)}m/h`;
+  const k = gbpPerH / 1e3;
+  if (k >= 1) return `£${Math.round(k)}k/h`;
+  return `£${Math.round(gbpPerH)}/h`;
+}
+
+// Import-rate dial calibration: the SAME 0/25/50/75/100 tick model as gaugeCalibration so the dial
+// chrome matches Wind/Sun (% on the inner ring), but the outer labels are £/h figures — £0 at the
+// floor, £cap/h at the ceiling, the mid figure at 50%. Pass calUnit:'' to buildGauge so it does not
+// append " MW" to these labels.
+export function importRateCalibration(capPerH) {
+  return [0, 25, 50, 75, 100].map((pct) => ({
+    pct,
+    frac: pct / 100,
+    label_pct: `${pct}%`,
+    label_mw: fmtRatePerH((capPerH * pct) / 100),
+  }));
+}
+
 // Neutral sceptic's-voice caption for the import-cost panel (British spelling, no catastrophising).
 export function importCostCaption(summary) {
   const w = summary?.worst_day;

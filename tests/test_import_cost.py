@@ -271,3 +271,193 @@ def test_guard_payload_raises_on_nonpositive_legend_entry():
 def test_build_payload_empty_returns_none():
     """Empty fuelhh/price stores → None (price store not yet built)."""
     assert ic.build_payload([], [], "t") is None
+
+
+# ── rolling-year half-hourly RATE carpet (homepage Wind/Sun sibling) ─────────────
+
+# Two settled days; cell = max(net_import_mw, 0) × system_sell_price (£/h).
+_RATE_FH = [
+    {"settlement_date": "2026-06-22", "settlement_period": 1, "INTFR": 2000},   # 2000 MW
+    {"settlement_date": "2026-06-22", "settlement_period": 2, "INTFR": -500},   # export -> £0
+    {"settlement_date": "2026-06-23", "settlement_period": 1, "INTFR": 1000},
+    {"settlement_date": "2026-06-23", "settlement_period": 48, "INTFR": 4000},
+]
+_RATE_PR = [
+    {"settlement_date": "2026-06-22", "settlement_period": 1, "system_sell_price": 100.0},   # 200,000
+    {"settlement_date": "2026-06-22", "settlement_period": 2, "system_sell_price": 800.0},   # export -> 0
+    {"settlement_date": "2026-06-23", "settlement_period": 1, "system_sell_price": 200.0},   # 200,000
+    {"settlement_date": "2026-06-23", "settlement_period": 48, "system_sell_price": 300.0},  # 1,200,000
+]
+
+
+def test_rate_carpet_days_shape_and_cells():
+    days = ic.rate_carpet_days(_RATE_FH, _RATE_PR)
+    assert [d["date"] for d in days] == ["2026-06-22", "2026-06-23"]
+    for d in days:
+        assert len(d["cf"]) == 48
+    d22, d23 = days
+    assert d22["cf"][0] == 200_000      # 2000 MW × £100
+    assert d22["cf"][1] == 0            # export half-hour floored to £0
+    assert d22["cf"][2] is None         # no data for this SP
+    assert d23["cf"][0] == 200_000      # 1000 MW × £200
+    assert d23["cf"][47] == 1_200_000   # 4000 MW × £300, SP48
+
+
+def test_rate_carpet_skips_sp_without_price():
+    fh = _RATE_FH + [{"settlement_date": "2026-06-23", "settlement_period": 5, "INTFR": 9000}]
+    days = ic.rate_carpet_days(fh, _RATE_PR)   # no price row for SP5 -> left None
+    d23 = next(d for d in days if d["date"] == "2026-06-23")
+    assert d23["cf"][4] is None
+
+
+def test_rate_carpet_rolling_window_drops_old_days():
+    fh = _RATE_FH + [{"settlement_date": "2020-01-01", "settlement_period": 1, "INTFR": 1000}]
+    pr = _RATE_PR + [{"settlement_date": "2020-01-01", "settlement_period": 1, "system_sell_price": 50.0}]
+    days = ic.rate_carpet_days(fh, pr, span_days=365)
+    assert "2020-01-01" not in [d["date"] for d in days]
+
+
+def test_rate_distribution_ascending_with_mean():
+    days = ic.rate_carpet_days(_RATE_FH, _RATE_PR)
+    d = ic.rate_distribution(days)
+    # non-null cells: [200000, 0, 200000, 1200000] -> mean 400000
+    assert d["p10"] <= d["p25"] <= d["p50"] <= d["p75"] <= d["p90"]
+    assert d["mean"] == 400_000
+    assert ic.rate_distribution([]) is None
+
+
+def test_rate_cap_rounds_up_to_500k_above_max():
+    days = ic.rate_carpet_days(_RATE_FH, _RATE_PR)
+    # max cell 1,200,000 -> next £500k = £1,500,000
+    assert ic.rate_cap(days) == 1_500_000
+
+
+def test_rate_cap_floor_for_tiny_data():
+    tiny = [{"date": "2026-06-23", "cf": [10_000] + [None] * 47}]
+    assert ic.rate_cap(tiny) == 1_000_000   # floored
+
+
+def test_build_rate_payload_keys_and_values():
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "2026-06-24T00:00:00Z")
+    for key in ("basis", "source", "metric_label", "caveat", "generated_utc",
+                "window", "range", "cap_per_h", "distribution", "days"):
+        assert key in p, f"missing key: {key}"
+    assert p["range"] == {"from": "2026-06-22", "to": "2026-06-23"}
+    assert p["cap_per_h"] == 1_500_000
+    assert p["window"] == "rolling_365d"
+
+
+def test_build_rate_payload_empty_returns_none():
+    assert ic.build_rate_payload([], [], "t") is None
+
+
+def test_guard_rate_payload_passes():
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "t")
+    ic.guard_rate_payload(p)  # must not raise
+
+
+def test_guard_rate_payload_raises_on_negative_cell():
+    from engine.guards import GuardError
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "t")
+    p["days"][0]["cf"][0] = -1
+    with pytest.raises(GuardError):
+        ic.guard_rate_payload(p)
+
+
+def test_guard_rate_payload_raises_on_wrong_row_length():
+    from engine.guards import GuardError
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "t")
+    p["days"][0]["cf"].pop()
+    with pytest.raises(GuardError):
+        ic.guard_rate_payload(p)
+
+
+def test_guard_rate_payload_raises_on_nonpositive_cap():
+    from engine.guards import GuardError
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "t")
+    p["cap_per_h"] = 0
+    with pytest.raises(GuardError):
+        ic.guard_rate_payload(p)
+
+
+def test_guard_rate_payload_raises_on_cap_below_max_cell():
+    from engine.guards import GuardError
+    p = ic.build_rate_payload(_RATE_FH, _RATE_PR, "t")
+    p["cap_per_h"] = 100   # below the £1.2m max cell -> the extreme would clip
+    with pytest.raises(GuardError):
+        ic.guard_rate_payload(p)
+
+
+# ── import capacity-factor carpet (homepage power sibling) ───────────────────────
+
+_CAPS = {"INTFR": 2000, "INTNED": 1000, "INTVKL": 1400}   # total 4400
+
+
+def test_active_capacity_sums_only_reporting_legs():
+    # INTVKL absent from the row -> not counted (link not yet commissioned).
+    assert ic.active_capacity_mw({"settlement_period": 1, "INTFR": 1500, "INTNED": 500}, _CAPS) == 3000
+    # None / blank legs are not reporting either.
+    assert ic.active_capacity_mw({"INTFR": 1500, "INTNED": None, "INTVKL": ""}, _CAPS) == 2000
+
+
+_PWR_FH = [
+    # day 1: only IFA+BritNed reporting (active 3000); net 2000 -> cf 0.6667
+    {"settlement_date": "2026-06-22", "settlement_period": 1, "INTFR": 1500, "INTNED": 500},
+    # day 1 SP2: export -600 -> cf 0 (floored); active still 3000
+    {"settlement_date": "2026-06-22", "settlement_period": 2, "INTFR": -500, "INTNED": -100},
+    # day 2: all three reporting (active 4400); net 2200 -> cf 0.5
+    {"settlement_date": "2026-06-23", "settlement_period": 1, "INTFR": 1000, "INTNED": 800, "INTVKL": 400},
+]
+
+
+def test_import_cf_carpet_days_shape_and_values():
+    days = ic.import_cf_carpet_days(_PWR_FH, _CAPS)
+    assert [d["date"] for d in days] == ["2026-06-22", "2026-06-23"]
+    for d in days:
+        assert len(d["cf"]) == 48
+    d22, d23 = days
+    assert round(d22["cf"][0], 4) == round(2000 / 3000, 4)   # net 2000 / active 3000
+    assert d22["cf"][1] == 0.0                                # export half-hour floored
+    assert d22["cf"][2] is None                              # no data
+    assert d23["cf"][0] == 0.5                               # net 2200 / active 4400
+
+
+def test_import_cf_none_when_no_legs_reporting():
+    fh = [{"settlement_date": "2026-06-23", "settlement_period": 1}]   # no INT legs at all
+    days = ic.import_cf_carpet_days(fh, _CAPS)
+    assert days[0]["cf"][0] is None   # active capacity 0 -> cf undefined, not div-by-zero
+
+
+def test_build_power_payload_keys_and_capacity():
+    p = ic.build_power_payload(_PWR_FH, _CAPS, 4400, "2026-06-24T00:00:00Z")
+    for key in ("basis", "source", "generated_utc", "window", "range",
+                "capacity_mw", "sat", "distribution", "days"):
+        assert key in p
+    assert p["capacity_mw"] == 4400
+    assert p["sat"] == 1.0
+    assert p["range"] == {"from": "2026-06-22", "to": "2026-06-23"}
+
+
+def test_build_power_payload_empty_returns_none():
+    assert ic.build_power_payload([], _CAPS, 4400, "t") is None
+
+
+def test_guard_power_payload_passes():
+    p = ic.build_power_payload(_PWR_FH, _CAPS, 4400, "t")
+    ic.guard_power_payload(p)
+
+
+def test_guard_power_payload_raises_on_cf_out_of_range():
+    from engine.guards import GuardError
+    p = ic.build_power_payload(_PWR_FH, _CAPS, 4400, "t")
+    p["days"][0]["cf"][0] = 3.0   # implausible CF
+    with pytest.raises(GuardError):
+        ic.guard_power_payload(p)
+
+
+def test_guard_power_payload_raises_on_nonpositive_capacity():
+    from engine.guards import GuardError
+    p = ic.build_power_payload(_PWR_FH, _CAPS, 4400, "t")
+    p["capacity_mw"] = 0
+    with pytest.raises(GuardError):
+        ic.guard_power_payload(p)

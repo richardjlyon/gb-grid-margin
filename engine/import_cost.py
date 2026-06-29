@@ -105,6 +105,134 @@ def carpet_matrix(daily: list[dict]) -> dict:
     return {"years": years, "doy": labels, "rows": rows}
 
 
+# ── rolling-year half-hourly RATE carpet (homepage Wind/Sun sibling) ────────────
+
+PERIODS = 48
+RATE_CAP_FLOOR = 1_000_000   # £/h floor for the dial/carpet scale (tiny fixtures)
+RATE_CAP_STEP = 500_000      # round the cap up to the next £500k above the year's worst rate
+
+
+def rate_carpet_days(
+    fuelhh_rows: list[dict],
+    price_rows: list[dict],
+    span_days: int = 365,
+) -> list[dict]:
+    """Per-day SP1..SP48 import-spend RATE grid (£/h), date-sorted, rolling last span_days.
+
+    Mirrors engine.capacity.build_carpet_days so the homepage import carpet is a true sibling
+    of the wind/solar carpets (drawCarpetCanvas, hour-of-day × date). Each cell =
+    max(net_import_mw, 0) × system_sell_price for that settlement period (MW × £/MWh = £/h);
+    export half-hours floor to £0. SPs with no price-store match are left None. DST SP49/50
+    drop (clamped to the 48 grid). Cells are rounded to whole £/h.
+    """
+    from engine.capacity import rolling_days  # shared rolling-window filter
+
+    price_by_key = {
+        (r["settlement_date"], r["settlement_period"]): r["system_sell_price"]
+        for r in price_rows
+    }
+    by_day: dict[str, list[float | None]] = {}
+    for fh in fuelhh_rows:
+        sp = fh["settlement_period"]
+        if not (1 <= sp <= PERIODS):
+            continue
+        key = (fh["settlement_date"], sp)
+        if key not in price_by_key:
+            continue
+        imp = max(net_import_mw(fh), 0.0)
+        rate = max(imp * price_by_key[key], 0.0)
+        row = by_day.setdefault(fh["settlement_date"], [None] * PERIODS)
+        row[sp - 1] = round(rate)
+    days = [{"date": d, "cf": by_day[d]} for d in sorted(by_day)]
+    return rolling_days(days, span_days)
+
+
+def rate_distribution(days: list[dict]) -> dict | None:
+    """Half-hourly rate distribution (p10/p25/p50/p75/p90 + mean, £/h) over the carpet cells.
+
+    Drives the central-tendency box-plot on BOTH the homepage dial and its legend, the same
+    percentile method as site/app.js distForDays. Returns None for an empty grid.
+    """
+    vals = sorted(c for d in days for c in d["cf"] if c is not None)
+    n = len(vals)
+    if n == 0:
+        return None
+    q = lambda p: vals[min(n - 1, int(p * n))]  # noqa: E731
+    return {
+        "p10": q(0.10), "p25": q(0.25), "p50": q(0.50),
+        "p75": q(0.75), "p90": q(0.90),
+        "mean": round(sum(vals) / n),
+    }
+
+
+def rate_cap(days: list[dict]) -> int:
+    """Dial/carpet scale cap (£/h) = next £500k above the worst half-hourly rate in the window.
+
+    Data-driven so the linear scale always REACHES the year's costliest half-hour (invariant:
+    the scale must not clip the real extreme), floored at RATE_CAP_FLOOR for tiny fixtures.
+    """
+    mx = max((c for d in days for c in d["cf"] if c is not None), default=0)
+    return max(RATE_CAP_FLOOR, int(math.ceil(mx / RATE_CAP_STEP) * RATE_CAP_STEP))
+
+
+# ── import capacity-factor carpet (homepage power sibling) ───────────────────────
+
+def active_capacity_mw(row: dict, caps: dict) -> float:
+    """Interconnector capacity reporting in this half-hour = Σ capacities of the legs present.
+
+    The settled FUELHH store blanks a leg before its link was commissioned, so summing only the
+    REPORTING legs (value not None/blank) tracks the fleet exactly as it grew — no commissioning
+    dates needed. `caps` maps INT* leg code -> rated capacity MW.
+    """
+    return sum(cap for code, cap in caps.items() if row.get(code) not in (None, ""))
+
+
+def import_cf_carpet_days(
+    fuelhh_rows: list[dict],
+    caps: dict,
+    span_days: int = 365,
+) -> list[dict]:
+    """Per-day SP1..SP48 import capacity-factor grid, date-sorted, rolling last span_days.
+
+    cf = max(net import, 0) ÷ active interconnector capacity — the sibling of the wind/solar
+    capacity factor (output ÷ DUKES nameplate). Export half-hours floor to 0; a half-hour with no
+    interconnector reporting is None (not a div-by-zero). Mirrors engine.capacity.build_carpet_days
+    so the homepage import carpet is a true sibling of the wind/solar carpets (drawCarpetCanvas).
+    """
+    from engine.capacity import rolling_days
+
+    by_day: dict[str, list[float | None]] = {}
+    for fh in fuelhh_rows:
+        sp = fh["settlement_period"]
+        if not (1 <= sp <= PERIODS):
+            continue
+        cap = active_capacity_mw(fh, caps)
+        row = by_day.setdefault(fh["settlement_date"], [None] * PERIODS)
+        if cap <= 0:
+            continue   # no interconnector reporting -> leave None
+        row[sp - 1] = round(max(net_import_mw(fh), 0.0) / cap, 4)
+    days = [{"date": d, "cf": by_day[d]} for d in sorted(by_day)]
+    return rolling_days(days, span_days)
+
+
+def cf_distribution(days: list[dict]) -> dict | None:
+    """Import-CF distribution (p10..p90 + mean, as percentages 0–100) over the carpet cells.
+
+    Same percentile method as site/app.js distForDays (vals[min(n-1, floor(p·n))]) so the engine
+    figure and any JS recompute agree. Returns None for an empty grid.
+    """
+    vals = sorted(c for d in days for c in d["cf"] if c is not None)
+    n = len(vals)
+    if n == 0:
+        return None
+    q = lambda p: vals[min(n - 1, int(p * n))] * 100  # noqa: E731
+    return {
+        "p10": round(q(0.10), 1), "p25": round(q(0.25), 1), "p50": round(q(0.50), 1),
+        "p75": round(q(0.75), 1), "p90": round(q(0.90), 1),
+        "mean": round(sum(vals) / n * 100, 1),
+    }
+
+
 # ── summary ───────────────────────────────────────────────────────────────────
 
 def summary(daily: list[dict]) -> dict:
@@ -291,3 +419,141 @@ def guard_payload(payload: dict) -> None:
             worst == max_cell,
             f"guard_payload: worst_day.value_gbp {worst} != carpet max {max_cell}",
         )
+
+
+# ── rate payload (homepage) + guard ─────────────────────────────────────────────
+
+_RATE_BASIS = (
+    "Rolling-year GB import-spend rate per half-hour = max(net interconnector inflow, 0) × "
+    "GB system sell price (MW × £/MWh = £/h). Export half-hours floor to £0. Indexed by "
+    "settlement period (local half-hour), last 365 settled days. Settled data: Elexon FUELHH "
+    "(interconnectors) and Elexon system cash-out price."
+)
+_RATE_METRIC_LABEL = "rate at which Britain is paying to import electricity, per half-hour"
+_RATE_CAVEAT = (
+    "Net imported energy valued at the GB system (cash-out) price — not the contractual "
+    "cost of the imports, which clear in the day-ahead auction."
+)
+
+
+def build_rate_payload(
+    fuelhh_rows: list[dict],
+    price_rows: list[dict],
+    generated_utc: str,
+    span_days: int = 365,
+) -> dict | None:
+    """Homepage import-rate payload: rolling-year hour×date £/h carpet + distribution + cap.
+
+    A sibling of capacity_carpets.json (drawCarpetCanvas), carrying the live-read rolling-year
+    spend RATE rather than the all-time daily totals (those stay in import_cost.json for the
+    detail page). Returns None when no joined half-hours exist (price store not yet built).
+    """
+    days = rate_carpet_days(fuelhh_rows, price_rows, span_days)
+    if not days:
+        return None
+    return {
+        "basis": _RATE_BASIS,
+        "source": _SOURCE,
+        "metric_label": _RATE_METRIC_LABEL,
+        "caveat": _RATE_CAVEAT,
+        "generated_utc": generated_utc,
+        "window": "rolling_365d",
+        "range": {"from": days[0]["date"], "to": days[-1]["date"]},
+        "cap_per_h": rate_cap(days),
+        "distribution": rate_distribution(days),
+        "days": days,
+    }
+
+
+def guard_rate_payload(payload: dict) -> None:
+    """Assert homepage import-rate payload invariants. Raises GuardError on any breach.
+
+    - caveat / metric_label non-empty (honesty framing present).
+    - cap_per_h positive AND >= the worst carpet cell (the extreme must be on-scale, not clipped).
+    - distribution present, non-negative, percentiles ascending (the box-plot is load-bearing).
+    - every day grid has exactly 48 periods; no cell negative (spend rate is never < £0).
+    """
+    require(payload.get("caveat"), "guard_rate_payload: caveat is empty or missing")
+    require(payload.get("metric_label"), "guard_rate_payload: metric_label is empty or missing")
+    require(payload["cap_per_h"] > 0,
+            f"guard_rate_payload: cap_per_h {payload['cap_per_h']} is not positive")
+
+    dist = payload.get("distribution")
+    require(dist is not None, "guard_rate_payload: distribution is missing")
+    assert dist is not None
+    order = [dist["p10"], dist["p25"], dist["p50"], dist["p75"], dist["p90"]]
+    require(all(a <= b for a, b in zip(order, order[1:])),
+            f"guard_rate_payload: distribution percentiles not ascending: {order}")
+    require(all(v >= 0 for v in (*order, dist["mean"])),
+            "guard_rate_payload: distribution has a negative value")
+
+    max_cell = 0
+    for d in payload["days"]:
+        require(len(d["cf"]) == PERIODS,
+                f"guard_rate_payload: day {d['date']} has {len(d['cf'])} periods, expected {PERIODS}")
+        for cell in d["cf"]:
+            if cell is None:
+                continue
+            require(cell >= 0,
+                    f"guard_rate_payload: cell {cell} < 0 on {d['date']} (spend rate cannot be negative)")
+            max_cell = max(max_cell, cell)
+    require(payload["cap_per_h"] >= max_cell,
+            f"guard_rate_payload: cap_per_h {payload['cap_per_h']} < worst cell {max_cell} (extreme clipped)")
+
+
+# ── power payload (homepage capacity-factor sibling) + guard ─────────────────────
+
+_POWER_BASIS = (
+    "Net imports as a share of GB interconnector capacity per half-hour = max(net interconnector "
+    "inflow, 0) ÷ the capacity of the interconnector legs reporting that half-hour. The sibling of "
+    "the wind/solar capacity factor (output ÷ nameplate). Export half-hours floor to 0; the active "
+    "capacity tracks the fleet as it grew (a leg is blank in settled FUELHH before commissioning). "
+    "Last 365 settled days. Capacities: DESNZ interconnector statistics (see data/interconnectors.json)."
+)
+_POWER_SOURCE = "Elexon FUELHH net interconnector flow ÷ DESNZ GB interconnector capacity"
+
+
+def build_power_payload(
+    fuelhh_rows: list[dict],
+    caps: dict,
+    total_capacity_mw: int,
+    generated_utc: str,
+    span_days: int = 365,
+) -> dict | None:
+    """Homepage import-power payload: rolling-year hour×date capacity-factor carpet + dial nameplate.
+
+    A sibling of capacity_carpets.json: the dial divides by `total_capacity_mw` (the current fleet,
+    the MW ring nameplate), the carpet by the per-half-hour active capacity. Returns None when no
+    half-hours have any interconnector reporting.
+    """
+    days = import_cf_carpet_days(fuelhh_rows, caps, span_days)
+    if not days:
+        return None
+    return {
+        "basis": _POWER_BASIS,
+        "source": _POWER_SOURCE,
+        "generated_utc": generated_utc,
+        "window": "rolling_365d",
+        "range": {"from": days[0]["date"], "to": days[-1]["date"]},
+        "capacity_mw": total_capacity_mw,
+        "sat": 1.0,
+        "distribution": cf_distribution(days),
+        "days": days,
+    }
+
+
+def guard_power_payload(payload: dict) -> None:
+    """Assert homepage import-power payload invariants. Raises GuardError on any breach.
+
+    - capacity_mw positive (the dial nameplate).
+    - every day grid has exactly 48 periods; every cf is None or within [0, 2] (a share of capacity;
+      brief over-nameplate flows tolerated, like the wind/solar carpet guard).
+    """
+    require(payload["capacity_mw"] > 0,
+            f"guard_power_payload: capacity_mw {payload['capacity_mw']} is not positive")
+    for d in payload["days"]:
+        require(len(d["cf"]) == PERIODS,
+                f"guard_power_payload: day {d['date']} has {len(d['cf'])} periods, expected {PERIODS}")
+        for cf in d["cf"]:
+            require(cf is None or 0.0 <= cf <= 2.0,
+                    f"guard_power_payload: cf {cf} on {d['date']} out of [0, 2]")

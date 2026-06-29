@@ -1,0 +1,256 @@
+{
+  "generated_utc": "2026-06-29T16:50:55.699305+00:00",
+  "units": {
+    "verdict": {
+      "label": "Reliability gauge (live)",
+      "section": "reliability",
+      "cadence": "live",
+      "method_anchor": "verdict",
+      "feeds": [
+        {
+          "name": "Elexon FUELINST (live)",
+          "url": "https://bmrs.elexon.co.uk/generation-by-fuel-type"
+        },
+        {
+          "name": "NESO embedded wind & solar forecast",
+          "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"
+        }
+      ],
+      "basis": "Firm (reliable) share of national demand = (gas + nuclear + biomass + other firm) \u00f7 national demand, recomputed live in the browser by the same parity-locked formula as the build. Wind, solar and net interconnector imports are the weather-and-imports (correlated-failure) bucket.",
+      "caveats": [
+        "A 5-minute snapshot. 'Weather & imports' classifies by what is firm when the continent is also becalmed \u2014 not a claim those megawatts are absent right now."
+      ]
+    },
+    "reliability-carpet": {
+      "label": "Reliability strip (settled, per half-hour)",
+      "section": "reliability",
+      "cadence": "settled",
+      "method_anchor": "reliability",
+      "feeds": [
+        {
+          "name": "Elexon FUELHH (settled)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"
+        },
+        {
+          "name": "NESO Historic Demand Data (embedded outturn)",
+          "url": "https://www.neso.energy/data-portal/historic-demand-data"
+        },
+        {
+          "name": "Sheffield Solar PV_Live (cross-check)",
+          "url": "https://www.solar.sheffield.ac.uk"
+        }
+      ],
+      "basis": "Reliable (firm) share of demand per half-hour, by the same parity-locked formula as the live gauge (engine.grid_engine.compute_verdict), over the rolling 365 settled days. Net-export half-hours clamp to 100% reliable, matching the live dial.",
+      "caveats": [
+        "The firm fuels are settled Elexon FUELHH; the embedded solar/wind are NESO's modelled outturn estimates, not metered \u2014 a mixed metered+estimated layer, disclosed.",
+        "Live gauge reads NESO's embedded forecast; the carpet reads settled outturn ~3 weeks behind \u2014 the same measure, a forecast-vs-settlement seam."
+      ]
+    },
+    "wind-dial": {
+      "label": "Wind dial (live)",
+      "section": "wind",
+      "cadence": "live",
+      "method_anchor": "capacity-trap",
+      "feeds": [
+        {
+          "name": "Elexon FUELINST (live)",
+          "url": "https://bmrs.elexon.co.uk/generation-by-fuel-type"
+        },
+        {
+          "name": "NESO embedded wind & solar forecast",
+          "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"
+        },
+        {
+          "name": "DUKES 2025, Table 6.2 (UK nameplate, end-2024)",
+          "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
+        }
+      ],
+      "basis": "Live wind capacity factor = live wind output (Elexon FUELINST + NESO embedded forecast) \u00f7 DUKES total UK wind nameplate.",
+      "caveats": []
+    },
+    "wind-carpet": {
+      "label": "Wind strip (settled, per half-hour)",
+      "section": "wind",
+      "cadence": "settled",
+      "method_anchor": "capacity-trap",
+      "feeds": [
+        {
+          "name": "Elexon FUELHH (settled)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"
+        },
+        {
+          "name": "NESO Historic Demand Data (embedded outturn)",
+          "url": "https://www.neso.energy/data-portal/historic-demand-data"
+        },
+        {
+          "name": "DUKES 2025, Table 6.2 (UK nameplate, end-2024)",
+          "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
+        }
+      ],
+      "basis": "Wind capacity factor per half-hour = (transmission WIND [Elexon FUELHH] + embedded wind [NESO outturn]) \u00f7 DUKES total UK wind nameplate (annual-step) \u2014 a true load factor, no cross-year artifact.",
+      "caveats": [
+        "Live gauge reads NESO's embedded forecast; the carpet reads settled outturn ~3 weeks behind \u2014 a forecast-vs-settlement seam."
+      ]
+    },
+    "solar-dial": {
+      "label": "Solar dial (live)",
+      "section": "solar",
+      "cadence": "live",
+      "method_anchor": "capacity-trap",
+      "feeds": [
+        {
+          "name": "NESO embedded wind & solar forecast",
+          "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"
+        }
+      ],
+      "basis": "Live solar capacity factor = NESO embedded solar forecast \u00f7 NESO embedded-solar capacity (contemporaneous, GB, DC/MWp) \u2014 numerator and denominator from the same NESO embedded series.",
+      "caveats": []
+    },
+    "solar-carpet": {
+      "label": "Solar strip (settled, per half-hour)",
+      "section": "solar",
+      "cadence": "settled",
+      "method_anchor": "capacity-trap",
+      "feeds": [
+        {
+          "name": "NESO Historic Demand Data (embedded outturn)",
+          "url": "https://www.neso.energy/data-portal/historic-demand-data"
+        }
+      ],
+      "basis": "Solar capacity factor per half-hour = embedded solar (NESO outturn) \u00f7 NESO embedded-solar capacity (contemporaneous, GB/DC). Night cells are a genuine zero, not a gap.",
+      "caveats": [
+        "A DUKES solar figure would mismatch (UK not GB, AC-equivalent not DC); the NESO embedded-solar capacity is the methodology-correct denominator."
+      ]
+    },
+    "wind-unreliability": {
+      "label": "Wind drought \u2014 whole-record carpet & lulls (wind detail)",
+      "section": "wind",
+      "cadence": "settled",
+      "method_anchor": "wind-unreliability",
+      "feeds": [
+        {
+          "name": "Elexon FUELHH (settled)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"
+        },
+        {
+          "name": "NESO Historic Demand Data (embedded outturn)",
+          "url": "https://www.neso.energy/data-portal/historic-demand-data"
+        },
+        {
+          "name": "DUKES 2025, Table 6.2 (UK nameplate, end-2024)",
+          "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
+        }
+      ],
+      "basis": "Daily wind capacity factor = mean power of (transmission WIND [Elexon FUELHH] + embedded wind [NESO outturn]) \u00f7 DUKES total UK wind nameplate (annual-step), back to 2016. A lull is a run of consecutive days below 10%; severe if it touches below 5%.",
+      "caveats": [
+        "Combined-basis figures supersede the former transmission-only lower bound; cached share images may show the higher old numbers."
+      ]
+    },
+    "import-power": {
+      "label": "Imports \u2014 capacity-factor panel (live needle, settled strip)",
+      "section": "imports",
+      "cadence": "settled",
+      "method_anchor": "import-cost",
+      "feeds": [
+        {
+          "name": "Elexon FUELINST (live)",
+          "url": "https://bmrs.elexon.co.uk/generation-by-fuel-type"
+        },
+        {
+          "name": "Elexon FUELHH (settled)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"
+        },
+        {
+          "name": "DESNZ GB interconnector capacity",
+          "url": "https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage"
+        }
+      ],
+      "basis": "Net imports as a share of GB interconnector capacity per half-hour = max(net interconnector inflow, 0) \u00f7 the capacity of the legs reporting that half-hour. The live needle is the same net-import figure as the verdict gauge; export half-hours floor to zero.",
+      "caveats": []
+    },
+    "import-cost": {
+      "label": "Imports \u2014 \u00a3 cost (import detail page)",
+      "section": "imports",
+      "cadence": "settled",
+      "method_anchor": "import-cost",
+      "feeds": [
+        {
+          "name": "Elexon FUELHH (settled)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"
+        },
+        {
+          "name": "Elexon system (cash-out) price",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/system-prices"
+        }
+      ],
+      "basis": "Daily GB net import value = \u03a3 over settled half-hours of max(net interconnector inflow, 0) \u00d7 \u00bdh \u00d7 GB system sell price (floored at \u00a30). Back to 2016.",
+      "caveats": [
+        "Net imported energy valued at the GB system (cash-out) price \u2014 NOT the contractual cost of the imports, which clear in the day-ahead auction. No licensed price series is used."
+      ]
+    },
+    "overcast": {
+      "label": "OVERCAST lamp (conditional solar)",
+      "section": "warnings",
+      "cadence": "live",
+      "method_anchor": "conditions",
+      "feeds": [
+        {
+          "name": "NESO embedded wind & solar forecast",
+          "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"
+        },
+        {
+          "name": "NESO Historic Demand Data (embedded outturn)",
+          "url": "https://www.neso.energy/data-portal/historic-demand-data"
+        }
+      ],
+      "basis": "Amber when live solar capacity factor falls below the 25th percentile of comparable half-hours, conditioned on (week-of-year, settlement period) so the diurnal+seasonal cycle does not swamp it. Readout = live CF \u00f7 that slot's clear-sky (P95) ceiling, 'X% of a clear day'; after dark the lamp is dormant.",
+      "caveats": [
+        "Live lamp reads NESO's embedded forecast; the distribution is settled outturn \u2014 a forecast-vs-settlement seam."
+      ]
+    },
+    "warnings": {
+      "label": "SCARCITY NOTICE \u2014 operational warnings (live)",
+      "section": "warnings",
+      "cadence": "live",
+      "method_anchor": "warnings",
+      "feeds": [
+        {
+          "name": "Elexon SYSWARN (active notices)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/system/warnings"
+        }
+      ],
+      "basis": "Red while NESO has at least one active margin notice on Elexon SYSWARN. Three-tier scarcity ladder, most to least severe: NISM (Notice of Insufficient System Margin), EMN (Electricity Margin Notice), CMN (Capacity Market Notice). The only authoritative lamp.",
+      "caveats": [
+        "A margin notice means the buffer is thin \u2014 the operator asking the market for more with hours of warning \u2014 not that the lights are going out."
+      ]
+    },
+    "lamps-computed": {
+      "label": "Computed lamps \u2014 UNRELIABLE \u00b7 WIND LULL \u00b7 HEAVY IMPORTS",
+      "section": "warnings",
+      "cadence": "live",
+      "method_anchor": "conditions",
+      "feeds": [
+        {
+          "name": "Elexon FUELINST (live)",
+          "url": "https://bmrs.elexon.co.uk/generation-by-fuel-type"
+        },
+        {
+          "name": "NESO embedded wind & solar forecast",
+          "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"
+        },
+        {
+          "name": "DESNZ GB interconnector capacity",
+          "url": "https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage"
+        },
+        {
+          "name": "DUKES 2025, Table 6.2 (UK nameplate, end-2024)",
+          "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
+        }
+      ],
+      "basis": "Each computed lamp goes amber when the live reading leaves the usual half \u2014 the P25\u2013P75 box of that panel's own rolling-year distribution \u2014 on the concerning side: UNRELIABLE when firm share < P25, WIND LULL when wind CF < P25, HEAVY IMPORTS when import share of capacity > P75. The rail reads in one language: each active lamp shows its source's share of national demand (the verdict-receipt basis), even where it trips on a different distribution. The threshold is the box-plot beside the panel.",
+      "caveats": [
+        "The amber lamps are this site's own reading of live conditions, not an official statement of system state. Only the red SCARCITY NOTICE carries an authoritative NESO source."
+      ]
+    }
+  }
+}

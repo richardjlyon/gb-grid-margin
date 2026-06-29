@@ -21,7 +21,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from engine import capacity, embedded_history, import_cost, reliability, system_price_history, wind_unreliability
+from engine import (capacity, embedded_history, import_cost, methodology, reliability,
+                    solar_overcast, sources, system_price_history, wind_unreliability)
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import GuardError, check_nameplate_sane, check_shares_sum_100
@@ -30,6 +31,7 @@ from engine.models import NameplateSeries
 
 NAMEPLATE_SERIES_PATH = Path("data/nameplate_series.json")
 NAMEPLATE_ANCHOR_PATH = Path("data/nameplate.json")
+INTERCONNECTORS_PATH = Path("data/interconnectors.json")
 SITE_DATA = Path("site/data")
 
 # Generation fuels that fall into "other" for the transmission-share split — the positive
@@ -221,6 +223,18 @@ def build(out_dir: Path = SITE_DATA) -> int:
             print(f"wind unreliability build failed (GuardError): {e}", file=sys.stderr)
             return 1
         reliability_files.append(("wind_unreliability", wu_payload))
+
+        # Conditional solar 'overcast' grid (Grid Conditions OVERCAST lamp): per (week, settlement
+        # period) cell, the p25 overcast line + a robust P95 clear-sky reference, over the whole
+        # embedded-solar record. Built from the same embedded_rows; night cells null.
+        so_payload = solar_overcast.build_payload(
+            solar_overcast.conditional_grid(embedded_rows), generated, len(embedded_rows))
+        try:
+            solar_overcast.guard_payload(so_payload)
+        except GuardError as e:
+            print(f"solar overcast build failed (GuardError): {e}", file=sys.stderr)
+            return 1
+        reliability_files.append(("solar_overcast", so_payload))
     else:
         print("embedded store empty — skipping reliability_*.json + capacity_carpets.json "
               "(run embedded_history backfill)")
@@ -236,6 +250,48 @@ def build(out_dir: Path = SITE_DATA) -> int:
         except GuardError as e:
             print(f"import cost build failed (GuardError): {e}", file=sys.stderr); return 1
         reliability_files.append(("import_cost", ic_payload))
+
+    # Homepage import-rate carpet: rolling-year half-hourly spend RATE (£/h), a Wind/Sun sibling.
+    # The all-time daily totals above (import_cost.json) feed the import detail page; this small
+    # rolling-year payload feeds the homepage panel. Skipped (not fatal) if the price store is empty.
+    ir_payload = import_cost.build_rate_payload(rows, price_rows, generated)
+    if ir_payload is None:
+        print("system-price store empty — skipping import_rate.json", file=sys.stderr)
+    else:
+        try:
+            import_cost.guard_rate_payload(ir_payload)
+        except GuardError as e:
+            print(f"import rate build failed (GuardError): {e}", file=sys.stderr); return 1
+        reliability_files.append(("import_rate", ir_payload))
+
+    # Homepage import-power carpet: net imports as a share of interconnector capacity (the §02 sibling).
+    # Capacities (per DESNZ) come from data/interconnectors.json; the per-half-hour denominator is the
+    # capacity of the legs reporting that half-hour, so it tracks the fleet as it grew.
+    interconnectors = json.loads(INTERCONNECTORS_PATH.read_text())
+    caps = {code: link["capacity_mw"] for code, link in interconnectors["links"].items()}
+    ip_payload = import_cost.build_power_payload(
+        rows, caps, interconnectors["total_capacity_mw"], generated)
+    if ip_payload is None:
+        print("no interconnector half-hours — skipping import_power.json", file=sys.stderr)
+    else:
+        try:
+            import_cost.guard_power_payload(ip_payload)
+        except GuardError as e:
+            print(f"import power build failed (GuardError): {e}", file=sys.stderr); return 1
+        reliability_files.append(("import_power", ip_payload))
+
+    # Provenance registry: the single author of every figure's source + basis + caveats. Emitted
+    # always (not gated on the embedded store) — the methodology page + provenance gate depend on it.
+    sources_payload = sources.build_payload(generated)
+    try:
+        sources.guard_payload(sources_payload)
+    except GuardError as e:
+        print(f"sources build failed (GuardError): {e}", file=sys.stderr); return 1
+    reliability_files.append(("sources", sources_payload))
+
+    # Regenerate the methodology page's source cards from the same registry (build-time, static).
+    methodology.build(sources_payload)
+    print("regenerated site/methodology.html source cards")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("ytd_shares", ytd), ("nameplate", nameplate),

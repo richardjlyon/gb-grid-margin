@@ -172,3 +172,152 @@ def test_sanity_magnitudes():
     assert 52_000_000 * 0.85 <= v_dec22 <= 52_000_000 * 1.15, (
         f"2022-12-12: £{v_dec22:,.1f} is outside ±15% of £52m"
     )
+
+
+# ---------------------------------------------------------------------------
+# Homepage rolling-year RATE carpet — independent recompute (shares NO engine code)
+# ---------------------------------------------------------------------------
+
+def _independent_rate_cells() -> dict[tuple[str, str], int]:
+    """Recompute the half-hourly import-spend rate (£/h) per (date, SP) from raw CSVs.
+
+    rate = max(net_import, 0) × price; export half-hours floor to £0; rounded to whole £/h.
+    Shares NO code with engine.import_cost.
+    """
+    price_idx: dict[tuple[str, str], float] = {}
+    for path in sorted(glob.glob(PRICE_GLOB)):
+        with open(path, newline="") as f:
+            for row in csv.DictReader(f):
+                price_idx[(row["settlement_date"], row["settlement_period"])] = float(
+                    row["system_sell_price"]
+                )
+
+    cells: dict[tuple[str, str], int] = {}
+    for path in sorted(glob.glob(FUELHH_GLOB)):
+        with open(path, newline="") as f:
+            reader = csv.DictReader(f)
+            int_cols = [
+                c for c in (reader.fieldnames or [])
+                if c.upper().startswith("INT") and c not in ("INDO", "ITSDO")
+            ]
+            for row in reader:
+                key = (row["settlement_date"], row["settlement_period"])
+                if key not in price_idx:
+                    continue
+                sp = int(row["settlement_period"])
+                if not (1 <= sp <= 48):
+                    continue
+                net_import = sum(
+                    float(row[c]) if row.get(c) not in (None, "") else 0.0
+                    for c in int_cols
+                )
+                rate = max(max(net_import, 0.0) * price_idx[key], 0.0)
+                cells[key] = round(rate)
+    return cells
+
+
+def _rate_payload() -> dict:
+    from engine import history, import_cost, system_price_history
+    return import_cost.build_rate_payload(
+        history.read_store(), system_price_history.read_store(), "test"
+    )
+
+
+def test_rate_carpet_cells_match_independent_recompute():
+    """Published rate-carpet cells must exactly match an independent recompute for sample SPs."""
+    cells = _independent_rate_cells()
+    payload = _rate_payload()
+    by_date = {d["date"]: d for d in payload["days"]}
+
+    checked = 0
+    for date, day in by_date.items():
+        for sp_idx, published in enumerate(day["cf"]):
+            if published is None:
+                continue
+            key = (date, str(sp_idx + 1))
+            indep = cells.get(key)
+            assert indep is not None, f"{date} SP{sp_idx + 1}: missing from independent recompute"
+            assert published == indep, (
+                f"{date} SP{sp_idx + 1}: published={published} != independent={indep}"
+            )
+            checked += 1
+            if checked >= 2000:        # a generous sample across the whole window
+                return
+    assert checked > 0, "no rate-carpet cells checked"
+
+
+def test_rate_cap_reaches_worst_cell():
+    """The published cap must sit at or above the worst published cell (extreme not clipped)."""
+    payload = _rate_payload()
+    worst = max(c for d in payload["days"] for c in d["cf"] if c is not None)
+    assert payload["cap_per_h"] >= worst
+    assert payload["cap_per_h"] - worst < 500_000  # …and no more than one rounding step above it
+
+
+# ---------------------------------------------------------------------------
+# Homepage import capacity-factor carpet — independent recompute (shares NO engine code)
+# ---------------------------------------------------------------------------
+
+def _interconnector_caps() -> dict[str, int]:
+    import json
+    table = json.loads((ROOT / "data" / "interconnectors.json").read_text())
+    return {code: link["capacity_mw"] for code, link in table["links"].items()}
+
+
+def _independent_import_cf() -> dict[tuple[str, str], float]:
+    """Recompute import CF per (date, SP) from raw FUELHH: max(net,0) / active capacity.
+
+    Active capacity = Σ capacities of INT legs with a non-blank value that half-hour. Shares NO code
+    with engine.import_cost.
+    """
+    caps = _interconnector_caps()
+    cells: dict[tuple[str, str], float] = {}
+    for path in sorted(glob.glob(FUELHH_GLOB)):
+        with open(path, newline="") as f:
+            reader = csv.DictReader(f)
+            int_cols = [c for c in (reader.fieldnames or [])
+                        if c.upper().startswith("INT") and c not in ("INDO", "ITSDO")]
+            for row in reader:
+                sp = int(row["settlement_period"])
+                if not (1 <= sp <= 48):
+                    continue
+                active = sum(caps[c] for c in int_cols
+                            if c in caps and row.get(c) not in (None, ""))
+                if active <= 0:
+                    continue
+                net = sum(float(row[c]) if row.get(c) not in (None, "") else 0.0 for c in int_cols)
+                cells[(row["settlement_date"], str(sp))] = round(max(net, 0.0) / active, 4)
+    return cells
+
+
+def _power_payload() -> dict:
+    from engine import history, import_cost
+    caps = _interconnector_caps()
+    total = sum(caps.values())
+    return import_cost.build_power_payload(history.read_store(), caps, total, "test")
+
+
+def test_interconnector_table_sums_to_published_total():
+    import json
+    table = json.loads((ROOT / "data" / "interconnectors.json").read_text())
+    assert sum(l["capacity_mw"] for l in table["links"].values()) == table["total_capacity_mw"]
+
+
+def test_import_cf_cells_match_independent_recompute():
+    """Published import-CF cells must exactly match an independent recompute for sample SPs."""
+    indep = _independent_import_cf()
+    payload = _power_payload()
+    checked = 0
+    for day in payload["days"]:
+        for sp_idx, published in enumerate(day["cf"]):
+            if published is None:
+                continue
+            key = (day["date"], str(sp_idx + 1))
+            assert key in indep, f"{key}: missing from independent recompute"
+            assert published == indep[key], (
+                f"{key}: published={published} != independent={indep[key]}"
+            )
+            checked += 1
+            if checked >= 2000:
+                return
+    assert checked > 0, "no import-CF cells checked"

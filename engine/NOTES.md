@@ -639,38 +639,69 @@ file agrees.
 `reliability_all.json` is no longer emitted by `engine.derived.build`. `reliability_year.json`
 (flat, rolling 12 months) is retained solely as the share-card source (§13).
 
-## 16. Grid Conditions panel — lamp thresholds *(2026-06-28)*
+## 16. Grid Conditions panel — lamp thresholds *(usual-half policy, 2026-06-29)*
 
 The homepage's Grid Conditions rail lights four lamps from the **live** dashboard figures (no
 new derived series — every lamp reads the same numbers the live verdict / capacity dials show,
 so a lamp can never disagree with the chart it summarises).
 
-**Wind lull — live wind CF `< 25%`.** The lamp lights on the *live* wind capacity factor —
-live wind output (Elexon FUELINST + NESO embedded) ÷ DUKES total UK wind nameplate — the
-identical figure the Entry-02 capacity dial points to. Below 25% reads as becalmed *right now*;
-the 25% line corresponds to the bottom ~half of the combined-basis daily distribution (the
-"below typical" band). **No run-length is shown:** a "Day N of a run" counter would need
-*settled* daily CF, but complete settled FUELHH lags ~5 days, so it can never reflect the
-current day — it would contradict the live dial (the exact bug that motivated this design). The
-lull-*duration* story ("when the wind stops, it stops for days") is told honestly, on settled
-data, by Entry 03's drought plot. An earlier `wind_live_run.json` series (transmission-only
-daily run counter) was built and then removed for this reason.
+**Site policy — the "usual half" rule.** A computed lamp goes amber when the live reading leaves
+the **usual half** — the IQR box (P25–P75) of that panel's own rolling-year distribution, the
+*thick bar* of the box-plot drawn under each carpet legend — on the concerning side. The threshold
+is read **live from that box-plot** (each panel's `distForDays(...)` percentiles), so there is no
+hand-picked constant to defend and a lamp can never contradict the box beside it. The concerning
+side depends on the metric: for wind CF and firm share a **low** reading is the worry (`< P25`);
+for imports a **high** reading is the worry (`> P75`). The rule is self-updating (the band drifts
+with the rolling year) and self-documenting (the band is already on screen). The official scarcity
+lamp is exempt — it is a NESO notice, not a computed band.
 
-**Imports 25% threshold derivation.** The Grid Conditions panel lights an amber imports lamp
-when net-import share of demand exceeds 25%. Derivation: net-import share = sum of signed
-`INT*` columns ÷ `INDO` demand, computed per half-hour from the history store. Over the last
-~12 months the median net-import share is ~13%; 25% falls near the 85th percentile (~16% of
-half-hours above that line). This is a high-usage signal — imports filling a material gap —
-not a routine baseline figure. Reproducible from the wide store with a short script.
+**Wind lull — trips on live wind CF `< P25`, displays share of demand.** The lamp lights on the
+*live* wind capacity factor — live wind output (Elexon FUELINST + NESO embedded) ÷ DUKES total UK
+wind nameplate, the figure the Entry-02 capacity dial points to — against the **P25** of that dial's
+box-plot (the left edge of the usual half: becalmed more than three-quarters of the year). But like
+the imports lamp (trip on one basis, read another) it **displays wind's share of national demand**
+(`wind_mw ÷ national_demand`), not the capacity factor, so the rail speaks one language — every active
+lamp reads share-of-demand, the §01 receipt basis — and the lamp's number matches the receipt's wind
+row. (Earlier it read "X% of installed capacity", which sat one or two points off the receipt's
+demand-share and read as a contradiction.) **No run-length is shown:**
+a "Day N of a run" counter would need *settled* daily CF, but complete settled FUELHH lags ~5 days,
+so it can never reflect the current day — it would contradict the live dial (the exact bug that
+motivated this design). The lull-*duration* story ("when the wind stops, it stops for days") is told
+honestly, on settled data, by the wind detail page's drought plot. An earlier `wind_live_run.json`
+series (transmission-only daily run counter) was built and then removed for this reason.
 
-**Firm < 50% threshold.** The firm lamp on the Grid Conditions panel turns amber when the
-live firm share (reliable + imports) falls below 50%. This is the majority line: "weather
-plus imports are carrying more than half of demand." It trips amber before the verdict gauge's
-red zone (< 40% firm), giving an earlier warning at the panel level.
+**Heavy imports — trips on capacity `> P75`, reads the exposure (`% of supply`).** The *trigger* is
+net imports as a share of GB interconnector capacity — the signed figure the Entry-03 dial needle
+points to (sum of signed `INT*` columns ÷ active-reporting interconnector capacity; see §15 / the
+import-power payload) — exceeding the **P75** of that panel's box-plot (above the usual half: the
+cables working harder than in a typical hour). An export hour is a negative share and so never trips.
+But the lamp **displays a different number from the one it trips on**: it reads **net imports as a
+share of supply** (`net imports ÷ demand`, ≈ 18–20% live), labelled "*X% of supply*". *Why split
+them:* cable-fullness (the trip basis) sizes the *pipe*, but the *risk* heavy imports flag is reliance
+on neighbours who may stop selling — and the size of that hole is how much of demand the imports are
+currently carrying, not how full the cables are. So the trigger stays tied to the panel's own
+distribution (lamp and dial agree on *when* it is heavy) while the reading states the *exposure*. The
+two never contradict (both say "heavy"); they show different faces. *Basis history:* an even earlier
+build *tripped* on "`> 25%` of demand", which broke when the Entry-03 panel was reframed onto capacity
+(lamp read demand, dial read capacity — the panel could show a heavy lean while the lamp stayed
+nominal). Trip-on-capacity fixed the *trigger*; reading share-of-supply fixes the *number's meaning*.
 
-**Source-trace.** The panel's pure threshold logic (`site/conditions.js`) is unit-tested
-(`site/conditions.test.mjs`, run under `tests/test_parity.py`); because each lamp consumes the
-same live figures the dashboard already renders, there is no separate series to drift.
+**Unreliable — live firm share `< P25`.** The lamp (titled **UNRELIABLE**) turns amber when the live
+firm share — reliable *dispatchable* power (gas + nuclear + biomass + other firm); **imports are NOT
+firm**, they sit in the unreliable bucket with wind and solar — falls below the **P25** of the
+Entry-01 reliability box-plot. Firm is then in its worst quarter of the year, so weather + imports are
+carrying an unusually large share of demand. The trip logic stays in firm terms (to match the firm
+distribution), but the lamp **displays the unreliable share** (`100 − firm`, e.g. "64% weather and
+imports") so the number rises with the alarm and agrees with the title — the rail-level echo of the
+§01 verdict gauge's own RELIABLE / UNRELIABLE flip. (This replaced a fixed `< 50%` "majority line";
+under the usual-half policy the trip point is the distribution's lower quartile, roughly coincident
+with the verdict gauge's `< 40%` red zone rather than an earlier warning.)
+
+**Source-trace.** The panel's pure threshold logic (`site/conditions.js`) takes each percentile as
+an argument and is unit-tested (`site/conditions.test.mjs`, run under `tests/test_parity.py`);
+because each lamp consumes the same live figures and the same box-plot the dashboard already
+renders, there is no separate series to drift. Wiring (which distribution feeds which lamp) is in
+`updateComputedLamps()` in `site/app.js`.
 
 ## 17. System sell-price history store *(Import-cost panel, Task 1, 2026-06-28)*
 
@@ -734,11 +765,39 @@ negative cash-out price on an imported half-hour means no cost, not negative cos
 the all-time total vs signed; the headline days are unaffected. `import_mwh` is left unfloored, so
 `mean_price = value / mwh` reflects realised cost.
 
-**Carpet colour scale.** `CAP_GBP = £20m` (`scale.cap_gbp`) is the sqrt-ramp saturation point, tuned
-to the real distribution (median £3.2m, p90 £10.8m, p99 £19.9m, **max £94.4m**): at £20m only ~1% of
-days saturate full-red and ~⅔ sit in the pale half, so the carpet reads as a pale field with red on
-the genuinely costly days. The cap is a **colour clamp only** — no datum is truncated; days above the
-cap (the long tail to £94.4m) all read deepest-red but are named explicitly by the on-carpet record
-marker, the caption, and the costliest-days list, so no figure is hidden. An earlier
+**Carpet colour scale.** `scale.cap_gbp` is the sqrt-ramp saturation point, set **from the data**:
+`_cap_for` rounds up to the next £10m above the costliest day (**max £94.4m → £100m**), floored at
+`CAP_FLOOR_GBP = £20m` so a quiet sample can't collapse the scale. Tuned against the real distribution
+(median £3.2m, p90 £10.8m, p99 £19.9m): at a £100m cap the everyday range sits in the pale half and
+only the genuinely costly days read deep red. The cap is a **colour clamp only** — no datum is
+truncated; days at the top of the tail all read deepest-red but are named explicitly by the on-carpet
+record marker, the caption, and the costliest-days list, so no figure is hidden. An earlier
 draft carried a cited £1,379/MWh emergency-import figure (Montel/Guardian); it was **dropped** — the
 panel shows only figures reproducible from Elexon/NESO/DUKES, never an unverifiable external number.
+
+## 19. Provenance registry — the single author of source + basis + caveats *(2026-06-29)*
+
+Provenance (which feeds a figure, the formula in words, the disclosed caveats) used to be
+triplicated — in the engine payloads (`*.json` `source`/`basis` fields), in hardcoded strings in
+`site/app.js`, and in prose here and on `methodology.html` — and it drifted. **`engine/sources.py`
+is now the single author.** It holds a flat registry of ~12 units keyed by stable ID (`verdict`,
+`reliability-carpet`, `wind-dial`, `wind-carpet`, `solar-dial`, `solar-carpet`, `wind-unreliability`,
+`import-power`, `import-cost`, `overcast`, `warnings`, `lamps-computed`), each carrying its feeds
+(name + url), basis, `cadence` (`live`/`settled`), `section`, caveats and method anchor.
+
+- **Emitted** to `site/data/sources.json` by `engine.derived.build` (guarded by `sources.guard_payload`).
+- **Methodology cards GENERATED** from it: `engine/methodology.py` renders the "Sources at a glance"
+  cards into `site/methodology.html` between the `GENERATED:sources` markers (static, no-JS, indexable).
+  The hand-written conceptual prose below the cards stays — NOTES and the prose are for *reasoning*
+  (why a denominator, why the mean not the median), the registry is for the *source strings*.
+- **Front page cut**: the homepage's ~9 per-figure source lines became **3 "Sources & method →" links**
+  (one per §01/§02/§03 → `methodology.html#src-group-<section>`), plus a registry-`cadence`-driven
+  "settled strip" chip. The §01 verdict snapshot line was dropped — the same `verdict.snapshot` the
+  GRID WARNINGS band already shows; the band is the single freshness clock. `site/app.js` reads
+  `data/sources.json` into `SOURCES` and `sectionSrc(section)` renders the links.
+- **Machine-checkable**: `tests/test_provenance_gate.py` asserts the methodology page's `data-unit`
+  cards == the registry exactly (no stale card, no undocumented figure) and that every front-page
+  section link resolves to a generated card group. A registry change that isn't rebuilt fails the gate.
+
+The per-module payload `source`/`basis` fields remain (the share cards and some panels still read
+them); the registry is their canonical home and should be kept in step when a basis changes.

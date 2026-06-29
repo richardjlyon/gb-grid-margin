@@ -12,6 +12,7 @@
   --ink:       #15181c;   /* ledger ink — all neutral figures, rules, needle at rest */
   --slate:     #565e66;   /* secondary text, every baked source line, year ticks */
   --rule:      #d7dbdf;   /* hairlines, card borders */
+  --rule-strong: #aab1b8; /* the visible double-rule between front-page sections (and hero → §01) */
   --rule-soft: #eaecee;   /* intra-table rules, the stripe's pale (windy) end */
   --red:       #d6121f;   /* debit red — THE accent: headline, armed needle, failures */
   --red-deep:  #a8101b;   /* deep debit — failing body ink at small sizes, sub-5% ticks */
@@ -107,7 +108,7 @@ a:hover { color: var(--red); }
 }
 .cond-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; color: #cfcabd; }
 .cond-snapshot {
-  font-size: 0.72rem; letter-spacing: .03em; color: var(--cond-dim);
+  font-size: 0.72rem; letter-spacing: .03em; color: #cfcabd;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .cond-rail { display: flex; align-items: stretch; }
@@ -135,15 +136,25 @@ a:hover { color: var(--red); }
   margin-top: 3px; white-space: nowrap;
 }
 .cond-status b { font-variant-numeric: tabular-nums; font-weight: 600; }
-/* active (our computed condition) — amber */
+/* active (our computed condition) — amber, gentle breathing glow to read as "live" */
 .cond-cell[data-state="active"] .cond-led {
   background: var(--cond-amber); box-shadow: 0 0 10px 2px rgba(255, 179, 71, .75), 0 0 0 1px #6b4e1c;
+  animation: cond-pulse-amber 1.8s ease-in-out infinite;
 }
 .cond-cell[data-state="active"] .cond-legend { color: var(--cond-amber-ink); }
 .cond-cell[data-state="active"] .cond-status { color: #E8A13A; }
-/* in_force (official scarcity notice) — red, the only red on the panel */
+/* in_force (official scarcity notice) — red, the only red on the panel; rapid pulse = urgent */
 .cond-cell[data-state="in_force"] .cond-led {
   background: var(--cond-red); box-shadow: 0 0 10px 2px rgba(214, 18, 31, .8), 0 0 0 1px #7d2228;
+  animation: cond-pulse-red .8s ease-in-out infinite;
+}
+@keyframes cond-pulse-amber {
+  0%, 100% { opacity: .5; box-shadow: 0 0 3px 1px rgba(255, 179, 71, .25), 0 0 0 1px #6b4e1c; }
+  50%      { opacity: 1; box-shadow: 0 0 15px 4px rgba(255, 179, 71, 1), 0 0 0 1px #6b4e1c; }
+}
+@keyframes cond-pulse-red {
+  0%, 100% { box-shadow: 0 0 5px 1px rgba(214, 18, 31, .45), 0 0 0 1px #7d2228; }
+  50%      { box-shadow: 0 0 15px 4px rgba(214, 18, 31, 1), 0 0 0 1px #7d2228; }
 }
 .cond-cell[data-state="in_force"] .cond-legend { color: #f0a9ad; }
 .cond-cell[data-state="in_force"] .cond-status { color: var(--cond-red); }
@@ -157,7 +168,7 @@ a:hover { color: var(--red); }
 }
 /* ---------- the ledger: entries separated by a double rule ---------- */
 main { padding-bottom: 40px; }
-.entry { padding: 30px 0 26px; border-top: 3px double var(--rule); }
+.entry { padding: 30px 0 26px; border-top: 3px double var(--rule-strong); }
 .entry:first-of-type { border-top: none; }
 .eyebrow {
   font-family: var(--display); font-size: 0.75rem; font-weight: 500;
@@ -177,7 +188,7 @@ main { padding-bottom: 40px; }
 /* homepage orientation lede — tells arrivals what the site is, above Entry 01 */
 .site-lede {
   font-family: var(--read); font-size: 1.42rem; font-weight: 500; line-height: 1.5; color: var(--ink);
-  max-width: 46em; margin: 30px 0 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+  max-width: 46em; margin: 30px 0 12px; padding-bottom: 22px; border-bottom: 3px double var(--rule-strong);
 }
 .src {
   font-family: var(--mono); font-size: 0.8125rem; color: var(--slate);
@@ -206,6 +217,8 @@ main { padding-bottom: 40px; }
   .verdict-cols { grid-template-columns: 1fr; gap: 4px; }
 }
 
+/* breathing room between the verdict gauge/receipt and the reliability strip below it */
+#reliability-body { margin-top: 2.5rem; }
 .gauge-block { text-align: center; margin: 6px 0 2px; }
 .gauge { width: min(440px, 92%); height: auto; display: block; margin: 0 auto; }
 .gauge-zonelabels {
@@ -398,7 +411,7 @@ main { padding-bottom: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-tick, .live-dot::before { animation: none !important; }
+  .brand-tick, .live-dot::before, .cond-led { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }
 
@@ -450,7 +463,6 @@ main { padding-bottom: 40px; }
 /* the source label (Wind / Solar) sits in the gauge column, with the rolling-year average alongside */
 .trap-label { grid-column: 1; margin: 16px 0 2px; font-family: var(--display); font-weight: 600;
   font-size: 1.05rem; color: var(--ink); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.trap-avg { font-family: var(--read); font-weight: 400; font-size: 0.85rem; color: var(--slate); }
 
 .trap-gauge-cell { grid-column: 1; min-width: 0; }
 /* compact, self-documenting key for the box-plot under each carpet legend — shown once, with
@@ -484,6 +496,9 @@ main { padding-bottom: 40px; }
 /* Entry 04 caption + source + costliest list, stacked under the carpet (column 2). Declared before
    the narrow-width media query below so that query can collapse it to column 1 like the other cells. */
 .trap-extra { grid-column: 2; min-width: 0; }
+/* The import live-receipt line: its own column-1 item below the dial, so the gauge cell matches the
+   wind/solar dial height and the carpet beside it bottom-aligns to the dial baseline. */
+.trap-gauge-extra { grid-column: 1; min-width: 0; }
 
 .gauge .g-pct { font: 600 11px 'Spline Sans Mono', monospace; fill: #15181c; }
 .gauge .g-mw { font: 500 9px 'Spline Sans Mono', monospace; fill: #565e66; }
@@ -493,7 +508,7 @@ main { padding-bottom: 40px; }
 .trap-gauge-cell .gauge .g-mw { font-size: 9px; }
 @media (max-width: 900px) {
   .trap-grid, .trap-grid.gauge-only { grid-template-columns: 1fr; }
-  .trap-label, .carpet-legend, .trap-gauge-cell, .carpet-cell, .trap-src-gauge, .trap-src-strip, .trap-extra { grid-column: 1; }
+  .trap-label, .carpet-legend, .trap-gauge-cell, .trap-gauge-extra, .carpet-cell, .trap-src-gauge, .trap-src-strip, .trap-extra { grid-column: 1; }
 }
 
 /* ---------- Entry 03 — wind unreliability carpet ---------- */
@@ -545,3 +560,63 @@ main { padding-bottom: 40px; }
 .import-rate-unit { font-size: 0.5em; font-weight: 600; color: var(--slate); letter-spacing: 0; }
 .import-rate-sub { font: 500 0.72rem var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--slate); text-align: center; margin: 3px 0 0; }
+
+/* the detail-page back crumb */
+.crumb { font: 500 0.9rem var(--display); margin: 0 0 1.5rem; }
+.crumb a { color: var(--slate); text-decoration-color: var(--rule); }
+.crumb a:hover { color: var(--red); }
+
+/* Methodology — generated source cards (engine/methodology.py). One card per provenance unit,
+   grouped by section. Scannable replacement for dense per-figure source prose. */
+.sources-at-a-glance { margin-top: 1.5rem; }
+.source-group { margin: 1.75rem 0 0; }
+.source-group > h2 { margin-bottom: 0.75rem; }
+.source-card {
+  border: 1px solid var(--rule); border-left: 3px solid var(--rule-strong);
+  border-radius: var(--radius); background: var(--paper);
+  padding: 0.85rem 1rem; margin: 0.6rem 0;
+}
+.source-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+.source-card__head h3 { font: 600 1.02rem var(--display); letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+.source-card .cadence {
+  flex: none; font: 600 0.66rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--rule);
+}
+.cadence--settled { color: var(--slate); background: var(--field); }
+.cadence--live { color: var(--red-deep); background: #fdeceb; border-color: #f3c9c7; }
+.source-card p { margin: 0.45rem 0 0; font-size: 0.9rem; line-height: 1.5; }
+.source-card__feeds { font-family: var(--mono); font-size: 0.8rem; color: var(--slate); }
+.source-card__feeds a { color: var(--slate); text-decoration-color: var(--rule); }
+.source-card__feeds a:hover { color: var(--red); }
+.source-card .k { font: 600 0.66rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--slate); margin-right: 0.4rem; }
+.source-card__basis { color: var(--ink); }
+.source-card__caveats { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.source-card__caveats li { font-size: 0.85rem; line-height: 1.45; color: var(--slate); margin: 0.2rem 0; }
+.source-card__more { font: 500 0.85rem var(--display); }
+.source-card__more a { color: var(--red); text-decoration-color: var(--rule); }
+.source-card__more a:hover { text-decoration-color: var(--red); }
+
+/* Front-page per-group footer: a bold sans "Going further:" label (left) shares the row with the
+   right-aligned "Sources & method →"; the deeper-analysis page link(s) list single-spaced below. */
+.entry-foot { display: flex; align-items: baseline; margin: 1.1rem 0 0; font: 500 0.9rem/1.5 var(--display); }
+.entry-foot-going { font-family: var(--display); font-weight: 700; color: var(--ink); }
+.entry-foot-src { margin-left: auto; white-space: nowrap; color: var(--red); text-decoration-color: var(--rule); }
+.entry-foot-src:hover { text-decoration-color: var(--red); }
+.entry-further { margin: 0.35rem 0 0; }
+.entry-further a { display: block; font: 500 0.95rem/1.35 var(--display); color: var(--red); text-decoration-color: var(--rule); }
+.entry-further a:hover { text-decoration-color: var(--red); }
+/* extra breathing room between stacked metric groups (e.g. wind → solar in §02): a grid that follows
+   a group footer (or its "Going further" block) is the start of the next group, so push it down. */
+.entry-foot + .trap-grid,
+.entry-further + .trap-grid { margin-top: 3rem; }
+
+/* Live reading under a §02/§03 dial — the live flow in MW and its share of demand, the only place
+   the panel shows live MW. A 2px metric-hue tick (--now-rgb, set inline per source); no hairline, no box. */
+.dial-now { font: 500 0.85rem/1.4 var(--mono); color: var(--ink); margin: 10px 0 2px; }
+.dial-now::before {
+  content: ""; display: inline-block; width: 2px; height: 0.82em;
+  background: rgb(var(--now-rgb)); margin-right: 7px; vertical-align: -1px;
+}
+.dial-now strong { font-weight: 600; }
+.dial-now-sub { color: var(--slate); }

@@ -1,161 +1,1017 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en-GB">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Methodology &amp; sources — Grid Margin</title>
-<meta name="description" content="How every figure on Grid Margin is computed: the sources, the formulas, the denominators, and the disclosed biases — including the limitations and biases we disclose rather than hide.">
-<meta property="og:title" content="Grid Margin — methodology &amp; sources">
-<meta property="og:description" content="Every figure, every denominator, every disclosed bias.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-</head>
-<body>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Methodology &amp; Sources — Grid Margin</title>
+        <meta
+            name="description"
+            content="How every figure on Grid Margin is computed: the sources, the formulas, the denominators, and the known limitations."
+        />
+        <meta
+            property="og:title"
+            content="Grid Margin — methodology &amp; sources"
+        />
+        <meta
+            property="og:description"
+            content="Every figure, every denominator, every disclosed bias."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="style.css" />
+        <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    </head>
+    <body>
+        <header class="masthead">
+            <div class="container masthead-inner">
+                <div>
+                    <p class="brand">
+                        <a href="/"
+                            ><span class="brand-tick" aria-hidden="true"></span
+                            >GB Grid Margin</a
+                        >
+                    </p>
+                </div>
+                <nav aria-label="Primary">
+                    <a href="methodology.html" aria-current="page"
+                        >Methodology</a
+                    ><a href="share.html">Share</a
+                    ><a href="about.html">About</a>
+                </nav>
+            </div>
+        </header>
 
-<header class="masthead">
-  <div class="container masthead-inner">
-    <div>
-      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
-    </div>
-    <nav aria-label="Primary"><a href="methodology.html" aria-current="page">Methodology</a><a href="share.html">Share</a><a href="about.html">About</a></nav>
-  </div>
-</header>
+        <main class="container prose">
+            <h1>Methodology &amp; Sources</h1>
+            <p class="lede">
+                Every figure traces to a settled or live figure from Elexon,
+                NESO or DUKES. No modelled numbers. This page sets out, figure
+                by figure, the source, the formula in words, and the known
+                limitations.
+            </p>
+            <p class="index">
+                On this page: <a href="#sources">Sources at a glance</a> ·
+                <a href="#denominator">Denominator</a> ·
+                <a href="#nameplate">Nameplate</a> ·
+                <a href="#verdict">Verdict pair</a> ·
+                <a href="#reliability">Reliability block</a> ·
+                <a href="#capacity-trap">Capacity trap</a> ·
+                <a href="#conditions">Grid warnings rail</a> ·
+                <a href="#warnings">Operational warnings</a> ·
+                <a href="#wind-unreliability">Wind unreliability</a> ·
+                <a href="#import-cost">Import cost</a> ·
+                <a href="#ytd">Year-to-date shares</a> ·
+                <a href="#store">The history store</a> ·
+                <a href="#guards">Guards</a> ·
+                <a href="#cards">Share cards</a>
+            </p>
 
-<main class="container prose">
-  <h1>Methodology &amp; sources</h1>
-  <p class="lede">Every figure traces to a settled or live figure from Elexon, NESO or DUKES. No modelled numbers. This page sets out, figure by figure, the source, the formula in words, and the known limitations — including the limitations and biases we disclose rather than hide.</p>
-  <p class="index">On this page:
-    <a href="#denominator">Denominator</a> · <a href="#nameplate">Nameplate</a> ·
-    <a href="#verdict">Verdict pair</a> · <a href="#reliability">Reliability block</a> · <a href="#capacity-trap">Capacity trap</a> ·
-    <a href="#gas-vs-wind">Gas vs wind</a> · <a href="#conditions">Grid conditions panel</a> · <a href="#warnings">Operational warnings</a> ·
-    <a href="#wind-unreliability">Wind unreliability</a> · <a href="#import-cost">Import cost</a> · <a href="#ytd">Year-to-date shares</a> ·
-    <a href="#store">The history store</a> · <a href="#guards">Guards &amp; the honesty bargain</a> ·
-    <a href="#cards">Share cards</a></p>
+            <section id="sources" class="sources-at-a-glance">
+                <h2>Sources at a glance</h2>
+                <p>
+                    Every figure on the site, with the feeds it draws on, the
+                    formula in words, and the caveats that come with it. The
+                    conceptual detail — <em>why</em> each figure is built the way
+                    it is — follows in the sections below.
+                </p>
+                <!-- GENERATED:sources:START — engine/methodology.py owns this region, do not hand-edit -->
+  <section class="source-group" id="src-group-reliability">
+    <h2>Reliability — the firm share (§01)</h2>
+    <article class="source-card" data-unit="verdict" id="src-verdict">
+      <div class="source-card__head"><h3>Reliability gauge (live)</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://bmrs.elexon.co.uk/generation-by-fuel-type" rel="noopener">Elexon FUELINST (live)</a>, <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Firm (reliable) share of national demand = (gas + nuclear + biomass + other firm) ÷ national demand, recomputed live in the browser by the same parity-locked formula as the build. Wind, solar and net interconnector imports are the weather-and-imports (correlated-failure) bucket.</p>
+      <ul class="source-card__caveats"><li>A 5-minute snapshot. 'Weather &amp; imports' classifies by what is firm when the continent is also becalmed — not a claim those megawatts are absent right now.</li></ul>
+      <p class="source-card__more"><a href="#verdict">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="reliability-carpet" id="src-reliability-carpet">
+      <div class="source-card__head"><h3>Reliability strip (settled, per half-hour)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH" rel="noopener">Elexon FUELHH (settled)</a>, <a href="https://www.neso.energy/data-portal/historic-demand-data" rel="noopener">NESO Historic Demand Data (embedded outturn)</a>, <a href="https://www.solar.sheffield.ac.uk" rel="noopener">Sheffield Solar PV_Live (cross-check)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Reliable (firm) share of demand per half-hour, by the same parity-locked formula as the live gauge (engine.grid_engine.compute_verdict), over the rolling 365 settled days. Net-export half-hours clamp to 100% reliable, matching the live dial.</p>
+      <ul class="source-card__caveats"><li>The firm fuels are settled Elexon FUELHH; the embedded solar/wind are NESO's modelled outturn estimates, not metered — a mixed metered+estimated layer, disclosed.</li><li>Live gauge reads NESO's embedded forecast; the carpet reads settled outturn ~3 weeks behind — the same measure, a forecast-vs-settlement seam.</li></ul>
+      <p class="source-card__more"><a href="#reliability">→ full method</a></p>
+    </article>
+  </section>
+  <section class="source-group" id="src-group-wind">
+    <h2>Wind (§02)</h2>
+    <article class="source-card" data-unit="wind-dial" id="src-wind-dial">
+      <div class="source-card__head"><h3>Wind dial (live)</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://bmrs.elexon.co.uk/generation-by-fuel-type" rel="noopener">Elexon FUELINST (live)</a>, <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a>, <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6" rel="noopener">DUKES 2025, Table 6.2 (UK nameplate, end-2024)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Live wind capacity factor = live wind output (Elexon FUELINST + NESO embedded forecast) ÷ DUKES total UK wind nameplate.</p>
+      <p class="source-card__more"><a href="#capacity-trap">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="wind-carpet" id="src-wind-carpet">
+      <div class="source-card__head"><h3>Wind strip (settled, per half-hour)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH" rel="noopener">Elexon FUELHH (settled)</a>, <a href="https://www.neso.energy/data-portal/historic-demand-data" rel="noopener">NESO Historic Demand Data (embedded outturn)</a>, <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6" rel="noopener">DUKES 2025, Table 6.2 (UK nameplate, end-2024)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Wind capacity factor per half-hour = (transmission WIND [Elexon FUELHH] + embedded wind [NESO outturn]) ÷ DUKES total UK wind nameplate (annual-step) — a true load factor, no cross-year artifact.</p>
+      <ul class="source-card__caveats"><li>Live gauge reads NESO's embedded forecast; the carpet reads settled outturn ~3 weeks behind — a forecast-vs-settlement seam.</li></ul>
+      <p class="source-card__more"><a href="#capacity-trap">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="wind-unreliability" id="src-wind-unreliability">
+      <div class="source-card__head"><h3>Wind drought — whole-record carpet &amp; lulls (wind detail)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH" rel="noopener">Elexon FUELHH (settled)</a>, <a href="https://www.neso.energy/data-portal/historic-demand-data" rel="noopener">NESO Historic Demand Data (embedded outturn)</a>, <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6" rel="noopener">DUKES 2025, Table 6.2 (UK nameplate, end-2024)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Daily wind capacity factor = mean power of (transmission WIND [Elexon FUELHH] + embedded wind [NESO outturn]) ÷ DUKES total UK wind nameplate (annual-step), back to 2016. A lull is a run of consecutive days below 10%; severe if it touches below 5%.</p>
+      <ul class="source-card__caveats"><li>Combined-basis figures supersede the former transmission-only lower bound; cached share images may show the higher old numbers.</li></ul>
+      <p class="source-card__more"><a href="#wind-unreliability">→ full method</a></p>
+    </article>
+  </section>
+  <section class="source-group" id="src-group-solar">
+    <h2>Solar (§02)</h2>
+    <article class="source-card" data-unit="solar-dial" id="src-solar-dial">
+      <div class="source-card__head"><h3>Solar dial (live)</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Live solar capacity factor = NESO embedded solar forecast ÷ NESO embedded-solar capacity (contemporaneous, GB, DC/MWp) — numerator and denominator from the same NESO embedded series.</p>
+      <p class="source-card__more"><a href="#capacity-trap">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="solar-carpet" id="src-solar-carpet">
+      <div class="source-card__head"><h3>Solar strip (settled, per half-hour)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://www.neso.energy/data-portal/historic-demand-data" rel="noopener">NESO Historic Demand Data (embedded outturn)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Solar capacity factor per half-hour = embedded solar (NESO outturn) ÷ NESO embedded-solar capacity (contemporaneous, GB/DC). Night cells are a genuine zero, not a gap.</p>
+      <ul class="source-card__caveats"><li>A DUKES solar figure would mismatch (UK not GB, AC-equivalent not DC); the NESO embedded-solar capacity is the methodology-correct denominator.</li></ul>
+      <p class="source-card__more"><a href="#capacity-trap">→ full method</a></p>
+    </article>
+  </section>
+  <section class="source-group" id="src-group-imports">
+    <h2>Imports (§03)</h2>
+    <article class="source-card" data-unit="import-power" id="src-import-power">
+      <div class="source-card__head"><h3>Imports — capacity-factor panel (live needle, settled strip)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://bmrs.elexon.co.uk/generation-by-fuel-type" rel="noopener">Elexon FUELINST (live)</a>, <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH" rel="noopener">Elexon FUELHH (settled)</a>, <a href="https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage" rel="noopener">DESNZ GB interconnector capacity</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Net imports as a share of GB interconnector capacity per half-hour = max(net interconnector inflow, 0) ÷ the capacity of the legs reporting that half-hour. The live needle is the same net-import figure as the verdict gauge; export half-hours floor to zero.</p>
+      <p class="source-card__more"><a href="#import-cost">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="import-cost" id="src-import-cost">
+      <div class="source-card__head"><h3>Imports — £ cost (import detail page)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH" rel="noopener">Elexon FUELHH (settled)</a>, <a href="https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/system-prices" rel="noopener">Elexon system (cash-out) price</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Daily GB net import value = Σ over settled half-hours of max(net interconnector inflow, 0) × ½h × GB system sell price (floored at £0). Back to 2016.</p>
+      <ul class="source-card__caveats"><li>Net imported energy valued at the GB system (cash-out) price — NOT the contractual cost of the imports, which clear in the day-ahead auction. No licensed price series is used.</li></ul>
+      <p class="source-card__more"><a href="#import-cost">→ full method</a></p>
+    </article>
+  </section>
+  <section class="source-group" id="src-group-warnings">
+    <h2>Grid warnings</h2>
+    <article class="source-card" data-unit="overcast" id="src-overcast">
+      <div class="source-card__head"><h3>OVERCAST lamp (conditional solar)</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a>, <a href="https://www.neso.energy/data-portal/historic-demand-data" rel="noopener">NESO Historic Demand Data (embedded outturn)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Amber when live solar capacity factor falls below the 25th percentile of comparable half-hours, conditioned on (week-of-year, settlement period) so the diurnal+seasonal cycle does not swamp it. Readout = live CF ÷ that slot's clear-sky (P95) ceiling, 'X% of a clear day'; after dark the lamp is dormant.</p>
+      <ul class="source-card__caveats"><li>Live lamp reads NESO's embedded forecast; the distribution is settled outturn — a forecast-vs-settlement seam.</li></ul>
+      <p class="source-card__more"><a href="#conditions">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="warnings" id="src-warnings">
+      <div class="source-card__head"><h3>SCARCITY NOTICE — operational warnings (live)</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings" rel="noopener">Elexon SYSWARN (active notices)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Red while NESO has at least one active margin notice on Elexon SYSWARN. Three-tier scarcity ladder, most to least severe: NISM (Notice of Insufficient System Margin), EMN (Electricity Margin Notice), CMN (Capacity Market Notice). The only authoritative lamp.</p>
+      <ul class="source-card__caveats"><li>A margin notice means the buffer is thin — the operator asking the market for more with hours of warning — not that the lights are going out.</li></ul>
+      <p class="source-card__more"><a href="#warnings">→ full method</a></p>
+    </article>
+    <article class="source-card" data-unit="lamps-computed" id="src-lamps-computed">
+      <div class="source-card__head"><h3>Computed lamps — UNRELIABLE · WIND LULL · HEAVY IMPORTS</h3><span class="cadence cadence--live">live</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://bmrs.elexon.co.uk/generation-by-fuel-type" rel="noopener">Elexon FUELINST (live)</a>, <a href="https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts" rel="noopener">NESO embedded wind &amp; solar forecast</a>, <a href="https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage" rel="noopener">DESNZ GB interconnector capacity</a>, <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6" rel="noopener">DUKES 2025, Table 6.2 (UK nameplate, end-2024)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Each computed lamp goes amber when the live reading leaves the usual half — the P25–P75 box of that panel's own rolling-year distribution — on the concerning side: UNRELIABLE when firm share &lt; P25, WIND LULL when wind CF &lt; P25, HEAVY IMPORTS when import share of capacity &gt; P75. The rail reads in one language: each active lamp shows its source's share of national demand (the verdict-receipt basis), even where it trips on a different distribution. The threshold is the box-plot beside the panel.</p>
+      <ul class="source-card__caveats"><li>The amber lamps are this site's own reading of live conditions, not an official statement of system state. Only the red SCARCITY NOTICE carries an authoritative NESO source.</li></ul>
+      <p class="source-card__more"><a href="#conditions">→ full method</a></p>
+    </article>
+  </section>
+  <!-- GENERATED:sources:END -->
+            </section>
 
-  <h2 id="denominator">The denominator — national demand</h2>
-  <p>Every live share divides by <strong>national demand</strong>, reconstructed from the supply side so the shares sum to 100% by construction:</p>
-  <p class="formula">national demand = positive transmission generation (excl. interconnectors and pumped storage)
-                + net interconnector imports (all INT*, exports net off)
-                + embedded solar (NESO)  + embedded wind (NESO)</p>
-  <p>Pumped-storage pumping is demand, not supply, so it is excluded; interconnector exports net off inside net imports. A build-time guard reconciles this against Elexon's national demand outturn, INDO (+ the same embedded estimate) and fails past a 12% gap — a tripwire for a gross feed failure, not a precision claim. (INDO, not transmission demand ITSDO: ITSDO additionally counts interconnector exports as demand, so it diverges from national demand on an export night.)</p>
+            <h2 id="denominator">The denominator — national demand</h2>
+            <p>
+                Every live share divides by <strong>national demand</strong>,
+                reconstructed from the supply side so the shares sum to 100% by
+                construction:
+            </p>
+            <p class="formula">
+                national demand = positive transmission generation (excl.
+                interconnectors and pumped storage) + net interconnector imports
+                (all INT*, exports net off) + embedded solar (NESO) + embedded
+                wind (NESO)
+            </p>
+            <p>
+                Pumped-storage pumping is demand, not supply, so it is excluded;
+                interconnector exports net off inside net imports. A build-time
+                guard reconciles this against Elexon's national demand outturn,
+                INDO (+ the same embedded estimate) and fails past a 12% gap — a
+                tripwire for a gross feed failure, not a precision claim. (INDO,
+                not transmission demand ITSDO: ITSDO additionally counts
+                interconnector exports as demand, so it diverges from national
+                demand on an export night.)
+            </p>
 
-  <h2 id="nameplate">Nameplate (installed capacity)</h2>
-  <p class="meta">Source: <a href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6">DUKES 2025, Table 6.2</a> · UK, end-2024 · full installed (not de-rated)</p>
-  <p>Wind 32.082 GW (onshore 16.166 + offshore 15.916), solar 18.28 GW — 50.4 GW of wind + solar combined. These are UK-wide; the small NI capacity makes a published share mildly conservative, never inflated. <strong>Which denominator powers which figure matters:</strong> the capacity trap and the wind unreliability carpet divide by this DUKES figure; a <em>live</em> solar capacity-share would instead use NESO's GB, DC-basis figure (~23 GW, 2026) — the two bases must never be mixed.</p>
+            <h2 id="nameplate">Nameplate (installed capacity)</h2>
+            <p class="meta">
+                Source:
+                <a
+                    href="https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
+                    >DUKES 2025, Table 6.2</a
+                >
+                · UK, end-2024 · full installed (not de-rated)
+            </p>
+            <p>
+                Wind 32.082 GW (onshore 16.166 + offshore 15.916), solar 18.28
+                GW — 50.4 GW of wind + solar combined. These are UK-wide; the
+                small NI capacity makes a published share mildly conservative,
+                never inflated.
+                <strong>Which denominator powers which figure matters:</strong>
+                the capacity trap and the wind unreliability carpet divide by
+                this DUKES figure; a <em>live</em> solar capacity-share would
+                instead use NESO's GB, DC-basis figure (~22–23 GW, 2026) — the
+                two bases must never be mixed.
+            </p>
 
-  <h2 id="verdict">The reliability gauge — how much leans on weather &amp; imports</h2>
-  <p class="meta">Source: Elexon FUELINST (5-min) + NESO embedded forecast · live in the browser · cadence: ~5 min</p>
-  <p><strong>The cut.</strong> We group supply not by fuel but by what matters for reliability — whether you can call on it when you need it:</p>
-  <p class="formula">Firm power      = gas + nuclear + biomass + hydro &amp; other firm fuels
-Weather &amp; imports = wind + solar + net interconnector imports</p>
-  <p>The gauge is a <strong>proportional arc</strong>: one slice per source, length in proportion to its output, green-toned for the firm (reliable) sources and red-toned for the weather &amp; imports (unreliable) ones. The arc reads <strong>RELIABLE</strong> or arms red as <strong>UNRELIABLE</strong> when the firm share falls below <strong>50%</strong> — i.e. when most of the grid is leaning on sources that can vanish together.</p>
-  <p><strong>Share of national demand.</strong> Each source is shown as a share of <strong>national demand</strong> — what Britain is consuming right now. Imports appear as a slice when importing, and on an export night the surplus is drawn as a magenta tail beyond the demand mark. The underlying verdict is computed identically in the build (Python) and the browser (JavaScript), pinned by a parity gate.</p>
-  <p><strong>Why imports sit with wind and solar, not with firm power.</strong> Wind is correlated across ~1,000–2,000&nbsp;km: a winter blocking high becalms Britain, France, Germany and the Benelux at once. In exactly those hours every connected market is short, prices spike everywhere, and the interconnectors run flat or reverse — imports fail precisely when they are needed. So wind, solar and imports are the <em>correlated-failure</em> bucket: they fall away together. Gas, nuclear and biomass do not share that weather correlation.</p>
-  <p><strong>Why biomass sits with firm power.</strong> Biomass (chiefly Drax) is dispatchable and weather-independent — operationally it behaves like gas, available in the calm. By the only test this gauge applies — <em>can you call on it when the wind dies?</em> — it is firm. The separate case against biomass (its subsidy and its carbon accounting) is a question of cost, not reliability, and lives on the <a href="https://subsidyclock.co.uk">Subsidy Clock</a>; we keep the two arguments in their own lanes.</p>
-  <p class="caveat"><strong>Firmness, not this instant.</strong> The gauge reads a 5-minute snapshot, and on a breezy day imports and wind are real power flowing right now. "Weather &amp; imports" is a statement about what is <em>guaranteed when the continent is also becalmed</em> — not a claim that those megawatts are absent at this moment. We classify by what you can count on in the tail, and we say so.</p>
+            <h2 id="verdict">
+                The reliability gauge — how much leans on weather &amp; imports
+            </h2>
+            <p class="meta">
+                Source: Elexon FUELINST (5-min) + NESO embedded forecast · live
+                in the browser · cadence: ~5 min
+            </p>
+            <p>
+                <strong>The cut.</strong> We group supply not by fuel but by
+                what matters for reliability — whether you can call on it when
+                you need it:
+            </p>
+            <p class="formula">
+                Firm power = gas + nuclear + biomass + hydro &amp; other firm
+                fuels Weather &amp; imports = wind + solar + net interconnector
+                imports
+            </p>
+            <p>
+                The gauge is a <strong>proportional arc</strong> — one slice per
+                source, each slice as long as that source's share of the moment.
+                The firm sources are drawn in green; the weather-and-imports
+                sources each keep their own colour — wind blue, solar amber,
+                imports magenta — so you can see at a glance what the grid is
+                actually running on. The verdict itself is carried by a slim
+                inner ring and the needle: they sit green while firm power holds
+                the majority, and arm <strong>red — UNRELIABLE</strong> the
+                moment the firm share slips below <strong>50%</strong>, the
+                point where most of the grid is leaning on sources that can go
+                quiet together.
+            </p>
+            <p>
+                <strong>Share of national demand.</strong> Each source is shown
+                as a share of <strong>national demand</strong> — what Britain is
+                consuming right now. Imports appear as a slice when importing,
+                and on an export night the surplus is drawn as a magenta tail
+                beyond the demand mark. The browser recomputes the verdict from
+                the live feed; the build computes it the same way.
+            </p>
+            <p>
+                <strong
+                    >Why imports sit with wind and solar, not with firm
+                    power.</strong
+                >
+                Wind is correlated across ~1,000–2,000&nbsp;km: a winter
+                blocking high becalms Britain, France, Germany and the Benelux
+                at once. In exactly those hours every connected market is short,
+                prices spike everywhere, and the interconnectors run flat or
+                reverse — imports fail precisely when they are needed. So wind,
+                solar and imports are the <em>correlated-failure</em> bucket:
+                they fall away together. Gas, nuclear and biomass do not share
+                that weather correlation.
+            </p>
+            <p>
+                <strong>Why biomass sits with firm power.</strong> Biomass
+                (chiefly Drax) is dispatchable and weather-independent —
+                operationally it behaves like gas, available in the calm. By the
+                only test this gauge applies —
+                <em>can you call on it when the wind dies?</em> — it is firm.
+                The separate case against biomass (its subsidy and its carbon
+                accounting) is a question of cost, not reliability, and lives on
+                the <a href="https://subsidyclock.co.uk">Subsidy Clock</a>; we
+                keep the two arguments in their own lanes.
+            </p>
+            <p class="caveat">
+                <strong>Firmness, not this instant.</strong> The gauge reads a
+                5-minute snapshot, and on a breezy day imports and wind are real
+                power flowing right now. "Weather &amp; imports" is a statement
+                about what is
+                <em>guaranteed when the continent is also becalmed</em> — not a
+                claim that those megawatts are absent at this moment. We
+                classify by what you can count on in the tail, and we say so.
+            </p>
 
-  <h2 id="reliability">The reliability block &#8212; reliable (firm) share of demand, per half-hour</h2>
-  <p class="meta">Source: Elexon FUELHH (settled) + NESO Historic Demand Data (embedded) · PV_Live cross-check · settled, ~3 weeks behind live</p>
-  <p><strong>Two measures, one question.</strong> The block beneath the gauge asks how much of Britain&#8217;s demand was met by firm power in each half-hour of the past year &#8212; and whether now is typical. It combines a live dial with a settled half-hourly day-grid (a &#8220;carpet&#8221;): the dial shows the current reliable (firm) share; the carpet shows the same measure for every settlement period of the rolling past year.</p>
-  <p><strong>Metric: firm share of demand.</strong> Each cell is computed by reusing the gauge&#8217;s own formula (<code>engine.grid_engine.compute_verdict</code>), joining settled Elexon FUELHH to NESO&#8217;s embedded solar and wind on the national-demand basis. On net-export half-hours &#8212; when firm generation exceeds GB demand and the surplus is exported &#8212; the share is clamped to 100% reliable, matching the live dial&#8217;s clamp. There is no second formula: the block and the gauge cannot disagree, and an independent raw-CSV recompute gate checks the published carpet against source.</p>
-  <p><strong>The carpet.</strong> The carpet is a grid of columns (one per settled day, oldest at the left, newest at the right) and 48 rows (settlement periods SP1&#8211;SP48, SP1&#160;=&#160;00:00 local time), so date runs left to right and time of day runs top (00:00) to bottom (24:00). Colour runs a continuous traffic-light ramp &#8212; <strong>green</strong> where firm power fully met demand (100% reliable), through amber, to <strong>deep red</strong> where the grid leaned heavily on weather and imports (0% reliable) &#8212; interpolated in <strong>OKLab</strong>, a perceptually-uniform colour space, so an equal step in firm share reads as an equal perceived step and the midpoint is a true amber, not a muddy blend. Green&#160;=&#160;reliable / red&#160;=&#160;unreliable echoes the verdict gauge directly above; amber is only the midpoint hue, never a threshold. Where several days fall in one screen column the <em>least reliable</em> (reddest) half-hour wins, so the worst spells are never averaged away. A missing settlement period is left neutral, distinct from an honest reading. The carpet lags live by approximately three weeks.</p>
-  <p><strong>The dial.</strong> The dial is a plain 0&#8211;100% arc carrying a red&#8594;amber&#8594;green ramp (0% red/least reliable at the left, 100% green/fully reliable at the right); it shows no nameplate or MW labels because the metric is a share of demand, not a capacity factor. The needle points to the current firm share, clamped to [0,&#160;100%], so it swings right toward green exactly as the verdict gauge above it does; an ink tick marks the rolling-year <em>mean</em>, so now reads against the average. The full distribution lives in the legend below, to keep the coloured arc legible.</p>
-  <p><strong>The legend and its range markers.</strong> Below the carpet the same red&#8594;amber&#8594;green ramp appears as a key, labelled <strong>Unreliable</strong> at the red end and <strong>Reliable</strong> at the green. A &#8220;now&#8221; caret marks the current firm share &#8212; the same value the dial&#8217;s needle points to. Beneath it, a box-plot summarises the rolling year&#8217;s distribution: a thin whisker spans the <em>middle 9&#160;in&#160;10</em> (the 10th&#8211;90th percentile), a thicker bar spans the <em>usual half</em> (the 25th&#8211;75th percentile), and an ink tick marks the <em>average</em>. The numbers underneath label the 9-in-10 ends and the average.</p>
-  <p class="caveat"><strong>A mixed settled-and-estimated layer.</strong> The firm fuels are settled Elexon FUELHH; the embedded solar and wind are NESO&#8217;s modelled outturn <em>estimates</em>, not metered. The live gauge reads NESO&#8217;s embedded <em>forecast</em>; the carpet reads NESO&#8217;s embedded <em>outturn estimate</em> &#8212; sibling products from the same methodology owner, the outturn estimate being the corrected version. A small step at the join is expected and disclosed. The carpet lags live by approximately three weeks.</p>
+            <h2 id="reliability">
+                The reliability block &#8212; reliable (firm) share of demand,
+                per half-hour
+            </h2>
+            <p class="meta">
+                Source: Elexon FUELHH (settled) + NESO Historic Demand Data
+                (embedded) · PV_Live cross-check · settled, ~3 weeks behind live
+            </p>
+            <p>
+                <strong>Two measures, one question.</strong> The block beneath
+                the gauge asks how much of Britain&#8217;s demand was met by
+                firm power in each half-hour of the past year &#8212; and
+                whether now is typical. It combines a live dial with a settled
+                half-hourly day-grid (a &#8220;carpet&#8221;): the dial shows
+                the current reliable (firm) share; the carpet shows the same
+                measure for every settlement period of the rolling past year.
+            </p>
+            <p>
+                <strong>Metric: firm share of demand.</strong> Each cell is
+                computed by reusing the gauge&#8217;s own formula
+                (<code>engine.grid_engine.compute_verdict</code>), joining
+                settled Elexon FUELHH to NESO&#8217;s embedded solar and wind on
+                the national-demand basis. On net-export half-hours &#8212; when
+                firm generation exceeds GB demand and the surplus is exported
+                &#8212; the share is clamped to 100% reliable, matching the live
+                dial&#8217;s clamp. There is no second formula: the block and
+                the gauge cannot disagree, and an independent raw-CSV recompute
+                gate checks the published carpet against source.
+            </p>
+            <p>
+                <strong>The carpet.</strong> The carpet is a grid of columns
+                (one per settled day, oldest at the left, newest at the right)
+                and 48 rows (settlement periods SP1&#8211;SP48,
+                SP1&#160;=&#160;00:00 local time), so date runs left to right
+                and time of day runs top (00:00) to bottom (24:00). Colour runs
+                a continuous traffic-light ramp &#8212;
+                <strong>green</strong> where firm power fully met demand (100%
+                reliable), through amber, to <strong>deep red</strong> where the
+                grid leaned heavily on weather and imports (0% reliable) &#8212;
+                interpolated in <strong>OKLab</strong>, a perceptually-uniform
+                colour space, so an equal step in firm share reads as an equal
+                perceived step and the midpoint is a true amber, not a muddy
+                blend. Green&#160;=&#160;reliable / red&#160;=&#160;unreliable
+                echoes the verdict gauge directly above; amber is only the
+                midpoint hue, never a threshold. Where several days fall in one
+                screen column the <em>least reliable</em> (reddest) half-hour
+                wins, so the worst spells are never averaged away. A missing
+                settlement period is left neutral, distinct from an honest
+                reading. The carpet lags live by approximately three weeks.
+            </p>
+            <p>
+                <strong>The dial.</strong> The dial is a plain 0&#8211;100% arc
+                carrying a red&#8594;amber&#8594;green ramp (0% red/least
+                reliable at the left, 100% green/fully reliable at the right);
+                it shows no nameplate or MW labels because the metric is a share
+                of demand, not a capacity factor. The needle points to the
+                current firm share, clamped to [0,&#160;100%], so it swings
+                right toward green exactly as the verdict gauge above it does;
+                an ink tick marks the rolling-year <em>mean</em>, so now reads
+                against the average. The full distribution lives in the legend
+                below, to keep the coloured arc legible.
+            </p>
+            <p>
+                <strong>The legend and its range markers.</strong> Below the
+                carpet the same red&#8594;amber&#8594;green ramp appears as a
+                key, labelled <strong>Unreliable</strong> at the red end and
+                <strong>Reliable</strong> at the green. A &#8220;now&#8221;
+                caret marks the current firm share &#8212; the same value the
+                dial&#8217;s needle points to. Beneath it, a box-plot summarises
+                the rolling year&#8217;s distribution: a thin whisker spans the
+                <em>middle 9&#160;in&#160;10</em> (the 10th&#8211;90th
+                percentile), a thicker bar spans the <em>usual half</em> (the
+                25th&#8211;75th percentile), and an ink tick marks the
+                <em>average</em>. The numbers underneath label the 9-in-10 ends
+                and the average.
+            </p>
+            <p class="caveat">
+                <strong>A mixed settled-and-estimated layer.</strong> The firm
+                fuels are settled Elexon FUELHH; the embedded solar and wind are
+                NESO&#8217;s modelled outturn <em>estimates</em>, not metered.
+                The live gauge reads NESO&#8217;s embedded <em>forecast</em>;
+                the carpet reads NESO&#8217;s embedded
+                <em>outturn estimate</em> &#8212; sibling products from the same
+                methodology owner, the outturn estimate being the corrected
+                version. A small step at the join is expected and disclosed. The
+                carpet lags live by approximately three weeks.
+            </p>
 
-  <h2 id="capacity-trap">The capacity trap</h2>
-  <p class="meta">Live gauge: Elexon FUELINST + NESO embedded forecast ÷ DUKES 6.2 nameplate · live · Carpets: Elexon FUELHH + NESO embedded outturn ÷ source capacity · rolling 365 settled days</p>
-  <p><strong>Three measures, one question.</strong> Entry 02 asks how much of Britain&#8217;s installed wind and solar capacity is working right now &#8212; and whether that is typical. It combines a live combined gauge with two settled half-hourly day-grids (&#8220;carpets&#8221;), one for wind and one for solar, placed side by side: the gauge shows the current combined load factor; each carpet shows the same measure, source by source, for every settlement period of the rolling past year.</p>
-  <p><strong>The live gauge (combined wind + solar).</strong> Live wind + solar output ÷ DUKES UK wind + solar nameplate (50.4&#8239;GW, end-2024). The numerator is full national output: transmission wind from Elexon FUELINST plus NESO&#8217;s embedded wind and solar forecast &#8212; the same basis as the reliability gauge. The denominator is DUKES UK nameplate: mildly conservative (UK not GB), but the only public installed-capacity figure on a consistent wind+solar basis. The gauge reads the current output in both MW and as a percentage of that nameplate.</p>
-  <p><strong>The wind carpet (settled, per half-hour).</strong> (Transmission FUELHH <code>WIND</code> + embedded wind outturn) ÷ DUKES total UK wind nameplate (annual-step). Both embedded and transmission wind are in the numerator &#8212; the full national output &#8212; over the full DUKES installed total. This is a <strong>true load factor</strong>. The cross-year artifact &#8212; the rising apparent CF as the offshore transmission share grew &#8212; does <strong>not</strong> apply here. (NESO&#8217;s live embedded-wind capacity is the embedded slice only and is the wrong denominator against a mixed numerator.)</p>
-  <p><strong>The solar carpet (settled, per half-hour).</strong> Embedded solar outturn ÷ NESO embedded-solar capacity (contemporaneous, GB, DC/MWp). Because solar generation is entirely embedded &#8212; no transmission-metered solar exists &#8212; both numerator and denominator are from the same NESO embedded series on the same scope and basis: the methodology-correct match. A DUKES solar figure would introduce a 4&#8211;5&#8239;GW mismatch (UK not GB, AC-equivalent not DC, end-2024 not current vintage). Night cells are genuine zero output, not gaps.</p>
-  <p><strong>Time-of-day axis and the clock change.</strong> Each carpet is a grid of columns (one per settled day, newest at the right) and 48 rows (settlement periods SP1&#8211;SP48, SP1&nbsp;=&nbsp;00:00 local time), so date runs left to right and time of day runs top (00:00) to bottom (24:00). Settlement periods follow the local clock, so the DST change is handled for free: the spring-forward day yields a naturally shorter column of 46 periods; the autumn-back day yields 50 periods, of which SP49 and SP50 fall outside the 48-row grid and are dropped.</p>
-  <p><strong>The colour scale.</strong> Each cell runs from white (no output) to the saturated source colour at full nameplate output &#8212; blue for wind, amber for solar. The ramp is interpolated in <strong>OKLab</strong>, a perceptually-uniform colour space, so an equal step in capacity factor reads as an equal step in perceived density: the deepening colour tracks output evenly, rather than staying pale and then darkening abruptly the way a naive RGB blend does. Interpolating in OKLab also holds each source to a single clean hue, with no detour through purple. A data gap (a half-hour Elexon or NESO never published) is drawn neutral grey, distinct from an honest zero.</p>
-  <p><strong>The legend and its range markers.</strong> Below each carpet, the same ramp appears as a key. A &#8220;now&#8221; caret marks the current capacity factor &#8212; the same value the live dial&#8217;s needle points to. Beneath it, a box-plot in the source colour summarises the rolling year&#8217;s half-hourly output: a thin whisker spans the <em>middle 9 in 10</em> (the 10th&#8211;90th percentile), a thicker bar spans the <em>usual half</em> (the 25th&#8211;75th percentile), and an ink tick marks the <em>average</em>. The numbers underneath label the 9-in-10 ends and the average. The dial behind its needle carries the same bands.</p>
-  <p><strong>Why the average, not the median.</strong> The central marker is the <strong>mean capacity factor</strong> &#8212; the load factor, i.e. the year&#8217;s energy divided by nameplate &#215; hours. This is the standard, citable &#8220;how much it delivers&#8221; figure (UK wind &#8776; 34%, solar &#8776; 10%). We deliberately do <em>not</em> use the median: solar produces nothing for over half the year because it is dark, so its median half-hour is 0% &#8212; a fact about the Earth&#8217;s rotation, not the panels. The mean is the fair summary of output; the percentile band beside it shows the variability.</p>
-  <p class="caveat"><strong>The forecast-vs-settled seam.</strong> The live gauge reads NESO&#8217;s embedded <em>forecast</em>; the carpets read NESO&#8217;s settled <em>outturn estimate</em> for the rolling last 365 settled days. These are sibling products from the same methodology owner &#8212; the outturn estimate is the corrected version, the forecast is the forward tick. A small step at the join is expected and disclosed. The carpets lag live by about three weeks.</p>
+            <h2 id="capacity-trap">The capacity trap</h2>
+            <p class="meta">
+                Live dials: wind ÷ DUKES 6.2 UK wind nameplate; solar ÷ NESO
+                embedded-solar capacity · live · Carpets: Elexon FUELHH + NESO
+                embedded outturn ÷ the same source capacity · rolling 365
+                settled days
+            </p>
+            <p>
+                <strong>Two sources, read side by side.</strong> Entry 02 asks
+                how much of Britain&#8217;s installed wind and solar is actually
+                working right now &#8212; and whether that is a normal day. Wind
+                and solar each get their own block: a live dial showing what the
+                fleet is delivering this minute, beside a settled half-hourly
+                day-grid (a &#8220;carpet&#8221;) of the past year. We keep them
+                apart rather than blending them into one number, because a
+                bright afternoon should not be allowed to paper over a windless
+                one, or the other way round. Within each block the dial and the
+                carpet divide by the same capacity, so the two always tell the
+                same story.
+            </p>
+            <p>
+                <strong>The live dials.</strong> Each dial divides the
+                fleet&#8217;s live output by its own installed capacity.
+                <strong>Wind</strong> is live wind output &#8212; transmission
+                wind from Elexon FUELINST plus NESO&#8217;s embedded wind
+                forecast &#8212; over the DUKES UK wind nameplate
+                (32.1&#8239;GW, end-2024). That denominator is mildly
+                conservative: DUKES counts the whole UK while the grid here is
+                Great Britain, so a published share leans low rather than high.
+                <strong>Solar</strong> is NESO&#8217;s embedded solar forecast
+                over NESO&#8217;s own embedded-solar capacity (~23.3&#8239;GW,
+                GB, DC) &#8212; numerator and denominator from the same series,
+                on the same basis, so the two are never mixed. Each dial reads
+                the current output in both MW and as a percentage of its
+                nameplate.
+            </p>
+            <p>
+                <strong>The wind carpet (settled, per half-hour).</strong>
+                (Transmission FUELHH <code>WIND</code> + embedded wind outturn)
+                ÷ DUKES total UK wind nameplate (annual-step). Both embedded and
+                transmission wind are in the numerator &#8212; the full national
+                output &#8212; over the full DUKES installed total. This is a
+                <strong>true load factor</strong>. The cross-year artifact
+                &#8212; the rising apparent CF as the offshore transmission
+                share grew &#8212; does <strong>not</strong> apply here.
+                (NESO&#8217;s live embedded-wind capacity is the embedded slice
+                only and is the wrong denominator against a mixed numerator.)
+            </p>
+            <p>
+                <strong>The solar carpet (settled, per half-hour).</strong>
+                Embedded solar outturn ÷ NESO embedded-solar capacity
+                (contemporaneous, GB, DC/MWp). Because solar generation is
+                entirely embedded &#8212; no transmission-metered solar exists
+                &#8212; both numerator and denominator are from the same NESO
+                embedded series on the same scope and basis: the
+                methodology-correct match. A DUKES solar figure would introduce
+                a 4&#8211;5&#8239;GW mismatch (UK not GB, AC-equivalent not DC,
+                end-2024 not current vintage). Night cells are genuine zero
+                output, not gaps.
+            </p>
+            <p>
+                <strong>Time-of-day axis and the clock change.</strong> Each
+                carpet is a grid of columns (one per settled day, newest at the
+                right) and 48 rows (settlement periods SP1&#8211;SP48,
+                SP1&nbsp;=&nbsp;00:00 local time), so date runs left to right
+                and time of day runs top (00:00) to bottom (24:00). Settlement
+                periods follow the local clock, so the DST change is handled for
+                free: the spring-forward day yields a naturally shorter column
+                of 46 periods; the autumn-back day yields 50 periods, of which
+                SP49 and SP50 fall outside the 48-row grid and are dropped.
+            </p>
+            <p>
+                <strong>The colour scale.</strong> Each cell runs from white (no
+                output) to the saturated source colour at full nameplate output
+                &#8212; blue for wind, amber for solar. The ramp is interpolated
+                in <strong>OKLab</strong>, a perceptually-uniform colour space,
+                so an equal step in capacity factor reads as an equal step in
+                perceived density: the deepening colour tracks output evenly,
+                rather than staying pale and then darkening abruptly the way a
+                naive RGB blend does. Interpolating in OKLab also holds each
+                source to a single clean hue, with no detour through purple. A
+                data gap (a half-hour Elexon or NESO never published) is drawn
+                neutral grey, distinct from an honest zero.
+            </p>
+            <p>
+                <strong>The legend and its range markers.</strong> Below each
+                carpet, the same ramp appears as a key. A &#8220;now&#8221;
+                caret marks the current capacity factor &#8212; the same value
+                the live dial&#8217;s needle points to. Beneath it, a box-plot
+                in the source colour summarises the rolling year&#8217;s
+                half-hourly output: a thin whisker spans the
+                <em>middle 9 in 10</em> (the 10th&#8211;90th percentile), a
+                thicker bar spans the <em>usual half</em> (the 25th&#8211;75th
+                percentile), and an ink tick marks the <em>average</em>. The
+                numbers underneath label the 9-in-10 ends and the average. The
+                dial behind its needle carries the same bands.
+            </p>
+            <p>
+                <strong>Why the average, not the median.</strong> The central
+                marker is the <strong>mean capacity factor</strong> &#8212; the
+                load factor, i.e. the year&#8217;s energy divided by nameplate
+                &#215; hours. This is the standard, citable &#8220;how much it
+                delivers&#8221; figure (UK wind &#8776; 34%, solar &#8776; 10%).
+                We deliberately do <em>not</em> use the median: solar produces
+                nothing for over half the year because it is dark, so its median
+                half-hour is 0% &#8212; a fact about the Earth&#8217;s rotation,
+                not the panels. The mean is the fair summary of output; the
+                percentile band beside it shows the variability.
+            </p>
+            <p class="caveat">
+                <strong>The forecast-vs-settled seam.</strong> The live gauge
+                reads NESO&#8217;s embedded <em>forecast</em>; the carpets read
+                NESO&#8217;s settled <em>outturn estimate</em> for the rolling
+                last 365 settled days. These are sibling products from the same
+                methodology owner &#8212; the outturn estimate is the corrected
+                version, the forecast is the forward tick. A small step at the
+                join is expected and disclosed. The carpets lag live by about
+                three weeks.
+            </p>
 
-  <h2 id="gas-vs-wind">Gas vs every wind farm</h2>
-  <p class="meta">Source: Elexon FUELINST — total WIND vs CCGT + OCGT, same snapshot · live</p>
-  <p><strong>Formula in words:</strong> the whole wind fleet's metered output against the whole gas fleet's, from one snapshot. The card is shown only while gas genuinely out-produces all wind. The per-station version ("one gas plant beats the lot") needs per-unit data (Elexon B1610) and is a deliberate fast-follow — asserted only when true.</p>
+            <h2 id="conditions">The GRID WARNINGS rail</h2>
+            <p class="meta">
+                Sources: Elexon FUELINST + NESO embedded (live wind CF, solar
+                CF, firm share, net imports) &#247; DUKES nameplate &amp; DESNZ
+                interconnector capacity · Elexon SYSWARN (active notices, live)
+                · cadence: all lamps live, ~5 min
+            </p>
+            <p>
+                The dark band under the masthead &#8212;
+                <strong>GRID WARNINGS</strong> &#8212; carries five lamps, left
+                to right in page order: <strong>UNRELIABLE</strong>,
+                <strong>WIND LULL</strong>, <strong>OVERCAST</strong>,
+                <strong>HEAVY IMPORTS</strong> and
+                <strong>SCARCITY NOTICE</strong>. Two colour states carry
+                distinct meanings:
+            </p>
+            <p class="formula">
+                AMBER — the site's own computed reading of the live grid RED —
+                an official NESO notice from Elexon SYSWARN (the only
+                authoritative signal)
+            </p>
+            <p>
+                One or two amber lamps are the ordinary state. Britain's grid
+                genuinely leans on weather and imports most of the time &#8212;
+                that is the finding, not a fault in the display.
+            </p>
+            <p>
+                <strong>The &#8220;usual half&#8221; rule.</strong> The four
+                computed lamps share one policy and carry no hand-picked
+                threshold. A lamp goes amber when the
+                <strong>live</strong> reading leaves the
+                <em>usual half</em> &#8212; the middle 50% (the 25th&#8211;75th
+                percentile box) of that panel's own rolling-year distribution
+                &#8212; on the concerning side. The threshold is read
+                <strong
+                    >live from the box-plot drawn under each panel's
+                    carpet</strong
+                >, so a lamp can never disagree with the band beside it, and it
+                drifts with the rolling year rather than needing a number
+                defended. The concerning side depends on the metric: for wind,
+                solar and firm share a <em>low</em> reading is the worry (below
+                the 25th percentile); for imports a <em>high</em> reading is
+                (above the 75th).
+            </p>
+            <p>The five lamps:</p>
+            <ul>
+                <li>
+                    <strong>UNRELIABLE.</strong> Amber when the live
+                    <strong>firm</strong> (dispatchable) share of national
+                    demand &#8212; the same figure the reliability gauge shows
+                    &#8212; falls below the <strong>25th percentile</strong> of
+                    its rolling year: firm power is in its worst quarter, so
+                    weather and imports are carrying an unusually large share.
+                    The lamp <em>trips</em> on the firm share (to match that
+                    distribution) but <em>displays</em> the unreliable share
+                    (100&#8201;&#8722;&#8201;firm, e.g. &#8220;64% weather and
+                    imports&#8221;), so the number rises with the alarm &#8212;
+                    the rail's echo of the verdict gauge's RELIABLE / UNRELIABLE
+                    flip.
+                </li>
+                <li>
+                    <strong>WIND LULL.</strong> Amber when the live wind
+                    capacity factor &#8212; live wind output (Elexon FUELINST +
+                    NESO embedded) &#247; DUKES total UK wind nameplate &#8212;
+                    falls below the <strong>25th percentile</strong> of the
+                    &#8220;Wind and solar is mostly idle&#8221; dial's
+                    distribution, so the lamp trips exactly when that dial sits
+                    in its low quarter. Like the other rail lamps it then
+                    <em>reads</em> wind's share of national demand &#8212; the
+                    same basis as the receipt above &#8212; so the rail speaks
+                    one language and the figure matches the verdict. How long
+                    such calms <em>last</em> is the drought plot in &#8220;When
+                    the wind stops, it stops for days&#8221;. &#8220;Nominal&#8221;
+                    otherwise.
+                </li>
+                <li>
+                    <strong>OVERCAST.</strong> Amber when live solar is cloudier
+                    than usual <em>for the time of day and year</em>. Solar
+                    cannot use a flat threshold &#8212; the daily and seasonal
+                    cycle swamps it &#8212; so its distribution is conditioned
+                    on <strong>(week-of-year, settlement period)</strong>: the
+                    lamp trips when the live solar capacity factor falls below
+                    the <strong>25th percentile</strong> of comparable
+                    half-hours (cloudier than three in four). It reads &#8220;X%
+                    of a clear day&#8221; &#8212; live CF over that slot's
+                    clear-sky reference (its 95th-percentile ceiling, robust to
+                    over-irradiance spikes). After dark it is dormant
+                    (&#8220;After dark&#8221;).
+                </li>
+                <li>
+                    <strong>HEAVY IMPORTS.</strong> The trigger is net imports
+                    as a share of GB
+                    <strong>interconnector capacity</strong> &#8212; the figure
+                    the imports dial points to &#8212; exceeding the
+                    <strong>75th percentile</strong> of that panel's
+                    distribution (the cables working harder than in a typical
+                    hour). But the lamp <em>displays a different number</em>:
+                    net imports as a share of <strong>supply</strong> (&#247;
+                    demand, labelled &#8220;X% of supply&#8221;). The trigger
+                    sizes the pipe (so lamp and dial agree on <em>when</em> it
+                    is heavy); the reading states the exposure &#8212; how much
+                    of demand is riding on neighbours who may stop selling. An
+                    export hour is a negative share and never trips.
+                </li>
+                <li>
+                    <strong>SCARCITY NOTICE.</strong> Red when Elexon SYSWARN
+                    carries at least one active margin notice. This is the
+                    <strong>only authoritative lamp</strong> and the only one
+                    exempt from the usual-half rule &#8212; it is a NESO notice,
+                    not a computed band. The three-tier ladder (NISM &#8594; EMN
+                    &#8594; CMN) is described in the
+                    <a href="#warnings">Operational warnings</a> section. The
+                    lamp is dormant when no notice is in force.
+                </li>
+            </ul>
+            <p class="caveat">
+                <strong>Computed vs authoritative.</strong> The four amber lamps
+                are this site&#8217;s own reading of live conditions &#8212;
+                useful context, not an official statement about system state.
+                Only the red SCARCITY NOTICE lamp carries an authoritative
+                source: a NESO notice published on Elexon SYSWARN. Amber lamps
+                with no red notice mean the site sees a condition worth flagging
+                &#8212; not that an operator has raised an alarm.
+            </p>
 
-  <h2 id="conditions">The grid conditions panel</h2>
-  <p class="meta">Sources: Elexon FUELINST + NESO embedded (live wind CF, firm share, net imports) &#247; DUKES nameplate · Elexon SYSWARN (active notices, live) · cadence: all lamps live, ~5 min</p>
-  <p>Four lamps below the gauge give a quick read of present conditions. Two colour states carry distinct meanings:</p>
-  <p class="formula">AMBER — the site's own computed reading of the live grid
-RED   — an official NESO notice from Elexon SYSWARN (the only authoritative signal)</p>
-  <p>One or two amber lamps are the ordinary state. Britain's grid genuinely leans on weather and imports most of the time &#8212; that is the finding, not a fault in the display.</p>
-  <p>The four lamps, with their thresholds:</p>
-  <ul>
-    <li><strong>WIND LULL.</strong> Amber when the <strong>live</strong> wind capacity factor &#8212; live wind output (Elexon FUELINST + NESO embedded) &#247; DUKES total UK wind nameplate &#8212; is below <strong>25%</strong>: the same figure the capacity dial in &#8220;Wind and solar is mostly idle&#8221; points to, so the lamp and that dial always agree. It measures how hard the wind is blowing right now (capacity factor), not wind's share of demand. How long such calms <em>last</em> is shown by the drought plot in &#8220;When the wind stops, it stops for days&#8221;. Live, ~5-min cadence.</li>
-    <li><strong>WEATHER-DEPENDENT MAJORITY.</strong> Amber when the firm (dispatchable) share of national demand &#8212; the same figure the reliability gauge shows &#8212; falls below <strong>50%</strong>. At that point, weather-driven output plus net imports together supply more than half the grid. Live, ~5-min cadence.</li>
-    <li><strong>HEAVY IMPORTS.</strong> Amber when net interconnector imports exceed <strong>25%</strong> of national demand &#8212; roughly the heaviest one-in-six of recent hours. Live, ~5-min cadence.</li>
-    <li><strong>SCARCITY NOTICE.</strong> Red when Elexon SYSWARN carries at least one active margin notice. This is the only authoritative lamp. The three-tier ladder (NISM &#8594; EMN &#8594; CMN) is described in the <a href="#warnings">Operational warnings</a> section. The lamp is dormant when no notice is in force.</li>
-  </ul>
-  <p class="caveat"><strong>Computed vs authoritative.</strong> The three amber lamps are this site&#8217;s own reading &#8212; useful context, not an official statement about system state. Only the red SCARCITY NOTICE lamp carries an authoritative source: a NESO notice published on Elexon SYSWARN. Amber lamps with no red notice mean the site sees a condition worth flagging &#8212; not that an operator has raised an alarm.</p>
+            <h2 id="warnings">Operational warnings — the scarcity ladder</h2>
+            <p class="meta">
+                Source:
+                <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings"
+                    >Elexon SYSWARN</a
+                >
+                (active-only feed) · live in the browser · cadence: polled, ~5
+                min
+            </p>
+            <p>
+                When the system operator is worried about margin, it says so on
+                the record. We surface those notices and nothing else — counted
+                and contextualised, never catastrophised. Three notice types
+                form a <strong>scarcity ladder</strong>, shown here most to
+                least severe:
+            </p>
+            <p class="formula">
+                NISM — Notice of Insufficient System Margin (most severe) EMN —
+                Electricity Margin Notice CMN — Capacity Market Notice (least
+                severe)
+            </p>
+            <p>
+                The <strong>SCARCITY NOTICE</strong> lamp in the GRID WARNINGS
+                rail lights only while one of these is <em>in force</em>;
+                otherwise it stays dark. When more than one is active, the most
+                severe wins (ties broken by the most recent issue time). The
+                lamp names the notice and its source — a NESO notice, surfaced
+                through the Elexon SYSWARN feed — so you can check it against
+                <a href="https://www.neso.energy">NESO</a> directly. A notice
+                means the buffer is thin, not that the lights are about to go
+                out; the two are routinely confused, and we are careful not to.
+            </p>
+            <p class="caveat">
+                <strong>What a margin notice is not.</strong> An EMN or CMN is
+                the operator asking the market for more, with hours of warning —
+                the system working as designed, not a blackout in progress. We
+                report the notice and its severity; we do not dress it up.
+            </p>
 
-  <h2 id="warnings">Operational warnings — the scarcity ladder</h2>
-  <p class="meta">Source: <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings">Elexon SYSWARN</a> (active-only feed) · live in the browser · cadence: polled, ~5 min</p>
-  <p>When the system operator is worried about margin, it says so on the record. We surface those notices and nothing else — counted and contextualised, never catastrophised. Three notice types form a <strong>scarcity ladder</strong>, shown here most to least severe:</p>
-  <p class="formula">NISM  — Notice of Insufficient System Margin   (most severe)
-EMN   — Electricity Margin Notice
-CMN   — Capacity Market Notice                 (least severe)</p>
-  <p>The live banner lights only while one of these is <em>in force</em>; otherwise it stays dormant. When more than one is active, the most severe wins (ties broken by the most recent issue time). The banner names the notice, its time window, the source (Elexon SYSWARN) and the issue time, so a reader can check it against <a href="https://www.neso.energy">NESO</a> directly. A notice is a statement that the buffer is thin — not that the lights are about to go out; the two are routinely confused and we are careful not to.</p>
-  <p class="caveat"><strong>What a margin notice is not.</strong> An EMN or CMN is the operator asking the market for more, with hours of warning — the system working as designed, not a blackout in progress. We report the notice and its severity; we do not dress it up.</p>
+            <h2 id="wind-unreliability">
+                Wind unreliability — the whole-record carpet &amp; drought
+                spikes
+            </h2>
+            <p class="meta">
+                Source: Elexon FUELHH (settled) + NESO embedded wind outturn ÷
+                DUKES 6.2 nameplate (annual-step) · daily · back to 2016
+            </p>
+            <p>
+                <strong>Formula in words.</strong> Each day's wind capacity
+                factor is the mean power of (transmission WIND from Elexon
+                FUELHH + embedded wind outturn from NESO Historic Demand Data)
+                over that day's settled half-hours, divided by the DUKES 6.2
+                total UK wind nameplate for that year (annual-step). By
+                combining both output streams and dividing by the full installed
+                base this is a <strong>true load factor</strong> — unlike the
+                retired transmission-only lower bound, it carries no cross-year
+                artifact: the mix of embedded and transmission wind in the
+                numerator has always matched the DUKES total denominator.
+            </p>
+            <p>
+                <strong>The carpet.</strong> The whole-record carpet plots every
+                day from 2016 to the present: rows are years (2016 at the top,
+                newest year at the bottom), columns are day-of-year (1 Jan at
+                the left, 31 Dec at the right), calendar-aligned so 29 February
+                has its own column (and is blank in non-leap years). It uses the
+                <strong>same colour key as the Entry 02 wind carpet</strong>, so
+                the two read consistently: colour runs
+                <strong>pale at low output</strong> (a near-calm day) and
+                deepens to <strong>blue at full output</strong>,
+                OKLab-interpolated. The calm spells therefore show as the pale
+                patches — read down a column to compare years, or across a row
+                to follow one year. A partial final year is drawn in its
+                available columns; missing days are left neutral grey.
+            </p>
+            <p>
+                <strong>A lull and its severity.</strong> A
+                <strong>lull</strong> (or drought) is a run of consecutive days
+                on which the daily capacity factor stays below
+                <strong>10%</strong>. Severity is measured by how deep it goes:
+                a lull that touches below <strong>5%</strong> on at least one
+                day is classed as <em>severe</em>. The drought-spike plot below
+                the carpet shows one vertical spike per lull: spike height
+                encodes the lull's duration in days; spike colour encodes how
+                deep it went (pale red for a shallow lull, deep red for one that
+                fell far below the threshold). Reference lines run across the
+                plot at 3 days, 1 week and 2 weeks, so a glance shows whether a
+                given spell is routine or exceptional.
+            </p>
+            <p class="caveat">
+                <strong
+                    >These figures supersede the former wind stripe and failure
+                    counter.</strong
+                >
+                Earlier share images and cached cards may show the lower-bound
+                transmission-only figures, which are systematically higher (more
+                days appearing below the threshold because embedded output was
+                invisible). The combined-basis record differs: for instance, the
+                all-time longest sub-10% run is shorter on this basis than the
+                old lower-bound figure suggested. A cached share image may
+                reflect the old number.
+            </p>
 
-  <h2 id="wind-unreliability">Wind unreliability — the whole-record carpet &amp; drought spikes</h2>
-  <p class="meta">Source: Elexon FUELHH (settled) + NESO embedded wind outturn ÷ DUKES 6.2 nameplate (annual-step) · daily · back to 2016</p>
-  <p><strong>Formula in words.</strong> Each day's wind capacity factor is the mean power of (transmission WIND from Elexon FUELHH + embedded wind outturn from NESO Historic Demand Data) over that day's settled half-hours, divided by the DUKES 6.2 total UK wind nameplate for that year (annual-step). By combining both output streams and dividing by the full installed base this is a <strong>true load factor</strong> — unlike the retired transmission-only lower bound, it carries no cross-year artifact: the mix of embedded and transmission wind in the numerator has always matched the DUKES total denominator.</p>
-  <p><strong>The carpet.</strong> The whole-record carpet plots every day from 2016 to the present: rows are years (2016 at the top, newest year at the bottom), columns are day-of-year (1 Jan at the left, 31 Dec at the right), calendar-aligned so 29 February has its own column (and is blank in non-leap years). It uses the <strong>same colour key as the Entry 02 wind carpet</strong>, so the two read consistently: colour runs <strong>pale at low output</strong> (a near-calm day) and deepens to <strong>blue at full output</strong>, OKLab-interpolated. The calm spells therefore show as the pale patches — read down a column to compare years, or across a row to follow one year. A partial final year is drawn in its available columns; missing days are left neutral grey.</p>
-  <p><strong>A lull and its severity.</strong> A <strong>lull</strong> (or drought) is a run of consecutive days on which the daily capacity factor stays below <strong>10%</strong>. Severity is measured by how deep it goes: a lull that touches below <strong>5%</strong> on at least one day is classed as <em>severe</em>. The drought-spike plot below the carpet shows one vertical spike per lull: spike height encodes the lull's duration in days; spike colour encodes how deep it went (pale red for a shallow lull, deep red for one that fell far below the threshold). Reference lines run across the plot at 3 days, 1 week and 2 weeks, so a glance shows whether a given spell is routine or exceptional.</p>
-  <p class="caveat"><strong>These figures supersede the former wind stripe and failure counter.</strong> Earlier share images and cached cards may show the lower-bound transmission-only figures, which are systematically higher (more days appearing below the threshold because embedded output was invisible). The combined-basis record differs: for instance, the all-time longest sub-10% run is shorter on this basis than the old lower-bound figure suggested. A cached share image may reflect the old number.</p>
+            <h2 id="import-cost">
+                Imports — capacity factor (homepage) and cost (detail page)
+            </h2>
+            <p class="meta">
+                Sources: Elexon FUELHH net interconnector flow; DESNZ GB
+                interconnector capacity; Elexon system (cash-out) price.
+                Settled, back to 2016.
+            </p>
+            <p>
+                <strong
+                    >The homepage panel — leaning on the
+                    interconnectors.</strong
+                >
+                The homepage shows imports the way it shows wind and solar: net
+                imports as a share of <strong>interconnector capacity</strong> —
+                a capacity factor — not in £. The denominator is GB's
+                operational interconnector capacity, currently
+                <strong>10.3 GW</strong> across ten links (IFA, IFA2, ElecLink,
+                BritNed, Nemo Link, North Sea Link, Viking Link, East-West,
+                Greenlink and Moyle), from
+                <a
+                    href="https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage"
+                    >DESNZ interconnector statistics</a
+                >
+                (the per-link table is in
+                <code>data/interconnectors.json</code>, reconciling to the 10.3
+                GW headline). For each settled half-hour the denominator is the
+                capacity of the legs <em>reporting</em> that half-hour: settled
+                FUELHH blanks a leg before its link was commissioned, so the
+                capacity factor tracks the fleet exactly as it grew — Greenlink,
+                for example, only counts from its 2025 commissioning, with no
+                commissioning-date table needed. The dial's MW ring runs from 0
+                to the full fleet; the live needle reads net imports ÷ capacity
+                — the same net-import figure as the verdict gauge and the
+                conditions lamp. Export half-hours floor to zero.
+            </p>
+            <p>
+                <strong>The cost lives on the detail page.</strong> The
+                <a href="import.html">import detail page</a> carries the money
+                story in two views. First, the half-hourly import-spend
+                <strong>rate</strong> (£/hour) over the last year: each carpet
+                cell, the dial needle and the box-plot are
+                <code>max(net imports, 0) × system price</code> for a settlement
+                period, on a linear scale from £0 to the year's worst
+                half-hourly rate (rounded up to the next £500k) so the busiest
+                half-hour is on-scale. Second, the whole daily record since 2016
+                (below).
+            </p>
+            <p>
+                <strong>Cost formula in words.</strong> Each settlement
+                half-hour's import cost is
+                <code>max(net_import_mw, 0) × 0.5h × system_sell_price</code>,
+                giving a £ figure per period. These are summed to a daily £
+                value — the carpet cell. <code>net_import_mw</code> is the
+                case-insensitive sum of all interconnector legs
+                (<code>INT*</code>) from Elexon FUELHH, with export half-hours
+                floored to zero: only the hours when Britain is drawing power
+                from abroad count toward cost. This series is settled; the
+                carpet runs back to 2016.
+            </p>
+            <p>
+                <strong>What this figure is — and is not.</strong> This is the
+                value of the net imported energy at the GB system (cash-out)
+                price. It is
+                <strong>not the contractual cost of buying the imports</strong>:
+                interconnector capacity rights and energy clear in the day-ahead
+                auction at N2EX, a price this dataset does not include. The
+                cash-out price is used as the closest settled, reproducible
+                proxy for what that energy was worth on the day — every number
+                on this panel traces to Elexon or NESO; no external licensed
+                price series is used.
+            </p>
+            <p>
+                <strong>The system price.</strong> The price is the Elexon
+                settlement <strong>system sell price</strong> (£/MWh), the GB
+                cash-out / imbalance price. Since Ofgem P305 came into force in
+                2015, Great Britain has used a single imbalance price for all
+                settlement periods — there is no separate buy and sell price —
+                so this is <em>the</em> system price. The price history store
+                covers 2016-01-01 to the latest settled day (approximately five
+                days behind live). Genuine Elexon non-publications are recorded
+                in a frozen 14-day known-gaps manifest; the validation gate
+                passes on those documented holes but fails on any new incomplete
+                day.
+            </p>
+            <p>
+                <strong>Negative-price floor.</strong> GB system prices go
+                negative in oversupply — periods where generators pay to export
+                rather than being paid to generate. An imported half-hour at a
+                negative system price is floored to <strong>£0</strong>:
+                <code>max(system price, 0)</code>. Being paid to take energy is
+                no cost, not a negative cost, and including it would contradict
+                the non-negative guard. The floor adds approximately
+                <strong>+0.56%</strong> to the all-time total relative to a
+                signed calculation; headline days are unaffected.
+            </p>
+            <p>
+                <strong>The full-record carpet (detail page).</strong> The whole
+                daily record — one cell per settled day (columns, oldest at the
+                left) × year (rows, 2016 at the top) — also on the
+                <a href="import.html">import detail page</a>. Its colour runs a
+                <strong>square-root ramp</strong> from white (no import cost) to
+                deepest red, with the cap set <em>from the data</em> to the next
+                £10m above the costliest day (currently <strong>£100m</strong>)
+                so the record day is on-scale, not clipped. The sqrt ramp keeps
+                the everyday range — median £3.2m, 90th percentile ~£10.8m —
+                spread across the colours rather than washed out by the long
+                tail. The cap is a <strong>colour clamp only</strong>: no datum
+                is truncated. The costliest single day on record,
+                <strong>£94.4m on 9 Sep 2021</strong>, is marked on the carpet,
+                named in the caption, and listed with the next costliest days
+                below it. Nothing is hidden; the worst days are the most
+                visible.
+            </p>
+            <p class="caveat">
+                <strong>Settled only; not a market price.</strong> Every figure
+                on this panel derives from settled Elexon data — FUELHH
+                interconnector flows and the system sell price — both
+                reproducible from public sources. The day-ahead or N2EX price
+                that interconnectors actually clear at is a licensed dataset and
+                is not used here. The caveat is baked into every caption and
+                source line.
+            </p>
 
-  <h2 id="import-cost">Import cost — net interconnector energy at the system price</h2>
-  <p class="meta">Source: Elexon FUELHH net interconnector flow × Elexon system (cash-out) price, settled, back to 2016</p>
-  <p><strong>Formula in words.</strong> Each settlement half-hour's import cost is <code>max(net_import_mw, 0) × 0.5h × system_sell_price</code>, giving a £ figure per period. These are summed to a daily £ value — the carpet cell. <code>net_import_mw</code> is the case-insensitive sum of all interconnector legs (<code>INT*</code>) from Elexon FUELHH, with export half-hours floored to zero: only the hours when Britain is drawing power from abroad count toward cost. This series is settled; the carpet runs back to 2016.</p>
-  <p><strong>What this figure is — and is not.</strong> This is the value of the net imported energy at the GB system (cash-out) price. It is <strong>not the contractual cost of buying the imports</strong>: interconnector capacity rights and energy clear in the day-ahead auction at N2EX, a price this dataset does not include. The cash-out price is used as the closest settled, reproducible proxy for what that energy was worth on the day — every number on this panel traces to Elexon or NESO; no external licensed price series is used.</p>
-  <p><strong>The system price.</strong> The price is the Elexon settlement <strong>system sell price</strong> (£/MWh), the GB cash-out / imbalance price. Since Ofgem P305 came into force in 2015, Great Britain has used a single imbalance price for all settlement periods — there is no separate buy and sell price — so this is <em>the</em> system price. The price history store covers 2016-01-01 to the latest settled day (approximately five days behind live). Genuine Elexon non-publications are recorded in a frozen 14-day known-gaps manifest; the validation gate passes on those documented holes but fails on any new incomplete day.</p>
-  <p><strong>Negative-price floor.</strong> GB system prices go negative in oversupply — periods where generators pay to export rather than being paid to generate. An imported half-hour at a negative system price is floored to <strong>£0</strong>: <code>max(system price, 0)</code>. Being paid to take energy is no cost, not a negative cost, and including it would contradict the non-negative guard. The floor adds approximately <strong>+0.56%</strong> to the all-time total relative to a signed calculation; headline days are unaffected.</p>
-  <p><strong>The carpet and its colour scale.</strong> The carpet plots one cell per settled day (columns, oldest at the left) × year (rows, 2016 at the top). The colour runs a <strong>square-root ramp</strong> from white (no import cost) to deepest red, saturating at a cap of <strong>£20m per day</strong>. That cap is tuned to the real distribution — median £3.2m, 90th percentile ~£10.8m, 99th percentile ~£19.9m — so the everyday range spreads across the ramp rather than washing out into a pale field. The cap is a <strong>colour clamp only</strong>: no datum is truncated. Days above £20m (the long tail up to the record <strong>£94.4m on 9 Sep 2021</strong>) all read deepest-red on the carpet, but the extreme days are communicated explicitly — by the on-carpet record marker, the caption, and the costliest-days list below the panel. Nothing is hidden; the worst days are the most visible.</p>
-  <p><strong>The live dial.</strong> The dial reads <code>max(net imports, 0) × latest settled system price</code>, expressed as a £/hour rate. It is stamped to the latest <em>settled</em> half-hour — cash-out prices typically publish roughly 15 minutes after each period closes — and is never presented as a live right-now figure. The stamp makes clear it is a recent-settled reading, not a forecast.</p>
-  <p class="caveat"><strong>Settled only; not a market price.</strong> Every figure on this panel derives from settled Elexon data — FUELHH interconnector flows and the system sell price — both reproducible from public sources. The day-ahead or N2EX price that interconnectors actually clear at is a licensed dataset and is not used here. The caveat is baked into every caption and source line.</p>
+            <h2 id="ytd">
+                Year-to-date shares — a transmission-system mix, not the verdict
+            </h2>
+            <p class="meta">
+                Source: Elexon FUELHH (settled) · annual · transmission-system
+                basis
+            </p>
+            <p>
+                <strong>Formula in words:</strong> each year's settled
+                generation by fuel, plus net interconnector flow, as a share of
+                total transmission supply. Pumped-storage round-trip is
+                excluded; the shares sum to 100% by construction.
+            </p>
+            <p class="caveat">
+                <strong
+                    >Read this on its own basis — it is not the live
+                    verdict.</strong
+                >
+                The settled store is transmission-metered FUELHH only and
+                carries <em>no embedded solar or wind</em>. Embedded solar is
+                netted off national demand and cannot appear in a settled-data
+                share at all, so these year-to-date figures are a
+                <strong>transmission-system mix</strong>, not the
+                national-demand verdict the gauge shows. The two use different
+                denominators and must never be compared directly. Net
+                interconnectors are a <strong>signed</strong> net flow: in a
+                net-export year (2022) the import share is negative — it is
+                drawn as a signed bar, never a pie wedge.
+            </p>
 
-  <h2 id="ytd">Year-to-date shares — a transmission-system mix, not the verdict</h2>
-  <p class="meta">Source: Elexon FUELHH (settled) · annual · transmission-system basis</p>
-  <p><strong>Formula in words:</strong> each year's settled generation by fuel, plus net interconnector flow, as a share of total transmission supply. Pumped-storage round-trip is excluded; the shares sum to 100% by construction.</p>
-  <p class="caveat"><strong>Read this on its own basis — it is not the live verdict.</strong> The settled store is transmission-metered FUELHH only and carries <em>no embedded solar or wind</em>. Embedded solar is netted off national demand and cannot appear in a settled-data share at all, so these year-to-date figures are a <strong>transmission-system mix</strong>, not the national-demand verdict the gauge shows. The two use different denominators and must never be compared directly. Net interconnectors are a <strong>signed</strong> net flow: in a net-export year (2022) the import share is negative — it is drawn as a signed bar, never a pie wedge.</p>
+            <h2 id="store">The history store</h2>
+            <p>
+                Settled half-hourly FUELHH and demand from Elexon back to the
+                clean-data edge of 2016-01-01 (nothing earlier exists on the
+                modern API). 77 days are genuine Elexon non-publications,
+                recorded in a frozen manifest; we never fabricate the missing
+                half-hours. The live clock is anchored to Elexon's
+                server-stamped snapshot, not the device clock. Full notes and
+                the open source are in the
+                <a href="https://github.com/richardjlyon/gb-grid-margin"
+                    >repository</a
+                >.
+            </p>
 
-  <h2 id="store">The history store</h2>
-  <p>Settled half-hourly FUELHH and demand from Elexon back to the clean-data edge of 2016-01-01 (nothing earlier exists on the modern API). 77 days are genuine Elexon non-publications, recorded in a frozen manifest; we never fabricate the missing half-hours. The live clock is anchored to Elexon's server-stamped snapshot, not the device clock. Full notes and the open source are in the <a href="https://github.com/richardjlyon/gb-grid-margin">repository</a>.</p>
+            <h2 id="guards">Build-time guards</h2>
+            <p>
+                Before a figure is published, the build checks it against the
+                guards below; a figure that fails one is not shipped. By stage of
+                the pipeline:
+            </p>
+            <ul>
+                <li>
+                    <strong>Solar cross-check (live).</strong> The NESO
+                    embedded-solar figure — the one estimate that moves the
+                    headline — is checked against the independent
+                    <a href="https://www.solar.sheffield.ac.uk"
+                        >Sheffield Solar PV_Live</a
+                    >
+                    outturn and the build fails if they disagree by more than
+                    <strong>10%</strong>. (PV_Live sends no CORS header, so it
+                    can only ever be the server-side auditor, never the live
+                    figure.)
+                </li>
+                <li>
+                    <strong>Demand reconciliation (live).</strong> The
+                    supply-side denominator is reconciled against Elexon's
+                    national demand outturn, INDO, plus the same embedded
+                    estimate, and fails past a <strong>12%</strong> gap — a
+                    tripwire for a gross feed failure (a zeroed, doubled or
+                    wrong-unit series), not a precision claim. The actual
+                    residual is recorded each run, not hidden.
+                </li>
+                <li>
+                    <strong>Snapshot completeness (live).</strong> A partial
+                    FUELINST publish — missing a core fuel, or implausibly low
+                    demand — is refused rather than rendered as if whole.
+                </li>
+                <li>
+                    <strong>Derived figures (settled).</strong> Before any daily
+                    figure is written, the build checks that the year-to-date
+                    shares sum to ~100%, every wind and solar capacity factor
+                    sits in range, each carpet's days are sorted and unique, the
+                    wind-drought episodes are internally valid (length ≥ 1 day,
+                    start ≤ end, below the 10% threshold), and the nameplate
+                    denominators are positive, in-envelope and self-reconciling.
+                    Any breach aborts the build and writes nothing. One value
+                    that looks wrong but is correct — a negative net-import
+                    share in an export year — is allowed by construction.
+                </li>
+                <li>
+                    <strong>Share cards.</strong> Cards are screenshotted into
+                    shareable images, so a wrong figure becomes a wrong picture.
+                    Each card is built from the same data the dashboard reads and
+                    checked against the same guards before it is rendered.
+                </li>
+            </ul>
+            <p>
+                <strong>When the live feed is stale or down.</strong> The live
+                layer is anchored to Elexon's server-stamped snapshot, not your
+                device clock. If the live fetch fails it falls back to the last
+                good reading (<code>latest.json</code>), clearly labelled as
+                such; once that reading is too old to show as current, the
+                dashboard goes number-free rather than display a stale headline
+                that looks live — a midday solar reading shown at midnight is a
+                wrong number, not an old one. A build older than twelve hours
+                renders as unavailable, with no numbers at all.
+            </p>
 
-  <h2 id="guards">Build-time guards &amp; the honesty bargain</h2>
-  <p>The bargain is simple: every figure traces to a settled or live source, and a number that cannot be made to add up is never published. That is enforced in code, not by good intentions — the build <strong>fails loudly</strong> rather than ship a wrong figure. The guards, by stage of the pipeline:</p>
-  <ul>
-    <li><strong>Solar cross-check (live).</strong> The NESO embedded-solar figure — the one estimate that moves the headline — is checked against the independent <a href="https://www.solar.sheffield.ac.uk">Sheffield Solar PV_Live</a> outturn and the build fails if they disagree by more than <strong>10%</strong>. (PV_Live sends no CORS header, so it can only ever be the server-side auditor, never the live figure.)</li>
-    <li><strong>Demand reconciliation (live).</strong> The supply-side denominator is reconciled against Elexon's national demand outturn, INDO, plus the same embedded estimate, and fails past a <strong>12%</strong> gap — a tripwire for a gross feed failure (a zeroed, doubled or wrong-unit series), not a precision claim. The actual residual is recorded each run, not hidden.</li>
-    <li><strong>Snapshot completeness (live).</strong> A partial FUELINST publish — missing a core fuel, or implausibly low demand — is refused rather than rendered as if whole.</li>
-    <li><strong>Derived figures (settled).</strong> Before any daily figure is written, the build checks that the year-to-date shares sum to ~100%, every wind and solar capacity factor sits in range, each carpet's days are sorted and unique, the wind-drought episodes are internally valid (length ≥ 1 day, start ≤ end, below the 10% threshold), and the nameplate denominators are positive, in-envelope and self-reconciling. Any breach aborts the build and writes nothing. One value that looks wrong but is correct — a negative net-import share in an export year — is allowed by construction.</li>
-    <li><strong>Share cards.</strong> Cards are screenshotted into shareable images, so a wrong figure becomes a wrong picture. Each card is built from the same JSON the dashboard reads and is checked against the same guards before rendering; a separate source-trace test recomputes every card figure from the site data and fails on any drift.</li>
-  </ul>
-  <p><strong>When the live feed is stale or down.</strong> The live layer is anchored to Elexon's server-stamped snapshot, not your device clock. If the live fetch fails it falls back to the last good reading (<code>latest.json</code>), clearly labelled as such; once that reading is too old to show as current, the dashboard goes number-free rather than display a stale headline that looks live — a midday solar reading shown at midnight is a wrong number, not an old one. A build older than twelve hours renders as unavailable, with no numbers at all.</p>
+            <h2 id="cards">Share cards</h2>
+            <p class="meta">Source: the same data the dashboard reads</p>
+            <p>
+                Each share card is built from the same data the dashboard reads —
+                the live snapshot and the settled wind record — so a card carries
+                the same figures the page shows.
+            </p>
+            <p>
+                Three cards ship. The <strong>hero</strong> card is evergreen —
+                the question &#8220;What&#8217;s powering your hospital
+                today?&#8221; over a fixed, illustrative gauge, carrying no
+                perishable number, so it is safe to leave cached as the
+                site&#8217;s social image. <strong>Live balance</strong> is the
+                live card: it leads with whichever side is carrying the grid at
+                the moment it is built, and carries the Elexon snapshot
+                timestamp so a shared card can be read in context.
+                <strong>Recent lull</strong> marks the most recent wind drought
+                of three days or more, stamped with the date it was generated
+                rather than a live time. Each reads only from the two files
+                above.
+            </p>
+            <p>
+                <strong>Cache bust.</strong> Each card PNG is SHA-256-hashed;
+                the first ten digits appear as a <code>?v=</code> token on every
+                image URL. Social platforms cache OG images aggressively; a
+                changed figure changes its hash and forces a re-scrape.
+            </p>
+            <p class="meta">
+                Methodology last reviewed against the shipped figures: 29 June
+                2026.
+            </p>
+        </main>
 
-  <h2 id="cards">Share cards</h2>
-  <p class="meta">Source: same <code>site/data/*.json</code> files the dashboard reads · pinned by <code>tests/test_sharecards_gate.py</code></p>
-  <p>Each share card is built from the same JSON data files the dashboard reads — <code>latest.json</code>, <code>nameplate.json</code>, <code>reliability_year.json</code> and <code>wind_unreliability.json</code>. A card figure and its corresponding dashboard figure use the same JSON field and the same format string; <code>tests/test_sharecards_gate.py</code> asserts every card figure independently and fails the build if anything drifts.</p>
-  <p><strong>Live cards</strong> carry the Elexon snapshot timestamp so a shared card can be read in context. The gas-vs-wind card is adaptive: it states whichever source actually leads at build time. <strong>Settled cards</strong> carry an as-of generation timestamp so they can be read in context. <strong>The warning card</strong> classifies any active Elexon SYSWARN notice against the three-tier scarcity ladder — NISM (Notice of Insufficient System Margin), EMN (Electricity Margin Notice), CMN (Capacity Market Notice) — and shows "All clear" when none is in force.</p>
-  <p><strong>Cache bust.</strong> Each card PNG is SHA-256-hashed; the first ten digits appear as a <code>?v=</code> token on every image URL. Social platforms cache OG images aggressively; a changed figure changes its hash and forces a re-scrape.</p>
-  <p class="caveat"><strong>No modelled figures.</strong> Every card value traces to a settled or live Elexon / NESO / DUKES figure already published on the dashboard. No figure is introduced that does not already exist in <code>site/data/*.json</code>.</p>
-  <p class="meta">Methodology last reviewed against the shipped figures: 27 June 2026.</p>
-</main>
-
-<footer class="footer">
-  <div class="container">
-    <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Source &amp; data</a></p>
-    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
-  </div>
-</footer>
-</body>
+        <footer class="footer">
+            <div class="container">
+                <p class="links">
+                    Made by
+                    <a href="https://theenergytrap.org">Richard Lyon</a> ·
+                    <a href="methodology.html">Methodology &amp; sources</a> ·
+                    <a href="share.html">Share cards</a> ·
+                    <a href="about.html">About this site</a> ·
+                    <a href="https://github.com/richardjlyon/gb-grid-margin"
+                        >Source &amp; data</a
+                    >
+                </p>
+                <p class="trace">
+                    Every figure traces to Elexon, NESO and DUKES. No modelled
+                    numbers.
+                </p>
+            </div>
+        </footer>
+    </body>
 </html>

@@ -7,14 +7,14 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
-import { windLullLamp, firmMajorityLamp, heavyImportsLamp, scarcityLamp } from './conditions.js';
+import { windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcityLamp } from './conditions.js';
 import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
   unreliableNowPct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
-  importValueColor, importCostCaption,
+  importValueColor, importCostCaption, fmtRatePerH, importRateCalibration,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,18 +28,18 @@ async function getJSON(url) {
 }
 
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const srcLine = (txt, anchor) =>
-  `<p class="src">Source: ${esc(txt)} · <a href="methodology.html#${anchor}">→ method</a></p>`;
 
-// A full, honest UTC stamp from an ISO instant: "25 Jun 2026 23:35 UTC" (or "" if unparseable).
-// Used so every public figure carries a complete timestamp, not a bare HH:MM.
-const _MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function fmtUTC(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getUTCDate())} ${_MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()} `
-    + `${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+// Footer for a homepage group. "Sources & method →" is right-aligned on its row. Where the group has
+// deeper-analysis page(s), a "Going further:" block below lists them. `further` = [{href, label}, …].
+function entryFooter(section, further) {
+  const has = further && further.length;
+  const going = has ? '<span class="entry-foot-going">Going further:</span>' : '';
+  const links = has
+    ? `<div class="entry-further">${further.map((f) => `<a href="${f.href}">→ ${f.label}</a>`).join('')}</div>`
+    : '';
+  return `<div class="entry-foot">${going}`
+    + `<a class="entry-foot-src" href="methodology.html#src-group-${section}">Sources &amp; method →</a>`
+    + `</div>${links}`;
 }
 
 // ============================================================ the half-dial gauge
@@ -65,7 +65,7 @@ function arcPath(cx, cy, R, a, b, max) {
 // but the mean tick + needle stay so "now" still reads against the rolling-year average.
 function buildGauge(value, max, { armed = false, danger = null, reliable = null,
                                   calibration = null, label = 'gauge', dist = null, trackRamp = null,
-                                  ariaLabel = null,
+                                  ariaLabel = null, calUnit = ' MW',
                                   palette = { track: '#d7dbdf', band: '#b4bac1', core: '#7c838a' } } = {}) {
   const cx = 100, cy = 104, R = 86;
   const ticks = [];
@@ -113,7 +113,7 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
       if (t.label_mw == null) continue;
       if (t.pct === 0 || t.pct === 100) {
         const [ox, oy] = arcPoint(cx, cy, R + 15, v, max);
-        cal += `<text x="${ox.toFixed(1)}" y="${(oy + 11).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? ' MW' : ''}</text>`;
+        cal += `<text x="${ox.toFixed(1)}" y="${(oy + 11).toFixed(1)}" class="g-mw" text-anchor="middle">${t.label_mw}${t.pct === 100 ? calUnit : ''}</text>`;
       } else if (t.pct === 50) {
         // The peak (50%-mark) power figure sits clearly above the dial, well clear of the "50%" label.
         const [ox, oy] = arcPoint(cx, cy, R + 18, v, max);
@@ -280,8 +280,7 @@ function renderVerdict(state) {
           </tbody>
         </table>
       </div>
-    </div>
-    ${srcLine(`Elexon FUELINST + NESO embedded · snapshot ${fmtUTC(v.snapshot) || `${String(v.snapshot).slice(11, 16)}Z`}`, 'verdict')}`;
+    </div>`;
 
   renderTrap(v);
   renderReliabilityBlock(v);
@@ -294,6 +293,9 @@ function renderVerdict(state) {
 const DIAL_PALETTE = {
   wind: { track: '#cbdef0', band: '#9cbfe3', core: '#4e8dcd', full: '#1f6fc0', fullRgb: [31, 111, 192] },
   solar: { track: '#e8d9be', band: '#d4b684', core: '#b17c23', full: '#e0921a', fullRgb: [224, 146, 26] },
+  // Imports — magenta, matching the verdict gauge's interconnector slice (COL_IMPORTS #c2188f), so
+  // "imports" reads the same hue across the dashboard. Bands luma-matched to the wind/solar shades.
+  import: { track: '#f0d2e6', band: '#dc9ec8', core: '#c0589f', full: '#c2188f', fullRgb: [194, 24, 143] },
 };
 
 // Reliability dial/carpet — single red. Bands behind the needle are red-tinted greys (luma-matched
@@ -304,10 +306,6 @@ const REL_PALETTE = { track: '#e3d2d4', band: '#cda9ad', core: '#b3565d', full: 
 // distribution bands tinted red so the central-tendency box reads as "cost" without a gradient track.
 const IMPORT_DIAL_PALETTE = { track: '#e8dcda', band: '#d3a8a2', core: '#b15c52', full: '#8c0c14', fullRgb: [140, 12, 20] };
 
-// Entry 02 source lines + the box-whisker key note, lifted to module scope so the shared
-// renderMetricBlock references them by name rather than closing over renderTrap.
-const WIND_GAUGE_SRC = 'Live: Elexon FUELINST + NESO embedded forecast / DUKES 6.2 wind nameplate';
-const SOLAR_GAUGE_SRC = 'Live: NESO embedded forecast / NESO embedded-solar capacity';
 // A single annotation — under solar only, to conserve space — explaining the hybrid box-whisker
 // key that sits above each carpet (it serves both sources and the dial bands, same scheme).
 // A compact visual key for the box-plot under every carpet legend. Shown ONCE (under the first
@@ -351,12 +349,13 @@ function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp, opts = {}) {
   // Numbers are £-formatted (opts.scale.fmt) instead of percentages.
   if (opts.scale) {
     const P = opts.scale.posFn, fmt = opts.scale.fmt;   // £ -> 0..100 bar position / display string
+    const period = opts.scale.period || 'day';          // box-plot tooltip noun (day / half-hour)
     const d = dist;   // raw £ percentiles {p10,p25,p50,p75,p90,mean}
     const nowPos = P(cf);   // cf is the raw live £ value here
     let box = '';
     if (d) {
       box = `
-        <span class="cl-box" aria-hidden="true" title="typical day: average ${fmt(d.mean)}, usual half ${fmt(d.p25)}–${fmt(d.p75)}, 9-in-10 ${fmt(d.p10)}–${fmt(d.p90)}">
+        <span class="cl-box" aria-hidden="true" title="typical ${period}: average ${fmt(d.mean)}, usual half ${fmt(d.p25)}–${fmt(d.p75)}, 9-in-10 ${fmt(d.p10)}–${fmt(d.p90)}">
           <span class="cl-box-line" style="left:${P(d.p10).toFixed(1)}%; width:${(P(d.p90) - P(d.p10)).toFixed(1)}%; background:${pal.band}"></span>
           <span class="cl-box-iqr" style="left:${P(d.p25).toFixed(1)}%; width:${(P(d.p75) - P(d.p25)).toFixed(1)}%; background:${pal.core}"></span>
           <span class="cl-box-avg" style="left:${P(d.mean).toFixed(1)}%"></span>
@@ -372,7 +371,7 @@ function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp, opts = {}) {
       <span class="cl-lab">${esc(opts.lo)}</span>
       <span class="cl-bar-wrap">
         <span class="cl-bar" style="background:${opts.barCss}" aria-hidden="true"></span>
-        <span class="cl-now" style="left:${nowPos.toFixed(1)}%" title="At the current rate: ${fmt(cf)} a day">now</span>
+        <span class="cl-now" style="left:${nowPos.toFixed(1)}%" title="At the current rate: ${fmt(cf)}">now</span>
         ${box}
       </span>
       <span class="cl-lab">${esc(opts.hi)}</span>
@@ -381,7 +380,9 @@ function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp, opts = {}) {
   const noun = unitNoun || 'capacity';
   const boxBand = ramp ? '#9aa3ab' : pal.band, boxCore = ramp ? '#4b535b' : pal.core;
   const barCss = ramp ? ramp.css : `linear-gradient(90deg in oklab, #fbfbf9, ${pal.full})`;
-  const loLab = ramp ? ramp.lo : 'No output', hiLab = ramp ? ramp.hi : 'Full output';
+  // End labels: the ramp's (reliability), or caller overrides (opts.lo/opts.hi — imports use
+  // "No imports"/"Full capacity"), else the wind/solar default.
+  const loLab = ramp ? ramp.lo : (opts.lo || 'No output'), hiLab = ramp ? ramp.hi : (opts.hi || 'Full output');
   const L = (frac) => Math.max(0, Math.min(100, (frac / satFull) * 100));   // a 0..1 cf -> bar %
   const pos = L(cf);
   // distribution box-plot below the bar (same scale, recoloured into the source hue to match the
@@ -435,15 +436,6 @@ function distForDays(node, days) {
   return (node._dist = { p10: q(0.1), p25: q(0.25), p50: q(0.5), p75: q(0.75), p90: q(0.9), mean });
 }
 
-// Mean capacity factor over the rolling year (all half-hourly cells) — the "rarely tops a quarter"
-// fact, stated in the label row beside the live dial.
-function avgFromDays(days) {
-  if (!days) return null;
-  let s = 0, n = 0;
-  for (const d of days) for (const cf of d.cf) if (cf != null) { s += cf; n += 1; }
-  return n ? Math.round((s / n) * 100) : null;
-}
-
 // The shared metric block: full-width source label row, the live dial (1/3 column) beside its
 // half-hourly carpet (2/3 column), then an aligned row of source lines. Closes over no Entry-02
 // globals — everything comes from `cfg` — so a later entry can reuse it with its own palette,
@@ -471,7 +463,6 @@ function renderMetricBlock(cfg) {
     calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
     trackRamp: cfg.rampFn || null,
   });
-  const avgNote = cfg.avgNote ? `<span class="trap-avg">${cfg.avgNote}</span>` : '';
   const srcP = (cls, txt) => txt
     ? `<p class="src trap-src ${cls}">Source: ${esc(txt)} · <a href="methodology.html#${cfg.methodAnchor}">→ method</a></p>`
     : '';
@@ -482,20 +473,45 @@ function renderMetricBlock(cfg) {
             aria-label="${esc(cfg.carpetAria ?? `${cfg.label} capacity factor, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). White = no output, deepening colour = toward full capacity.`)}"></canvas>
         </div>
         <div class="carpet-xaxis" id="carpet-${cfg.kind}-x"></div>`;
+  // gaugeExtra (the import live-receipt line) renders as its OWN column-1 grid item below the dial,
+  // NOT inside the gauge cell — so the gauge cell stays the same height as the wind/solar dials and
+  // the carpet beside it bottom-aligns to the dial baseline. Emitted after the carpet in DOM order so
+  // grid auto-placement keeps the carpet in the dial's row (row 2, col 2). Absent for wind/solar/
+  // reliability (no gaugeExtra), so their markup is unchanged.
+  const gaugeExtra = cfg.gaugeExtra ? `<div class="trap-gauge-extra">${cfg.gaugeExtra}</div>` : '';
   const strip = hasCarpet ? `
       <div class="carpet-cell">
         ${cfg.carpetHtml ?? defaultCarpet}
       </div>
+      ${gaugeExtra}
       ${srcP('trap-src-gauge', cfg.gaugeSrc)}
       ${srcP('trap-src-strip', cfg.carpetSrc)}
       ${cfg.stripExtra ? `<div class="trap-extra">${cfg.stripExtra}</div>` : ''}`
-    : srcP('trap-src-gauge', cfg.gaugeSrc);
+    : `${gaugeExtra}${srcP('trap-src-gauge', cfg.gaugeSrc)}`;
   return `
-      ${cfg.label ? `<p class="trap-label">${esc(cfg.label)}${avgNote}</p>` : ''}
-      ${hasCarpet ? (cfg.legendHtml ?? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp)) : ''}
-      <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div>${cfg.gaugeExtra ?? ''}</div>
+      ${cfg.label ? `<p class="trap-label">${esc(cfg.label)}</p>` : ''}
+      ${hasCarpet ? (cfg.legendHtml ?? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp, cfg.legendLabels || {})) : ''}
+      <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
       ${strip}
       ${cfg.keyNote ?? ''}`;
+}
+
+// A quiet reading under a live dial: the live flow in MW and its share of national demand. It is the
+// only place the §02/§03 panels show the live MW, and the demand figure reconciles the capacity-factor
+// dial with the §01 receipt. A 2px metric-hue tick (--now-rgb); no hairline, no box.
+function dialNowLine(kind, mw, demandMw) {
+  const rgb = (DIAL_PALETTE[kind] || {}).fullRgb;
+  if (!rgb) return '';
+  const tint = `--now-rgb:${rgb[0]},${rgb[1]},${rgb[2]}`;
+  if (Number.isFinite(mw) && mw < 0) {   // a net export (imports only) — the cables run the other way
+    const ex = Math.round(-mw).toLocaleString('en-GB');
+    return `<p class="dial-now" style="${tint}">Exporting <strong class="num">${ex} MW</strong> · cables reversed</p>`;
+  }
+  if (!Number.isFinite(mw) || !demandMw) return '';
+  const mwTxt = Math.round(mw).toLocaleString('en-GB');
+  const demandPct = Math.round(mw / demandMw * 100);
+  return `<p class="dial-now" style="${tint}"><strong class="num">${mwTxt} MW</strong>`
+    + ` · <span class="dial-now-sub"><span class="num">${demandPct}%</span> of demand</span></p>`;
 }
 
 // Entry 02: one block per source (wind, then solar). A single colour legend sits above each. No
@@ -507,24 +523,29 @@ function renderTrap(v) {
   const windCapMw = g.wind_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000);
   const solarCapMw = g.solar_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.solar_gw : 18.28) * 1000);
   const has = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
-  const cfgFor = (kind, label, sourceMw, capMw, gaugeSrc, carpetSrc) => {
+  const demandMw = Number.isFinite(v.national_demand_mw) ? v.national_demand_mw : null;
+  const cfgFor = (kind, label, sourceMw, capMw) => {
     const days = has ? CAPACITY[kind].days : null;
     const dist = has ? distForDays(CAPACITY[kind], days) : null;
-    const avg = avgFromDays(days);
     return {
       kind, label, palette: DIAL_PALETTE[kind], nameplateMw: capMw,
       sat: has ? CAPACITY.sat[kind] : 1, days, dist,
       liveCf: capMw ? (sourceMw / capMw) : 0,
-      avgNote: avg == null ? '' : `averages ${avg}% of capacity over the year`,
       keyNote: '',   // the shared box-plot key is shown once, under the Entry-01 reliability block
-      gaugeSrc, carpetSrc, methodAnchor: 'capacity-trap',
+      gaugeExtra: dialNowLine(kind, sourceMw, demandMw),   // live MW + share of demand under the dial
     };
   };
+  // Wind and solar are two distinct methodological groups: each its own block + "Sources & method →",
+  // with wind's drought detail link beneath its own. Imports (§03) follows the same source→deeper scheme.
   $('trap-body').innerHTML = `
     <div class="trap-grid${has ? '' : ' gauge-only'}">
-      ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw, WIND_GAUGE_SRC, (CAPACITY && CAPACITY.source_wind) || WIND_GAUGE_SRC))}
-      ${renderMetricBlock(cfgFor('solar', 'Solar', v.solar_mw || 0, solarCapMw, SOLAR_GAUGE_SRC, (CAPACITY && CAPACITY.source_solar) || SOLAR_GAUGE_SRC))}
-    </div>`;
+      ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw))}
+    </div>
+    ${entryFooter('wind', [{ href: 'wind.html', label: 'When the wind stops, it stops for days — the whole wind record since 2016' }])}
+    <div class="trap-grid${has ? '' : ' gauge-only'}">
+      ${renderMetricBlock(cfgFor('solar', 'Solar', v.solar_mw || 0, solarCapMw))}
+    </div>
+    ${entryFooter('solar')}`;
   if (has) {
     syncBlockHeights();
     drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
@@ -557,25 +578,20 @@ function renderReliabilityBlock(v) {
     p10: 100 - uDist.p90, p25: 100 - uDist.p75, p50: 100 - uDist.p50,
     p75: 100 - uDist.p25, p90: 100 - uDist.p10, mean: 100 - uDist.mean,
   } : null;
-  const avgU = avgFromDays(days);
-  const avg = avgU == null ? null : 100 - avgU;            // mean reliable share over the year
-  const src = (REL_CARPET && REL_CARPET.source) || 'Elexon FUELHH (settled) + NESO embedded';
   host.innerHTML = `
     <div class="trap-grid${has ? '' : ' gauge-only'}">
       ${renderMetricBlock({
         kind: 'reliability', label: 'Reliability', palette: REL_PALETTE,
         nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
         liveCf: nowPct == null ? null : nowPct / 100,
-        avgNote: avg == null ? '' : `averaged ${avg}% of demand over the year`,
         keyNote: has ? KEY_NOTE_HTML : '',
         unitNoun: 'demand',
         rampFn: reliabilityColor, rampLabels: { lo: 'Unreliable', hi: 'Reliable' },
-        gaugeSrc: 'Live: Elexon FUELINST + NESO embedded forecast (firm share)',
-        carpetSrc: src, methodAnchor: 'reliability',
         gaugeLabel: 'Reliability — firm share of national demand',
         carpetAria: 'Reliable (firm) share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Green = demand fully met by firm power, through amber to deep red = increasingly leaning on weather and imports.',
       })}
-    </div>`;
+    </div>
+    ${entryFooter('reliability')}`;
   if (has) {
     syncBlockHeights();
     drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null,
@@ -624,6 +640,7 @@ function layoutCarpetAxis(kind, days) {
 }
 
 let CAPACITY = null;   // site/data/capacity_carpets.json (wind + solar half-hourly CF grids)
+let SOLAR_OVERCAST = null;   // site/data/solar_overcast.json (conditional clear-sky grid for OVERCAST)
 
 // A carpet plot: x = date (oldest left → newest right), y = time of day (SP1=00:00 top → SP48
 // bottom). Each cell coloured by its half-hourly capacity factor (carpetCellColor): white = no
@@ -683,6 +700,9 @@ function condOverride() {
   const w = find('wind'); if (w) out.wind = { state: 'active', cfPct: Number(arg(w)) || 14 };
   if (find('firm')) out.firm = { state: 'active', firmPct: 38 };
   if (find('import')) out.import = { state: 'active', pct: 29 };
+  const so = find('solar');
+  if (so) out.solar = arg(so) === 'dark' ? { state: 'dark' }
+    : { state: 'active', clearFrac: (Number(arg(so)) / 100) || 0.28 };
   const sc = find('scarcity'); if (sc) out.scarcity = { state: 'in_force', type: (arg(sc) || 'emn').toUpperCase(), label: 'Electricity Margin Notice' };
   return out;
 }
@@ -700,16 +720,43 @@ function setLamp(id, state, statusHtml, aria) {
 
 function _windStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
-  return `${l.state === 'active' ? 'Low' : 'Nominal'} · <b>${_round(l.cfPct)}%</b> cap`;
+  // The lamp TRIPS on wind capacity factor (< P25 of the §02 dial), but the READING is wind's share of
+  // national demand — the same basis as the §01 receipt and the other rail lamps, so the rail speaks
+  // one language and the number agrees with the receipt. Nominal: just "Nominal" (no number needed).
+  return l.state === 'active'
+    ? `<b>${_round(l.demandPct)}%</b> of demand`
+    : 'Nominal';
 }
 function _firmStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
-  return `${l.state === 'active' ? 'Active' : 'Nominal'} · firm <b>${_round(l.firmPct)}%</b>`;
+  // The lamp logic tracks the RELIABLE (firm) share — low is the alarm — but the DISPLAY reads the
+  // UNRELIABLE share (100 − firm = wind + solar + imports), so the number climbs with the alarm and
+  // agrees with the "UNRELIABLE" title. The label makes a leading "Active" redundant.
+  const u = Number.isFinite(l.firmPct) ? 100 - l.firmPct : NaN;
+  return l.state === 'active'
+    ? `<b>${_round(u)}%</b> weather and imports`
+    : 'Nominal';
 }
 function _importStatus(l) {
   if (l.state === 'unavailable') return 'unavailable';
-  if (l.pct < 0) return `Nominal · <b>${_round(Math.abs(l.pct))}%</b> export`;
-  return `${l.state === 'active' ? 'Active' : 'Nominal'} · <b>${_round(l.pct)}%</b>`;
+  // The lamp TRIPS on cable utilisation (> P75 of capacity, set in updateComputedLamps), but the
+  // READING is the EXPOSURE: net imports as a share of supply — how much we are leaning on neighbours
+  // who may stop selling. (Cable-fullness sizes the pipe; the share of supply sizes the hole if it
+  // stops.) Signed: an export hour reads as export. Falls back to l.pct for the ?cond= preview override.
+  const d = Number.isFinite(l.demandPct) ? l.demandPct : l.pct;
+  if (d < 0) return `Nominal · <b>${_round(Math.abs(d))}%</b> export`;
+  return l.state === 'active'
+    ? `<b>${_round(d)}%</b> of supply`
+    : `Nominal · <b>${_round(d)}%</b> of supply`;
+}
+function _overcastStatus(l) {
+  if (l.state === 'dark') return 'After dark';
+  if (l.state === 'unavailable') return 'unavailable';
+  // Active (overcast): the "% of a clear day" reading; nominal: just "Nominal" (the long tail
+  // overflowed the cell and the number isn't needed when it isn't cloudy) — same as the wind lamp.
+  return l.state === 'active'
+    ? `<b>${_round((l.clearFrac ?? 0) * 100)}%</b> of a clear day`
+    : 'Nominal';
 }
 function _scarcityStatus(l) {
   if (l.state === 'in_force') return `${esc(l.type)} in force · NESO`;
@@ -717,22 +764,82 @@ function _scarcityStatus(l) {
   return 'unavailable · NESO';
 }
 
+// Current (week-of-year 0..51, settlement period 1..48) for a snapshot in UK LOCAL time — the same
+// indexing as solar_overcast.json (engine week_index + SP1 = 00:00 local). Intl gives the Europe/London
+// wall clock so BST/GMT is handled without a hardcoded offset.
+function londonWeekSP(d) {
+  const p = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d).reduce((o, x) => (o[x.type] = x.value, o), {});
+  const y = +p.year, m = +p.month, day = +p.day;
+  let hour = +p.hour; if (hour === 24) hour = 0;
+  const doy = Math.floor((Date.UTC(y, m - 1, day) - Date.UTC(y, 0, 1)) / 86400000) + 1;
+  return { week: Math.min(51, Math.floor((doy - 1) / 7)), sp: hour * 2 + (+p.minute >= 30 ? 2 : 1) };
+}
+
+// Each computed lamp trips when "now" leaves the usual half (IQR) of its panel's box-plot — the
+// threshold percentile is read LIVE from the same distribution the panel draws (distForDays of the
+// wind / reliability / import panels), so a lamp can never disagree with the box beside it. Wind & firm
+// are low-is-bad (< P25); imports is high-is-bad (> P75). A distribution that hasn't loaded yet leaves
+// its lamp 'unavailable' (the conditions.js guard), degrading only that lamp.
 function updateComputedLamps(verdict) {
   const ov = condOverride() || {};
   // live wind capacity factor = live wind output / DUKES total wind nameplate — the SAME figure as
-  // the Entry-02 dial, so the lamp and the dial can never disagree.
+  // the Entry-02 dial, against the P25 of that dial's box-plot.
   const windNameplateMw = (NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000;
   const windCf = verdict ? (verdict.wind_mw / windNameplateMw) * 100 : NaN;
-  const wind = ov.wind || windLullLamp(windCf);
-  const firm = ov.firm || firmMajorityLamp(verdict ? verdict.firm_pct : NaN);
-  const imp = ov.import || heavyImportsLamp(verdict ? verdict.net_import_mw : NaN,
-    verdict ? verdict.national_demand_mw : NaN);
+  const windDist = (CAPACITY && CAPACITY.wind) ? distForDays(CAPACITY.wind, CAPACITY.wind.days) : null;
+  const wind = ov.wind || windLullLamp(windCf, windDist ? windDist.p25 : NaN);
+  // Trip is on capacity factor (above), but the lamp READS wind's share of supply (demand) — the same
+  // basis as the §01 receipt and the other rail lamps — so attach that for _windStatus.
+  const windDemandPct = (verdict && Number.isFinite(verdict.wind_mw)
+    && Number.isFinite(verdict.national_demand_mw) && verdict.national_demand_mw > 0)
+    ? (verdict.wind_mw / verdict.national_demand_mw) * 100 : NaN;
+  if (!ov.wind && Number.isFinite(windDemandPct)) wind.demandPct = windDemandPct;
+  // firm share P25: the reliability carpet stores UNRELIABLE share, so firm = 100 − unreliable and
+  // P25(firm) = 100 − P75(unreliable).
+  const uDist = REL_CARPET ? distForDays(REL_CARPET, REL_CARPET.days) : null;
+  const firmP25 = uDist ? 100 - uDist.p75 : NaN;
+  const firm = ov.firm || firmMajorityLamp(verdict ? verdict.firm_pct : NaN, firmP25);
+  // imports: signed net-import share of interconnector capacity (the Entry-03 needle's basis), against
+  // the P75 of that panel's box-plot. Same capacity denominator the panel uses.
+  const ipData = window.__importPowerData;
+  const impDist = (ipData && ipData.days) ? distForDays(ipData, ipData.days) : null;
+  const impCapMw = (ipData && ipData.capacity_mw) || 10300;
+  const impPct = (verdict && Number.isFinite(verdict.net_import_mw))
+    ? (verdict.net_import_mw / impCapMw) * 100 : NaN;
+  const imp = ov.import || heavyImportsLamp(impPct, impDist ? impDist.p75 : NaN);
+  // Trip is on capacity (above), but the lamp READS the exposure — net imports as a share of supply
+  // (demand) — so attach that for _importStatus. The trigger stays tied to the §03 panel's box-plot.
+  const impDemandPct = (verdict && Number.isFinite(verdict.net_import_mw)
+    && Number.isFinite(verdict.national_demand_mw) && verdict.national_demand_mw > 0)
+    ? (verdict.net_import_mw / verdict.national_demand_mw) * 100 : NaN;
+  if (!ov.import && Number.isFinite(impDemandPct)) imp.demandPct = impDemandPct;
+  // overcast (solar): conditioned on solar geometry. Live solar CF on the SAME basis as the Entry-02
+  // solar dial (solar ÷ latest NESO embedded-solar capacity), looked up against this (week, SP) cell
+  // of the conditional grid. A null cell (night) → dark; missing grid/verdict → unavailable.
+  let solar = ov.solar;
+  if (!solar) {
+    const grid = SOLAR_OVERCAST && SOLAR_OVERCAST.grid;
+    const solarCapMw = (CAPACITY && CAPACITY.gauge && CAPACITY.gauge.solar_nameplate_mw) || NaN;
+    const solarCf = (verdict && Number.isFinite(verdict.solar_mw) && solarCapMw > 0)
+      ? verdict.solar_mw / solarCapMw : NaN;
+    if (!grid || !verdict) {
+      solar = { state: 'unavailable' };
+    } else {
+      const { week, sp } = londonWeekSP(new Date(verdict.snapshot));
+      solar = overcastLamp(solarCf, (grid[week] && grid[week][sp - 1]) || null);
+    }
+  }
   const windStatus = _windStatus(wind);
   setLamp('cond-wind', wind.state, windStatus, `Wind lull — ${windStatus.replace(/<[^>]+>/g, '')}`);
   const firmStatus = _firmStatus(firm);
-  setLamp('cond-firm', firm.state, firmStatus, `Weather-dependent majority — ${firmStatus.replace(/<[^>]+>/g, '')}`);
+  setLamp('cond-firm', firm.state, firmStatus, `Unreliable — ${firmStatus.replace(/<[^>]+>/g, '')}`);
   const importStatus = _importStatus(imp);
   setLamp('cond-import', imp.state, importStatus, `Heavy imports — ${importStatus.replace(/<[^>]+>/g, '')}`);
+  const overcastStatus = _overcastStatus(solar);
+  setLamp('cond-solar', solar.state, overcastStatus, `Overcast — ${overcastStatus.replace(/<[^>]+>/g, '')}`);
   const wrap = $('conditions');
   if (wrap) wrap.removeAttribute('data-loading');
 }
@@ -946,6 +1053,117 @@ function _fmtImportEvent(ev) {
   return `${Number(d)} ${mon} ${y} £${(ev.value_gbp / 1e6).toFixed(1)}m`;
 }
 
+// The live net-imports receipt under the import dial (shared by the homepage rate panel and the
+// detail-page daily panel): MW imported, share of demand, and the system price, or an honest
+// feed-state note when the live block is absent (the dial still reads £0, never a placeholder).
+function _importReceiptHtml(live) {
+  if (!live) return `<p class="import-unavail">Live import rate not yet returned — dial shows £0.</p>`;
+  const mw = live.net_import_mw != null ? Math.round(live.net_import_mw).toLocaleString('en-GB') : '—';
+  const pct = live.import_pct != null ? live.import_pct.toFixed(1) : '—';
+  const price = live.price_per_mwh != null ? `£${live.price_per_mwh.toFixed(2)}/MWh` : '—';
+  const stamp = live.price_stamp ? `<span class="import-stamp">${esc(live.price_stamp)}</span>` : '';
+  return `
+      <p class="import-receipt-line">
+        Net imports now: <strong class="num">${mw} MW</strong>
+        (<span class="num">${pct}%</span> of demand)
+        · at <strong class="num">${price}</strong>
+      </p>
+      ${stamp}`;
+}
+
+// Import-page money analysis — the rolling-year spend RATE (£/h): a linear, ring-calibrated dial (NO
+// big value call-out) beside the rolling-year hour×date rate carpet, with the same box-plot legend.
+// Lives on import.html (#import-rate-body); the homepage shows the power/capacity sibling instead.
+function renderImportRate(data, live) {
+  window.__importRateData = data;
+  const cap = data.cap_per_h || 1e6;
+  const dist = data.distribution || null;            // raw £/h percentiles {p10..p90, mean}
+  const pal = IMPORT_DIAL_PALETTE;
+  const P = (v) => Math.max(0, Math.min(100, (Math.max(v, 0) / cap) * 100));   // linear £/h -> bar %
+
+  // Live "now" = the current import-spend rate (£/h) from the build snapshot; 0 (needle hard left)
+  // when there is no live rate — there is ALWAYS a dial, never a placeholder.
+  const liveRate = (live && Number.isFinite(live.rate_per_h)) ? Math.max(0, live.rate_per_h) : 0;
+
+  // The dial: wind/solar chrome — % ticks inner, £/h outer, the central-tendency band + mean tick
+  // painted on, needle at the live rate. Linear scale to the year's rate cap (no big call-out).
+  const nd = (k) => (dist ? Math.max(0, dist[k]) / cap : 0);
+  const dialDist = dist
+    ? { p10: nd('p10'), p25: nd('p25'), p50: nd('p50'), p75: nd('p75'), p90: nd('p90'), mean: nd('mean') }
+    : null;
+  const gaugeHtml = buildGauge(Math.min(liveRate / cap, 1), 1, {
+    dist: dialDist, palette: pal, calibration: importRateCalibration(cap), calUnit: '',
+    label: 'import spend rate now',
+    ariaLabel: `import spend rate now: ${fmtRatePerH(liveRate)}`
+      + (dist ? `; a typical half-hour averages ${fmtRatePerH(dist.mean)}` : ''),
+  });
+
+  // Legend bar sampled from the SAME linear carpet ramp (carpetCellColor) so a position's colour
+  // matches the carpet cell of the rate that sits there. £/h formatting, box-plot on the rate dist.
+  const N = 24;
+  const barCss = `linear-gradient(to right, ${Array.from({ length: N }, (_, i) => {
+    const t = i / (N - 1);
+    const [r, g, b] = carpetCellColor(t * cap, cap, pal.fullRgb);
+    return `rgb(${r},${g},${b}) ${(t * 100).toFixed(1)}%`;
+  }).join(', ')})`;
+  const legendHtml = legendFor('import', liveRate, pal, dist, null, null, null,
+    { scale: { posFn: P, fmt: fmtRatePerH, period: 'half-hour' }, barCss, lo: '£0', hi: fmtRatePerH(cap) });
+
+  $('import-rate-body').innerHTML = `
+    <div class="trap-grid">
+      ${renderMetricBlock({
+        kind: 'import', label: 'Spend rate', palette: pal, days: data.days,
+        gaugeHtml, gaugeExtra: _importReceiptHtml(live), legendHtml,
+        carpetAria: 'GB import-spend rate, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Pale = little or no import spend; deepening red = paying more to import.',
+        gaugeSrc: 'Elexon FUELINST net imports × settled system price (build snapshot)',
+        carpetSrc: data.source, methodAnchor: 'import-cost',
+      })}
+    </div>`;
+  syncBlockHeights();
+  drawCarpetCanvas('carpet-import', data.days, cap, pal.fullRgb, { keepWorstHigh: true });
+}
+
+// Homepage Imports panel — net imports as a share of GB interconnector capacity: a true §02 (wind/
+// solar) sibling. % inner ring + MW outer ring (to the full ~10.3 GW fleet), the rolling-year hour×
+// date capacity-factor carpet, the standard box-plot legend, magenta (the verdict's import hue). The
+// live needle reads the SAME verdict the gauge + conditions lamp use; the £ cost story lives on
+// import.html. Re-rendered each poll via updateImportPowerPanel.
+function renderImportPower(data, verdict) {
+  window.__importPowerData = data;
+  const has = !!(data && data.days && data.days.length);
+  const capMw = (data && data.capacity_mw) || 10300;
+  const days = has ? data.days : null;
+  const dist = has ? distForDays(data, days) : null;
+  const liveNet = verdict && Number.isFinite(verdict.net_import_mw) ? Math.max(0, verdict.net_import_mw) : 0;
+  const netRaw = verdict && Number.isFinite(verdict.net_import_mw) ? verdict.net_import_mw : null;
+  const demandMw = verdict && Number.isFinite(verdict.national_demand_mw) ? verdict.national_demand_mw : null;
+  $('import-body').innerHTML = `
+    <div class="trap-grid${has ? '' : ' gauge-only'}">
+      ${renderMetricBlock({
+        kind: 'import', label: 'Imports', palette: DIAL_PALETTE.import,
+        nameplateMw: capMw, sat: has ? data.sat : 1, days, dist,
+        liveCf: capMw ? liveNet / capMw : 0,
+        unitNoun: 'interconnector capacity',
+        legendLabels: { lo: 'No imports', hi: 'Full capacity' },
+        gaugeExtra: dialNowLine('import', netRaw, demandMw),   // live net imports + share of demand
+        gaugeLabel: 'Imports — net imports as a share of interconnector capacity',
+        carpetAria: 'Net imports as a share of GB interconnector capacity, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Pale = little or no import; deepening magenta = leaning harder on imports.',
+      })}
+    </div>
+    ${entryFooter('imports', [{ href: 'import.html', label: 'What those imports cost: the £ history since 2016' }])}`;
+  if (has) {
+    syncBlockHeights();
+    drawCarpetCanvas('carpet-import', data.days, data.sat, DIAL_PALETTE.import.fullRgb, { keepWorstHigh: true });
+  }
+}
+
+// Re-render the homepage import-power panel from the live verdict each poll, so its needle reads the
+// same net-import snapshot as the verdict gauge + conditions lamp.
+function updateImportPowerPanel(v) {
+  if (!window.__importPowerData || !$('import-body')) return;
+  renderImportPower(window.__importPowerData, v);
+}
+
 function renderImportCost(data, live) {
   const capGbp = data.scale?.cap_gbp ?? 20e6;
   const dist = data.distribution || null;
@@ -985,22 +1203,7 @@ function renderImportCost(data, live) {
     + `<p class="import-rate-sub">at the current import rate</p>`;
 
   // Receipt under the dial: the live net-imports line, or an honest feed-state note (dial stays at £0).
-  let receiptHtml;
-  if (live) {
-    const mw = live.net_import_mw != null ? Math.round(live.net_import_mw).toLocaleString('en-GB') : '—';
-    const pct = live.import_pct != null ? live.import_pct.toFixed(1) : '—';
-    const price = live.price_per_mwh != null ? `£${live.price_per_mwh.toFixed(2)}/MWh` : '—';
-    const stamp = live.price_stamp ? `<span class="import-stamp">${esc(live.price_stamp)}</span>` : '';
-    receiptHtml = `
-      <p class="import-receipt-line">
-        Net imports now: <strong class="num">${mw} MW</strong>
-        (<span class="num">${pct}%</span> of demand)
-        · at <strong class="num">${price}</strong>
-      </p>
-      ${stamp}`;
-  } else {
-    receiptHtml = `<p class="import-unavail">Live import rate not yet returned — dial shows £0.</p>`;
-  }
+  const receiptHtml = _importReceiptHtml(live);
 
   // The carpet (year x day-of-year) markup — painted by drawImportCarpet after insertion.
   const carpetHtml = `
@@ -1035,11 +1238,10 @@ function renderImportCost(data, live) {
       <p class="src">Source: ${esc(data.source)} · <a href="methodology.html#import-cost">→ method</a></p>
       ${costliestHtml}`;
 
-  $('import-body').innerHTML = `
+  $('import-detail-body').innerHTML = `
     <div class="trap-grid">
       ${renderMetricBlock({
         kind: 'import', label: 'Imports',
-        avgNote: dist ? `averages ${fmtGbp(dist.mean)} a day over the record` : '',
         gaugeHtml, gaugeExtra: receiptHtml,
         legendHtml, carpetHtml, stripExtra,
       })}
@@ -1054,6 +1256,7 @@ async function refreshLive() {
     const state = await resolveState({}, () => Date.now());
     renderVerdict(state);
     updateComputedLamps(state.verdict);
+    updateImportPowerPanel(state.verdict);
     $('clockstrip').textContent = `${state.lastUpdated}`;
     $('freshness').textContent = state.lastUpdated;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
@@ -1066,46 +1269,93 @@ async function refreshLive() {
   }
 }
 
+// One app.js drives three pages, each rendering only the blocks whose host elements are present:
+// the homepage (live verdict + reliability + capacity + the rolling-year Imports rate panel),
+// wind.html (the wind-unreliability detail), and import.html (the all-time daily import-cost detail).
+// Each section fetches its own data and degrades independently; the live layer + polling run on the
+// homepage only (detected by #verdict-body).
 async function main() {
-  // History first (static, always available); then the live layer on top.
+  const isHome = !!$('verdict-body');
+
+  // Shared anchor: DUKES nameplate (the capacity-trap denominator + the wind carpet's basis).
   try {
     NAMEPLATE = await getJSON('data/nameplate.json');
   } catch (e) { /* nameplate failure is non-fatal; defaults apply */ }
-  // The reliability carpet (Entry 01, under the gauge) is independent: its own fetch so a missing
-  // file omits only the carpet, never the live gauge above it. renderReliabilityBlock runs from
-  // renderVerdict each poll, so loading the data here is enough.
-  try { REL_CARPET = await getJSON('data/reliability_carpet.json'); }
-  catch (e) { REL_CARPET = null; }
-  // capacity carpets (Entry 02 right panels) — independent fetch so a missing file degrades
-  // only the carpets, never the gauge or the other history entries.
-  try { CAPACITY = await getJSON('data/capacity_carpets.json'); }
-  catch (e) { CAPACITY = null; }
-  // wind unreliability (Entry 03) — independent fetch; a missing file degrades only this section.
-  try {
-    const windData = await getJSON('data/wind_unreliability.json');
-    renderWindUnreliability(windData);
-  } catch (e) {
-    $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
+
+  if (isHome) {
+    // The reliability carpet (Entry 01, under the gauge) is independent: its own fetch so a missing
+    // file omits only the carpet, never the live gauge above it. renderReliabilityBlock runs from
+    // renderVerdict each poll, so loading the data here is enough.
+    try { REL_CARPET = await getJSON('data/reliability_carpet.json'); }
+    catch (e) { REL_CARPET = null; }
+    // capacity carpets (Entry 02 right panels) — independent fetch so a missing file degrades
+    // only the carpets, never the gauge or the other history entries.
+    try { CAPACITY = await getJSON('data/capacity_carpets.json'); }
+    catch (e) { CAPACITY = null; }
+    // Conditional solar 'overcast' grid (OVERCAST lamp) — independent fetch; a miss just leaves the
+    // lamp unavailable.
+    try { SOLAR_OVERCAST = await getJSON('data/solar_overcast.json'); }
+    catch (e) { SOLAR_OVERCAST = null; }
   }
-  // import cost (Entry 04) — two independent fetches: history carpet + live price block.
-  // Either can fail independently; the section still renders even with a null price block.
-  try {
-    const importData = await getJSON('data/import_cost.json');
-    let importLive = null;
+
+  // Wind-unreliability detail (wind.html, #wind-body) — independent fetch.
+  if ($('wind-body')) {
     try {
-      const latest = await getJSON('data/latest.json');
-      importLive = latest.import ?? null;
-    } catch (e) { /* price block unavailable — dial shows unavailable state */ }
-    window.__importData = importData;
-    window.__importLive = importLive;
-    renderImportCost(importData, importLive);
-  } catch (e) {
-    $('import-body').innerHTML = `<p class="warn">Import-cost data unavailable. ${esc(e.message || e)}</p>`;
+      const windData = await getJSON('data/wind_unreliability.json');
+      renderWindUnreliability(windData);
+    } catch (e) {
+      $('wind-body').innerHTML = `<p class="warn">Wind unreliability data unavailable. ${esc(e.message || e)}</p>`;
+    }
   }
-  await refreshLive();
-  setInterval(refreshLive, POLL_MS);
-  updateScarcityLamp();
-  setInterval(updateScarcityLamp, POLL_MS);
+
+  // The live import price block (build snapshot) feeds the import-page money analyses.
+  const importLive = async () => {
+    try { return (await getJSON('data/latest.json')).import ?? null; }
+    catch (e) { return null; }   // price block unavailable — the dial reads £0, never a placeholder
+  };
+
+  // Import-cost detail (import.html, #import-detail-body) — the all-time daily £ carpet + £94m record.
+  if ($('import-detail-body')) {
+    try {
+      const importData = await getJSON('data/import_cost.json');
+      window.__importData = importData;
+      renderImportCost(importData, await importLive());
+    } catch (e) {
+      $('import-detail-body').innerHTML = `<p class="warn">Import-cost data unavailable. ${esc(e.message || e)}</p>`;
+    }
+  }
+
+  // Import-page money analysis (import.html, #import-rate-body) — the rolling-year £/h spend rate.
+  if ($('import-rate-body')) {
+    try {
+      const rateData = await getJSON('data/import_rate.json');
+      renderImportRate(rateData, await importLive());
+    } catch (e) {
+      $('import-rate-body').innerHTML = `<p class="warn">Import-rate data unavailable. ${esc(e.message || e)}</p>`;
+    }
+  }
+
+  // Homepage Imports panel (#import-body) — net imports as a share of interconnector capacity (the §02
+  // sibling). The carpet is settled; the dial needle is kept live by refreshLive (updateImportPowerPanel)
+  // off the same verdict as the gauge + conditions lamp. First paint uses the build-snapshot verdict.
+  if ($('import-body')) {
+    try {
+      window.__importPowerData = await getJSON('data/import_power.json');
+      let v0 = null;
+      try { v0 = (await getJSON('data/latest.json')).verdict ?? null; } catch (e) { /* dial reads 0 */ }
+      renderImportPower(window.__importPowerData, v0);
+    } catch (e) {
+      $('import-body').innerHTML = `<p class="warn">Import data unavailable. ${esc(e.message || e)}</p>`;
+    }
+  }
+
+  if (isHome) {
+    await refreshLive();
+    setInterval(refreshLive, POLL_MS);
+    updateScarcityLamp();
+    setInterval(updateScarcityLamp, POLL_MS);
+  }
+
   let t;
   window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => {
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
@@ -1114,6 +1364,8 @@ async function main() {
     if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
     if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
     if (window.__importData) drawImportCarpet(window.__importData);
+    if (window.__importRateData) { syncBlockHeights(); drawCarpetCanvas('carpet-import', window.__importRateData.days, window.__importRateData.cap_per_h, IMPORT_DIAL_PALETTE.fullRgb, { keepWorstHigh: true }); }
+    if (window.__importPowerData) { syncBlockHeights(); drawCarpetCanvas('carpet-import', window.__importPowerData.days, window.__importPowerData.sat, DIAL_PALETTE.import.fullRgb, { keepWorstHigh: true }); }
   }, 150); });
 }
 

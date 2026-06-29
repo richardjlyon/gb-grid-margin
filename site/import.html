@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import cost since 2016 — Grid Margin</title>
+<meta name="description" content="What Britain has paid to import electricity, every day since 2016: the costliest days on record, and the £94m single-day peak. Net interconnector flow valued at the GB system price. Every figure traces to Elexon.">
+<meta property="og:title" content="Import cost since 2016 — Grid Margin">
+<meta property="og:description" content="What Britain has paid to import electricity, every day since 2016 — the costliest days on record. Every figure traces to Elexon.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="container masthead-inner">
+    <div>
+      <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="methodology.html">Methodology</a>
+      <a href="share.html">Share</a>
+      <a href="about.html">About</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+  <p class="crumb"><a href="/">← Back to the live dashboard</a></p>
+
+  <section class="entry" id="entry-import-detail" aria-labelledby="h-import-detail">
+    <p class="eyebrow">Import cost · the full record</p>
+    <h2 class="headline ink" id="h-import-detail">The power we rely on costs the most when we need it most</h2>
+    <p class="def">The homepage shows how hard Britain is leaning on its interconnectors. This is what that leaning costs: the price Britain pays to import electricity, valued at the GB system price. First the spend rate over the last year, then the whole daily record since 2016 — the cheap-import calms in pale, the expensive squeeze days in deep red, and the costliest single days marked.</p>
+  </section>
+
+  <section class="entry" id="entry-import-rate" aria-labelledby="h-import-rate">
+    <p class="eyebrow">Spend rate · the last year</p>
+    <h2 class="headline ink" id="h-import-rate">What Britain is paying to import, right now</h2>
+    <p class="def">The half-hourly import-spend rate (£ per hour) over the last year: net imports valued at the GB system price. The dial reads the latest settled half-hour against the year's range.</p>
+    <div id="import-rate-body"><p class="def">Reading the spend rate…</p></div>
+  </section>
+
+  <section class="entry" id="entry-import-history" aria-labelledby="h-import-history">
+    <p class="eyebrow">Daily cost · since 2016</p>
+    <h2 class="headline ink" id="h-import-history">Every day's import bill since 2016</h2>
+    <p class="def">The cost of every day's net imports since 2016 — pale on the cheap-import calms, deep red on the expensive squeeze days, with the costliest single days on record marked. The record stands at £94.4m, on 9 September 2021.</p>
+    <div id="import-detail-body"><p class="def">Reading the import record…</p></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> ·
+      <a href="methodology.html">Methodology &amp; sources</a> ·
+      <a href="share.html">Share cards</a> ·
+      <a href="about.html">About this site</a> ·
+      <a href="https://github.com/richardjlyon/gb-grid-margin">Source &amp; data</a></p>
+    <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+  </div>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

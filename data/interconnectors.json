@@ -1,0 +1,20 @@
+{
+  "as_of": "2026-01",
+  "source": "DESNZ 'Next steps for electricity interconnection in Great Britain' (2026) for the current 10.3 GW fleet and the ElecLink/Viking Link/Greenlink figures; DESNZ/BEIS 'Electricity interconnectors in the UK since 2010' (Energy Trends special article, 30 June 2022), Table 1, for the established links.",
+  "source_url_current": "https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage",
+  "source_url_historic": "https://assets.publishing.service.gov.uk/media/62bb2816d3bf7f662753cfa8/Electricity_interconnectors_in_the_UK_since_2010.pdf",
+  "total_capacity_mw": 10300,
+  "basis_note": "GB operational interconnector import capacity (not de-rated). Keys are the Elexon FUELHH INT* leg codes. The active capacity for any half-hour is the sum of the capacities of the legs that REPORT that half-hour: the settled FUELHH store blanks a leg before its link was commissioned, so this denominator tracks the fleet exactly as it grew (e.g. Greenlink appearing mid-2025) without needing exact commissioning dates. Net import as a share of this is the import capacity factor, the sibling of the wind/solar capacity factor (output / DUKES nameplate).",
+  "links": {
+    "INTFR":   { "name": "IFA",            "country": "France",       "capacity_mw": 2000, "commissioned": 1986 },
+    "INTIFA2": { "name": "IFA2",           "country": "France",       "capacity_mw": 1000, "commissioned": 2021 },
+    "INTELEC": { "name": "ElecLink",       "country": "France",       "capacity_mw": 1000, "commissioned": 2022 },
+    "INTNED":  { "name": "BritNed",        "country": "Netherlands",  "capacity_mw": 1000, "commissioned": 2011 },
+    "INTNEM":  { "name": "Nemo Link",      "country": "Belgium",      "capacity_mw": 1000, "commissioned": 2019 },
+    "INTNSL":  { "name": "North Sea Link", "country": "Norway",       "capacity_mw": 1400, "commissioned": 2021 },
+    "INTVKL":  { "name": "Viking Link",    "country": "Denmark",      "capacity_mw": 1400, "commissioned": 2023 },
+    "INTEW":   { "name": "East-West",      "country": "Ireland",      "capacity_mw": 500,  "commissioned": 2012 },
+    "INTGRNL": { "name": "Greenlink",      "country": "Ireland",      "capacity_mw": 500,  "commissioned": 2025 },
+    "INTIRL":  { "name": "Moyle",          "country": "Ireland (NI)", "capacity_mw": 500,  "commissioned": 2001 }
+  }
+}
