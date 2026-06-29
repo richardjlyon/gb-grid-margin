@@ -1,3 +1,5 @@
+import pytest
+
 from engine import import_cost as ic
 
 
@@ -125,3 +127,99 @@ def test_scale_returns_documented_cap_and_legend():
     result = ic.scale(_DAILY)
     assert result["cap_gbp"] == 10_000_000
     assert result["legend"] == [1_000_000, 5_000_000, 10_000_000]
+
+
+# ── build_payload + guard_payload ──────────────────────────────────────────────
+
+_FUELHH_MINI = [
+    {"settlement_date": "2025-06-01", "settlement_period": 1, "INTFR": 1000},
+]
+_PRICE_MINI = [
+    {"settlement_date": "2025-06-01", "settlement_period": 1, "system_sell_price": 200.0},
+]
+# 1000 MW × 0.5 h × £200 = £100,000
+_EXPECTED_VALUE = 100_000.0
+
+
+def test_build_payload_provenance_keys_present():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    for key in ("basis", "source", "metric_label", "caveat", "generated_utc",
+                "range", "partial_years", "scale", "carpet", "events", "summary", "cited"):
+        assert key in payload, f"missing key: {key}"
+
+
+def test_build_payload_exact_source_string():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    assert payload["source"] == (
+        "Elexon FUELHH net interconnector flow × Elexon system (cash-out) price, "
+        "settled, back to 2016"
+    )
+
+
+def test_build_payload_exact_cited_dict():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    assert payload["cited"] == {
+        "label": "Montel EnAppSys, via the Guardian",
+        "date": "2026-06-24",
+        "value_per_mwh": 1379,
+        "note": "emergency-import price; not reproducible from public data",
+    }
+
+
+def test_build_payload_exact_metric_label():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    assert payload["metric_label"] == "net imported energy valued at the GB system price"
+
+
+def test_build_payload_exact_caveat():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    assert payload["caveat"] == (
+        "Net imported energy valued at the GB system (cash-out) price — not the "
+        "contractual cost of the imports, which clear in the day-ahead auction."
+    )
+
+
+def test_build_payload_passes_guard():
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    ic.guard_payload(payload)  # must not raise
+
+
+def test_guard_payload_raises_on_negative_carpet_cell():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    # Inject a negative value into a carpet cell (the load-bearing invariant)
+    rows = payload["carpet"]["rows"]
+    year_key = list(rows.keys())[0]
+    # Find the first non-None cell and flip it negative
+    for i, cell in enumerate(rows[year_key]):
+        if cell is not None:
+            rows[year_key][i] = -1.0
+            break
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_worst_day_not_max_cell():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    # Inflate worst_day so it no longer matches the carpet max
+    payload["summary"]["worst_day"]["value_gbp"] += 999.0
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_carpet_row_wrong_length():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    year_key = list(payload["carpet"]["rows"].keys())[0]
+    payload["carpet"]["rows"][year_key].pop()  # remove one element → length 365
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)
+
+
+def test_guard_payload_raises_on_empty_caveat():
+    from engine.guards import GuardError
+    payload = ic.build_payload(_FUELHH_MINI, _PRICE_MINI, "2025-06-01T12:00:00Z")
+    payload["caveat"] = ""
+    with pytest.raises(GuardError):
+        ic.guard_payload(payload)

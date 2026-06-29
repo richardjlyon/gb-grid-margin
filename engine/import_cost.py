@@ -143,3 +143,106 @@ def scale(daily: list[dict]) -> dict:  # noqa: ARG001 — daily reserved for fut
         "cap_gbp": CAP_GBP,
         "legend": [1_000_000, 5_000_000, 10_000_000],
     }
+
+
+# ── payload + guard ───────────────────────────────────────────────────────────
+
+from engine.guards import GuardError, require  # noqa: E402
+
+_BASIS = (
+    "Daily GB net import value = sum over settled half-hours of max(net interconnector "
+    "inflow, 0) × ½h × GB system sell price. Export half-hours are floored to £0: the "
+    "metric captures what the system paid to attract electricity from interconnected "
+    "markets, not what was earned on export flows. Settled data: Elexon FUELHH "
+    "(interconnectors) and Elexon system cash-out price, back to 2016."
+)
+_SOURCE = (
+    "Elexon FUELHH net interconnector flow × Elexon system (cash-out) price, "
+    "settled, back to 2016"
+)
+_METRIC_LABEL = "net imported energy valued at the GB system price"
+_CAVEAT = (
+    "Net imported energy valued at the GB system (cash-out) price — not the "
+    "contractual cost of the imports, which clear in the day-ahead auction."
+)
+_CITED = {
+    "label": "Montel EnAppSys, via the Guardian",
+    "date": "2026-06-24",
+    "value_per_mwh": 1379,
+    "note": "emergency-import price; not reproducible from public data",
+}
+
+
+def build_payload(
+    fuelhh_rows: list[dict],
+    price_rows: list[dict],
+    generated_utc: str,
+) -> dict:
+    """Assemble the full import-cost JSON payload from raw store rows.
+
+    Calls daily_import_value once and feeds all downstream helpers so every
+    derived field is computed from the same daily series.
+    """
+    from engine.derived import partial_years  # deferred to break circular import
+
+    daily = daily_import_value(fuelhh_rows, price_rows)
+    dates = [d["date"] for d in daily]
+    return {
+        "basis": _BASIS,
+        "source": _SOURCE,
+        "metric_label": _METRIC_LABEL,
+        "caveat": _CAVEAT,
+        "generated_utc": generated_utc,
+        "range": {
+            "first": dates[0] if dates else None,
+            "last": dates[-1] if dates else None,
+        },
+        "partial_years": partial_years(dates),
+        "scale": scale(daily),
+        "carpet": carpet_matrix(daily),
+        "events": events(daily),
+        "summary": summary(daily),
+        "cited": _CITED,
+    }
+
+
+def guard_payload(payload: dict) -> None:
+    """Assert import-cost payload invariants. Raises GuardError on any breach.
+
+    Invariants:
+    - caveat and metric_label must be non-empty (honesty framing must be present).
+    - scale.cap_gbp and every scale.legend entry must be positive.
+    - Every carpet row must have exactly 366 cells.
+    - No carpet cell may be negative (import value is never negative — exports floor
+      to £0; a negative cell indicates a logic break).
+    - summary.worst_day.value_gbp must equal the maximum carpet cell value (the
+      worst day recorded in the summary must match the carpet's peak cell).
+    """
+    require(payload.get("caveat"), "guard_payload: caveat is empty or missing")
+    require(payload.get("metric_label"), "guard_payload: metric_label is empty or missing")
+
+    sc = payload["scale"]
+    require(sc["cap_gbp"] > 0,
+            f"guard_payload: scale.cap_gbp {sc['cap_gbp']} is not positive")
+    for v in sc["legend"]:
+        require(v > 0, f"guard_payload: scale.legend entry {v} is not positive")
+
+    max_cell: float | None = None
+    for yr, row in payload["carpet"]["rows"].items():
+        require(len(row) == 366,
+                f"guard_payload: carpet row {yr} has {len(row)} cells, expected 366")
+        for cell in row:
+            if cell is None:
+                continue
+            require(cell >= 0,
+                    f"guard_payload: carpet cell {cell} < 0 for year {yr} "
+                    f"(import value cannot be negative)")
+            if max_cell is None or cell > max_cell:
+                max_cell = cell
+
+    if max_cell is not None:
+        worst = payload["summary"]["worst_day"]["value_gbp"]
+        require(
+            worst == max_cell,
+            f"guard_payload: worst_day.value_gbp {worst} != carpet max {max_cell}",
+        )
