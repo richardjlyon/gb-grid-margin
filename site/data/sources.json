@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-06-29T16:50:55.699305+00:00",
+  "generated_utc": "2026-06-30T07:31:33.267941+00:00",
   "units": {
     "verdict": {
       "label": "Reliability gauge (live)",
@@ -247,7 +247,7 @@
           "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"
         }
       ],
-      "basis": "Each computed lamp goes amber when the live reading leaves the usual half \u2014 the P25\u2013P75 box of that panel's own rolling-year distribution \u2014 on the concerning side: UNRELIABLE when firm share < P25, WIND LULL when wind CF < P25, HEAVY IMPORTS when import share of capacity > P75. The rail reads in one language: each active lamp shows its source's share of national demand (the verdict-receipt basis), even where it trips on a different distribution. The threshold is the box-plot beside the panel.",
+      "basis": "Each computed lamp goes amber when the live reading leaves the usual half \u2014 the P25\u2013P75 box of that panel's own rolling-year distribution \u2014 on the concerning side: UNRELIABLE when firm share of demand < P25, WIND LULL when wind capacity factor (wind \u00f7 DUKES nameplate) < P25, HEAVY IMPORTS when net imports \u00f7 interconnector capacity > P75. Each active lamp shows the reading most telling for its condition: WIND LULL the live wind capacity factor itself (the same wind \u00f7 nameplate it trips on); UNRELIABLE the weather-and-imports share of demand; HEAVY IMPORTS the net-import share of supply. The threshold is the box-plot beside the panel.",
       "caveats": [
         "The amber lamps are this site's own reading of live conditions, not an official statement of system state. Only the red SCARCITY NOTICE carries an authoritative NESO source."
       ]
