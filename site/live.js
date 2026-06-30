@@ -17,6 +17,8 @@ const BAD_URL = 'https://invalid.invalid/';
 
 const SCHEMA_VERSION = 1;
 const PER_FEED_TIMEOUT_MS = 6000;
+const NESO_TIMEOUT_MS = 12000;     // NESO CKAN is the slow origin; give it more headroom than Elexon
+const NESO_RETRIES = 1;            // one retry before abandoning the live reading on a transient NESO blip
 const RECONCILE_TOL = 0.12;
 const SKEW_TOL_MIN = 3;            // data this far in the future => device clock wrong
 const LIVE_LAG_UNCERTAIN_MIN = 20; // a just-fetched live snapshot older than this => age uncertain
@@ -53,7 +55,11 @@ function feedUrl(feed, faults, nowMs) {
     const from = isoMinZ(new Date(nowMs - FUELINST_WINDOW_MIN * 60 * 1000));
     return `${ELEXON}/datasets/FUELINST/stream?publishDateTimeFrom=${from}&publishDateTimeTo=${to}`;
   }
-  if (feed === 'neso') return `${NESO}/datastore_search?resource_id=${NESO_RID}&limit=100`;
+  // limit=1000 (covers the full ~670-row forecast horizon) + explicit sort: fetch every row so
+  // pickEmbedded selects the true nearest-to-snapshot row. The old limit=100/no-sort relied on
+  // NESO keeping _id=1 pinned to ~now; when their republish ran late the nearest of the first 100
+  // rows fell outside the ±30-min window and the live wind/solar reading was silently dropped.
+  if (feed === 'neso') return `${NESO}/datastore_search?resource_id=${NESO_RID}&limit=1000&sort=_id`;
   if (feed === 'demand') {
     const day = isoMinZ(new Date(nowMs)).slice(0, 10);
     return `${ELEXON}/demand/outturn?settlementDateFrom=${day}&settlementDateTo=${day}`;
@@ -70,8 +76,23 @@ async function fetchFeed(feed, faults, nowMs, clockNow, httpGet) {
       setTimeout(() => { clearTimeout(fail); res(); }, faults.slow.ms);
     });
   }
-  const body = await httpGet(feedUrl(feed, faults, nowMs), { timeoutMs: PER_FEED_TIMEOUT_MS });
+  const timeoutMs = feed === 'neso' ? NESO_TIMEOUT_MS : PER_FEED_TIMEOUT_MS;
+  const body = await httpGet(feedUrl(feed, faults, nowMs), { timeoutMs });
   return { body, latencyMs: Math.round(clockNow() - t0) };
+}
+
+// fetchFeed with a small retry budget — for the flaky NESO origin. Retries only a thrown
+// failure (timeout / network / non-2xx); a successful-but-stale body is handled downstream.
+async function fetchFeedRetry(feed, faults, nowMs, clockNow, httpGet, retries) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fetchFeed(feed, faults, nowMs, clockNow, httpGet);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr;
 }
 
 function pickEmbedded(records, anchorMs) {
@@ -97,7 +118,7 @@ async function tryLive(faults, clockNow, httpGet) {
   const nowMs = clockNow();
   const [fuel, neso, demand] = await Promise.allSettled([
     fetchFeed('fuelinst', faults, nowMs, clockNow, httpGet),
-    fetchFeed('neso', faults, nowMs, clockNow, httpGet),
+    fetchFeedRetry('neso', faults, nowMs, clockNow, httpGet, NESO_RETRIES),
     fetchFeed('demand', faults, nowMs, clockNow, httpGet),
   ]);
   const feeds = {

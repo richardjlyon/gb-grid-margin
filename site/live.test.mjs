@@ -166,3 +166,46 @@ test('M3: fallback capacity share uses round-half-even (12.25 → 12.2)', async 
   assert.equal(s.mode, 'fallback');
   assert.equal(s.capacity.wind_capacity_share_pct, 12.2);
 });
+
+// NESO retry: a single transient NESO failure must NOT drop the live reading — the feed is
+// retried once and the cycle stays LIVE. (Guards the flaky-NESO drop the diagnostics surfaced.)
+test('a transient NESO failure is retried and stays LIVE', async () => {
+  let nesoCalls = 0;
+  const httpGet = async (url) => {
+    if (url.includes('FUELINST')) return fuelBody();
+    if (url.includes('demand/outturn')) return demandBody();
+    if (url.includes('latest.json')) return latestJson();
+    if (url.includes('datastore_search')) {
+      nesoCalls += 1;
+      if (nesoCalls === 1) throw new Error('NESO timeout (transient)');
+      return nesoBody();
+    }
+    throw new Error(`unexpected url ${url}`);
+  };
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(nesoCalls, 2, 'NESO should be retried exactly once');
+  assert.equal(s.mode, 'live');
+  assert.ok(Number.isFinite(s.verdict.solar_mw));
+});
+
+// pickEmbedded must select the row nearest the snapshot among ALL returned rows — not the first.
+// This is why the query now fetches the full forecast horizon rather than the first 100 rows.
+test('embedded row nearest the snapshot is chosen from many rows', async () => {
+  const manyRows = {
+    result: { records: [
+      { DATE_GMT: '2026-06-25T00:00:00', TIME_GMT: '08:00',   // far from 13:30 snapshot
+        EMBEDDED_SOLAR_FORECAST: 999, EMBEDDED_WIND_FORECAST: 999,
+        EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400 },
+      { DATE_GMT: '2026-06-25T00:00:00', TIME_GMT: '13:30',   // exact snapshot match
+        EMBEDDED_SOLAR_FORECAST: 8000, EMBEDDED_WIND_FORECAST: 1000,
+        EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400 },
+      { DATE_GMT: '2026-06-25T00:00:00', TIME_GMT: '20:00',   // far from snapshot
+        EMBEDDED_SOLAR_FORECAST: 0, EMBEDDED_WIND_FORECAST: 0,
+        EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400 },
+    ] },
+  };
+  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: manyRows, demand: demandBody(), latest: latestJson() });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'live');
+  assert.equal(s.verdict.solar_mw, 8000);   // the 13:30 row, not the 08:00 row's 999
+});

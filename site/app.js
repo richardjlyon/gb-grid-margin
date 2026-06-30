@@ -1221,17 +1221,34 @@ function renderImportCost(data, live) {
 }
 
 // ============================================================ orchestration
+// Console diagnostics for the live layer. Wind & solar come only from the NESO embedded feed
+// (a separate origin from Elexon); when it fails the whole live reading falls back. Nothing was
+// logged before, so those drops were invisible — this surfaces the mode and per-feed status each
+// cycle so a real failure can be diagnosed from the browser console.
+function logLiveCycle(state) {
+  const feeds = state.feeds || {};
+  const summary = Object.entries(feeds)
+    .map(([k, f]) => `${k}:${f.status}${f.latencyMs != null ? `/${f.latencyMs}ms` : ''}`).join(' ');
+  const line = `[grid] ${state.mode} · ${summary || 'no feed status'}${state.reason ? ` · ${state.reason}` : ''}`;
+  if (state.mode === 'live') console.info(line);
+  else console.warn(line, { lastUpdated: state.lastUpdated });
+  return summary;
+}
+
 async function refreshLive() {
   try {
     const state = await resolveState({}, () => Date.now());
+    const feedSummary = logLiveCycle(state);
     renderVerdict(state);
     updateComputedLamps(state.verdict);
     updateImportPowerPanel(state.verdict);
     $('clockstrip').textContent = `${state.lastUpdated}`;
     const dot = $('live-dot');   // live = the normal state: show nothing; only surface a degraded state
     dot.textContent = state.mode === 'live' ? '' : state.mode === 'fallback' ? 'Last good' : 'Offline';
+    dot.title = state.mode === 'live' ? '' : `${state.reason || state.lastUpdated} — feeds ${feedSummary}`;
     dot.hidden = state.mode === 'live';
   } catch (e) {
+    console.error('[grid] live layer threw', e);
     $('verdict-body').innerHTML = `<p class="warn">Live layer error — no current reading. ${esc(e.message || e)}</p>`;
     $('entry-trap').hidden = true;
     updateComputedLamps(null);
