@@ -11,7 +11,7 @@ import { windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcit
 import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
-  unreliableNowPct,
+  unreliableNowPct, integerShares, reliablePct,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
   importValueColor, importCostCaption, fmtRatePerH,
@@ -141,22 +141,6 @@ function buildGauge(value, max, { armed = false, danger = null, reliable = null,
     <line x1="${cx}" y1="${cy}" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="${needleColor}" stroke-width="3" stroke-linecap="round"/>
     <circle cx="${cx}" cy="${cy}" r="5" fill="${needleColor}"/>
   </svg>`;
-}
-
-// Whole-percent shares via largest remainder: floor each share, then hand the leftover percent(s) to
-// the largest fractional parts (or claw back if the floors overshoot). Guarantees a column of integer
-// percentages sums to exactly 100. Returns a Map keyed by the slice object.
-function integerShares(slices, total) {
-  const out = new Map();
-  if (!(total > 0)) { slices.forEach((s) => out.set(s, 0)); return out; }
-  const raw = slices.map((s) => (Math.max(0, s.mw) / total) * 100);
-  const floor = raw.map(Math.floor);
-  let rem = 100 - floor.reduce((a, b) => a + b, 0);
-  const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac);
-  for (let k = 0; rem > 0 && k < order.length; k++) { floor[order[k].i] += 1; rem -= 1; }
-  for (let k = order.length - 1; rem < 0 && k >= 0; k--) { if (floor[order[k].i] > 0) { floor[order[k].i] -= 1; rem += 1; } }
-  slices.forEach((s, i) => out.set(s, floor[i]));
-  return out;
 }
 
 // The source-mix arc (share of demand): each slice ∝ output, reliable (green) from the left,
@@ -420,7 +404,7 @@ function legendFor(kind, cf, pal, dist, satFull, unitNoun, ramp, opts = {}) {
       <span class="cl-lab">${loLab}</span>
       <span class="cl-bar-wrap">
         <span class="cl-bar" style="background:${barCss}" aria-hidden="true"></span>
-        <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${Math.round(cf * 100)}% of ${noun}">now</span>
+        <span class="cl-now" style="left:${pos.toFixed(1)}%" title="Now: ${opts.nowPctLabel ?? Math.round(cf * 100)}% of ${noun}">now</span>
         ${box}
       </span>
       <span class="cl-lab">${hiLab}</span>
@@ -466,8 +450,12 @@ function renderMetricBlock(cfg) {
   // The dial: the default %-of-capacity gauge, or a caller-supplied gauge string (Entry 04's
   // £-rate ramp dial, which has its own scale and readout). cfg.gaugeExtra hangs under the dial
   // (Entry 04's live-imports receipt line).
+  const gaugeLabel = cfg.gaugeLabel ?? `${cfg.label} output as a share of installed capacity`;
   const gauge = cfg.gaugeHtml != null ? cfg.gaugeHtml : buildGauge((cfg.liveCf ?? 0) * 100, 100, {
-    label: cfg.gaugeLabel ?? `${cfg.label} output as a share of installed capacity`,
+    label: gaugeLabel,
+    // When a label is pinned (the reliability dial), announce that integer so the dial's accessible
+    // value matches the verdict gauge stamp instead of the continuous needle value.
+    ariaLabel: cfg.nowPctLabel == null ? null : `${gaugeLabel}: ${cfg.nowPctLabel} of 100`,
     calibration: gaugeCalibration(cfg.nameplateMw), dist: cfg.dist, palette: pal,
     trackRamp: cfg.rampFn || null,
   });
@@ -498,7 +486,7 @@ function renderMetricBlock(cfg) {
     : `${gaugeExtra}${srcP('trap-src-gauge', cfg.gaugeSrc)}`;
   return `
       ${cfg.label ? `<p class="trap-label">${esc(cfg.label)}</p>` : ''}
-      ${hasCarpet ? (cfg.legendHtml ?? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp, cfg.legendLabels || {})) : ''}
+      ${hasCarpet ? (cfg.legendHtml ?? legendFor(cfg.kind, cfg.liveCf, pal, cfg.dist, cfg.sat, cfg.unitNoun, ramp, { ...(cfg.legendLabels || {}), nowPctLabel: cfg.nowPctLabel })) : ''}
       <div class="trap-gauge-cell"><div class="gauge-block">${gauge}</div></div>
       ${strip}
       ${cfg.keyNote ?? ''}`;
@@ -577,7 +565,11 @@ function renderReliabilityBlock(v) {
   const has = !!(REL_CARPET && REL_CARPET.days && REL_CARPET.days.length);
   const m = v ? sourceArcModel(v) : null;
   const u = m ? unreliableNowPct(m.firmPct) : null;        // unreliable share now, 0..100 (clamped)
-  const nowPct = u == null ? null : 100 - u;               // RELIABLE share now — what the dial reads
+  const nowPct = u == null ? null : 100 - u;               // RELIABLE share now — the dial NEEDLE position
+  // The number the dial DISPLAYS is the verdict gauge's integer reliable share (largest-remainder, so
+  // it matches the receipt), NOT round(nowPct): the two adjacent reliability readings must never differ
+  // by a rounding point. Needle stays at the continuous nowPct above; only the label is pinned.
+  const nowLabel = m ? reliablePct(m) : null;
   const days = has ? REL_CARPET.days : null;
   // The carpet's distribution is over the unreliable share; mirror each percentile onto the reliable
   // axis (reliable = 100 − unreliable, so the percentile order reverses) for the dial + legend box.
@@ -592,6 +584,7 @@ function renderReliabilityBlock(v) {
         kind: 'reliability', label: 'Reliability', palette: REL_PALETTE,
         nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
         liveCf: nowPct == null ? null : nowPct / 100,
+        nowPctLabel: nowLabel,
         keyNote: has ? KEY_NOTE_HTML : '',
         unitNoun: 'demand',
         rampFn: reliabilityColor, rampLabels: { lo: 'Unreliable', hi: 'Reliable' },
@@ -753,9 +746,11 @@ function _importStatus(l) {
   // stops.) Signed: an export hour reads as export. Falls back to l.pct for the ?cond= preview override.
   const d = Number.isFinite(l.demandPct) ? l.demandPct : l.pct;
   if (d < 0) return `Nominal · <b>${_round(Math.abs(d))}%</b> export`;
+  // Nominal reads a bare "Nominal", matching the wind / firm / overcast lamps; only the active state
+  // carries the share-of-supply number.
   return l.state === 'active'
     ? `<b>${_round(d)}%</b> of supply`
-    : `Nominal · <b>${_round(d)}%</b> of supply`;
+    : 'Nominal';
 }
 function _overcastStatus(l) {
   if (l.state === 'dark') return 'After dark';

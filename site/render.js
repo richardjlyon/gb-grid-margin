@@ -143,6 +143,35 @@ export function sourceArcModel(v) {
   };
 }
 
+// Whole-percent shares via largest remainder: floor each share, then hand the leftover percent(s) to
+// the largest fractional parts (or claw back if the floors overshoot). Guarantees a column of integer
+// percentages sums to exactly 100. Returns a Map keyed by the slice object.
+export function integerShares(slices, total) {
+  const out = new Map();
+  if (!(total > 0)) { slices.forEach((s) => out.set(s, 0)); return out; }
+  const raw = slices.map((s) => (Math.max(0, s.mw) / total) * 100);
+  const floor = raw.map(Math.floor);
+  let rem = 100 - floor.reduce((a, b) => a + b, 0);
+  const order = raw.map((r, i) => ({ i, frac: r - Math.floor(r) })).sort((a, b) => b.frac - a.frac);
+  for (let k = 0; rem > 0 && k < order.length; k++) { floor[order[k].i] += 1; rem -= 1; }
+  for (let k = order.length - 1; rem < 0 && k >= 0; k--) { if (floor[order[k].i] > 0) { floor[order[k].i] -= 1; rem += 1; } }
+  slices.forEach((s, i) => out.set(s, floor[i]));
+  return out;
+}
+
+// The integer reliable (firm) share — the SINGLE source of truth for both the verdict gauge stamp
+// AND the Entry-01 reliability dial below it. It is the sum of the reliable slices' largest-remainder
+// integer shares, so it matches the receipt table row-for-row. The dial must read this, NOT
+// Math.round(firmPct): the aggregate round and the largest-remainder group sum disagree by a point
+// when the weather slices carry the bigger fractions, which made the two adjacent reliability numbers
+// read e.g. 52 (gauge) vs 53 (dial). Routing both through this guarantees they never diverge.
+function groupPct(model, group) {
+  const ints = integerShares(model.slices, model.arcTotal);
+  return model.slices.reduce((a, s) => a + (s.group === group ? (ints.get(s) || 0) : 0), 0);
+}
+export function reliablePct(model) { return groupPct(model, 'reliable'); }
+export function unreliablePct(model) { return groupPct(model, 'unreliable'); }
+
 // --- live import-spend rate -------------------------------------------------
 
 // Live import-spend rate: MW × £/MWh = £/hour. Export (net ≤ 0) → £0/h.

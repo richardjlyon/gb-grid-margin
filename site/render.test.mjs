@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   gaugeNeedleAngle, firmStatus, firmShares,
-  capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel,
+  capacityTrapStatic, fmtPct, fmtPct0, fmtGW, sourceArcModel, reliablePct, unreliablePct,
   reliableShareToColor, unreliableNowPct, rgbCss, RELIABILITY_RAMP,
   carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor, windDroughtColor, droughtSpikes,
   droughtCaption, carpetMonthTicks,
@@ -43,6 +43,25 @@ test('sourceArcModel — over-export: no negative slices (clamp), firm shrinks',
   assert.ok(approx(m.slices.find((s) => s.key === 'wind').mw, 0));
   assert.ok(m.slices.every((s) => s.mw >= -1e-9));
   assert.ok(approx(m.slices.reduce((s, x) => s + x.frac, 0), 1));
+});
+
+test('reliablePct — integer reliable share, sums with unreliable to 100', () => {
+  const v = { gas_mw: 12000, nuclear_mw: 5000, biomass_mw: 2000, other_mw: 1000, wind_mw: 8000, solar_mw: 2000, net_import_mw: 6000, national_demand_mw: 36000 };
+  const m = sourceArcModel(v);
+  const rel = reliablePct(m);
+  assert.equal(rel + unreliablePct(m), 100);
+  assert.equal(rel, 56);   // 20000/36000 = 55.6% → largest-remainder lands the reliable group on 56 here
+});
+
+test('reliablePct — the Entry-01 dial follows the gauge stamp, never the naive aggregate round', () => {
+  // firm = 52.8% of demand. Math.round(52.8) = 53, but the verdict gauge stamps the reliable group
+  // at 52 because largest-remainder hands the two leftover percent to wind+solar (the bigger
+  // fractions). The reliability dial below MUST read that same 52 — the two adjacent reliability
+  // numbers must never disagree (the user-reported "gauge 52 vs dial 53" off-by-one).
+  const v = { gas_mw: 7920, nuclear_mw: 7920, biomass_mw: 0, other_mw: 0, wind_mw: 7080, solar_mw: 7080, net_import_mw: 0, national_demand_mw: 30000 };
+  const m = sourceArcModel(v);
+  assert.equal(Math.round(m.firmPct), 53);   // what the dial USED to round to (the bug)
+  assert.equal(reliablePct(m), 52);          // the gauge stamp — and now the dial too
 });
 
 test('gaugeNeedleAngle maps 0..max onto a -90..+90 half-dial', () => {
