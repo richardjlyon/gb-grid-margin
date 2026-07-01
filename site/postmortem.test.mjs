@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { activeCommentIndex, revealedPoints, formatClock, formatCalendar, frameParts } from './postmortem-draw.js';
 import { COL_WIND, COL_SOLAR, COL_IMPORTS } from './render.js';
+import { Transport } from './postmortem.js';
 
 test('activeCommentIndex picks the last entry at or before sp', () => {
   const c = [{ period: 24 }, { period: 38 }, { period: 43 }];
@@ -51,4 +52,15 @@ test('formatClock renders local half-hour', () => {
 test('formatCalendar renders day/month/weekday', () => {
   const c = formatCalendar('2026-06-24T10:30:00Z');
   assert.deepEqual(c, { day: '24', month: 'JUN', weekday: 'WED' });
+});
+
+test('Transport clamps and reports index changes', () => {
+  const seen = [];
+  const t = new Transport(3, (i) => seen.push(i));
+  t.step(1); assert.equal(t.index, 1);
+  t.step(1); t.step(1); assert.equal(t.index, 2);   // clamped at n-1
+  t.toStart(); assert.equal(t.index, 0);
+  t.toEnd(); assert.equal(t.index, 2);
+  t.seek(1); assert.equal(t.index, 1);
+  assert.deepEqual(seen, [1, 2, 0, 2, 1]);
 });
