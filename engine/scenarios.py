@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import html as _htmlmod
 import json
+import sys
 from pathlib import Path
 
 from engine import chrome, snapshot
@@ -166,3 +167,23 @@ def generate_pages(payloads: list[dict], site: Path = Path("site")) -> list[Path
         written.append(path)
     _atomic_write(out_dir / "index.html", _index_html(payloads))
     return written
+
+
+def build_all(fuelhh_rows, embedded_rows, price_rows, ns, caps, generated_utc,
+              site: Path = Path("site")) -> list[tuple[str, dict]]:
+    covered_dates = {r["settlement_date"] for r in embedded_rows}
+    payloads, named = [], []
+    for s in load_scenarios():
+        validate_scenario(s)
+        if s["window"]["to"] not in covered_dates and s["basis"] == "national":
+            print(f"scenario {s['slug']}: window not covered by embedded store — skipping",
+                  file=sys.stderr)
+            continue
+        p = resolve_payload(s, fuelhh_rows=fuelhh_rows, embedded_rows=embedded_rows,
+                            price_rows=price_rows, ns=ns, caps=caps, generated_utc=generated_utc)
+        guard_payload(p)
+        payloads.append(p)
+        named.append((f"scenario_{s['slug']}", p))
+    if payloads:
+        generate_pages(payloads, site=site)
+    return named

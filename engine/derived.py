@@ -289,6 +289,18 @@ def build(out_dir: Path = SITE_DATA) -> int:
         print(f"sources build failed (GuardError): {e}", file=sys.stderr); return 1
     reliability_files.append(("sources", sources_payload))
 
+    # Post-mortem scenarios: render the authored taxonomy against the settled stores into
+    # site/post-mortem/*.html + scenario_<slug>.json (skips any scenario not yet covered by the
+    # embedded store, non-fatal).
+    from engine import scenarios as _scenarios
+    try:
+        scenario_named = _scenarios.build_all(rows, embedded_rows, price_rows, ns, caps, generated)
+    except GuardError as e:
+        print(f"scenario build failed (GuardError): {e}", file=sys.stderr); return 1
+    reliability_files.extend(scenario_named)
+    if scenario_named:
+        print(f"generated {len(scenario_named)} post-mortem page(s)")
+
     # Regenerate the methodology page's source cards from the same registry (build-time, static).
     methodology.build(sources_payload)
     print("regenerated site/methodology.html source cards")
