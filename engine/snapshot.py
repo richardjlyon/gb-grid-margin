@@ -40,3 +40,28 @@ def extract_frame(fuelhh_row: dict, embedded_row: dict, ns: NameplateSeries,
         "import_share_pct": pct(net, demand), "net_import_mw": net,
         "price_gbp_mwh": price,
     }
+
+
+def _price_index(price_rows: list[dict]) -> dict[tuple[str, int], float]:
+    return {(r["settlement_date"], int(r["settlement_period"])): r["system_sell_price"]
+            for r in price_rows if r.get("system_sell_price") is not None}
+
+
+def extract_series(date_from: str, date_to: str, *, fuelhh_rows: list[dict],
+                   embedded_rows: list[dict], price_rows: list[dict],
+                   ns: NameplateSeries, caps: dict[str, int]) -> list[dict]:
+    """Frames for every half-hour in BOTH FUELHH and embedded within [date_from, date_to]."""
+    emb_by_key = {(r["settlement_date"], int(r["settlement_period"])): r for r in embedded_rows}
+    prices = _price_index(price_rows)
+    out = []
+    for fh in fuelhh_rows:
+        d = fh["settlement_date"]
+        if d < date_from or d > date_to:
+            continue
+        k = (d, int(fh["settlement_period"]))
+        emb = emb_by_key.get(k)
+        if emb is None:
+            continue
+        out.append(extract_frame(fh, emb, ns, caps, prices.get(k)))
+    out.sort(key=lambda f: f["t"])
+    return out
