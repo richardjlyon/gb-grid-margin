@@ -92,3 +92,9 @@ def test_build_all_returns_named_payloads(tmp_path):
     assert "scenario_8-january-2025-costliest-day" in names
     assert "scenario_24-june-2026-emergency" not in names
     assert (site / "post-mortem" / "8-january-2025-costliest-day.html").exists()
+
+
+def test_index_links_to_postmortem():
+    html = open("site/index.html").read()
+    assert "post-mortem/8-january-2025-costliest-day" in html
+    assert "Going further" in html

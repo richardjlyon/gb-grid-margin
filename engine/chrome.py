@@ -29,7 +29,9 @@ from engine.build_site import _atomic_write
 SITE = Path("site")
 
 # The six pages that share the chrome. (validate.html is a dev harness; the /s/ unfurl stubs and the
-# share cards are generated elsewhere.)
+# share cards are generated elsewhere. Generated post-mortem/*.html pages are also excluded — they're
+# produced fresh each build by engine.scenarios from these same canonical ASSETS/FOOTER, so their
+# chrome can't drift.)
 PAGES = ["index.html", "methodology.html", "about.html", "import.html", "wind.html", "share.html"]
 
 # Pages that own a primary-nav entry get aria-current; the home page and the detail pages do not.
