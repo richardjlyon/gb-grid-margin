@@ -34,3 +34,15 @@ def test_real_scenarios_file_validates():
     assert "24-june-2026-emergency" in slugs
     for s in ss:
         scenarios.validate_scenario(s)
+
+
+def test_resolve_payload_shapes_frames_and_markers():
+    fh, emb, pr, ns, caps = __import__("tests.test_snapshot", fromlist=["_stores"])._stores()
+    s = next(s for s in scenarios.load_scenarios() if s["slug"] == "8-january-2025-costliest-day")
+    p = scenarios.resolve_payload(s, fuelhh_rows=fh, embedded_rows=emb, price_rows=pr,
+                                  ns=ns, caps=caps, generated_utc="2026-07-01T00:00:00Z")
+    assert len(p["frames"]) == 48
+    assert p["basis"] == s["basis"]
+    # markers point at the SP-matching frame index
+    m0 = next(m for m in p["markers"] if "price spike" in m["label"])
+    assert p["frames"][m0["index"]]["sp"] == 31
