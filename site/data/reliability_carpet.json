@@ -6,7 +6,7 @@
     "Embedded solar/wind are NESO's modelled outturn estimates, not metered \u2014 the firm fuels are settled Elexon FUELHH. A mixed metered+estimated layer, disclosed.",
     "The live gauge reads NESO's embedded forecast; this settled series reads NESO's embedded outturn estimate (same owner, sibling product) and lags ~21 days, so it ends before today \u2014 the live 'now' caret is not part of the settled series."
   ],
-  "generated_utc": "2026-06-30T07:31:33.267941+00:00",
+  "generated_utc": "2026-07-01T07:44:08.684708+00:00",
   "window": "rolling_365d",
   "range": {
     "from": "2025-05-28",
