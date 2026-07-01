@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from engine import snapshot
 from engine.guards import require
 
 SCENARIOS_PATH = Path("data/scenarios.json")
@@ -33,3 +34,23 @@ def validate_scenario(s: dict) -> None:
         require(1 <= c["period"] <= 50, f"scenario {s['slug']}: commentary period {c['period']}")
     for k in ("kicker", "dek", "body_md", "attributed_figures"):
         require(k in s["hero"], f"scenario {s['slug']}: hero missing {k!r}")
+
+
+def resolve_payload(scenario: dict, *, fuelhh_rows, embedded_rows, price_rows,
+                    ns, caps, generated_utc: str) -> dict:
+    w = scenario["window"]
+    frames = snapshot.extract_series(w["from"], w["to"], fuelhh_rows=fuelhh_rows,
+                                     embedded_rows=embedded_rows, price_rows=price_rows,
+                                     ns=ns, caps=caps)
+    sp_to_index = {f["sp"]: i for i, f in enumerate(frames)}
+    markers = [{"index": sp_to_index[c["period"]], "label": c["label"]}
+               for c in scenario["commentary"]
+               if c["marker"] and c["period"] in sp_to_index]
+    return {
+        "slug": scenario["slug"], "title": scenario["title"],
+        "category": scenario["category"], "event_date": scenario["event_date"],
+        "basis": scenario["basis"], "generated_utc": generated_utc,
+        "hero": scenario["hero"], "commentary": scenario["commentary"],
+        "panels": scenario["panels"], "sources": scenario.get("sources", []),
+        "frames": frames, "markers": markers,
+    }
