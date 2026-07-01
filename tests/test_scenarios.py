@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from engine import scenarios
 from engine.guards import GuardError
@@ -46,3 +48,19 @@ def test_resolve_payload_shapes_frames_and_markers():
     # markers point at the SP-matching frame index
     m0 = next(m for m in p["markers"] if "price spike" in m["label"])
     assert p["frames"][m0["index"]]["sp"] == 31
+
+
+def test_generate_pages_writes_page_and_index(tmp_path):
+    payload = {"slug": "demo", "title": "Anatomy of an emergency", "event_date": "2026-06-24",
+               "category": "import-squeeze", "basis": "national", "generated_utc": "x",
+               "hero": {"kicker": "24 June 2026", "dek": "d", "body_md": "b", "attributed_figures": []},
+               "commentary": [], "panels": ["reliability"], "sources": [], "frames": [], "markers": []}
+    site = tmp_path / "site"; (site / "data").mkdir(parents=True)
+    paths = scenarios.generate_pages([payload], site=site)
+    page = site / "post-mortem" / "demo.html"
+    index = site / "post-mortem" / "index.html"
+    assert page in paths and page.exists() and index.exists()
+    html = page.read_text()
+    assert 'class="masthead"' in html and "postmortem.js" in html
+    assert 'href="../methodology.html"' in html  # relativised nav
+    assert "Anatomy of an emergency" in html
