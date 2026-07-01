@@ -20,3 +20,8 @@ def test_validate_rejects_bad_commentary_period():
     bad = {**GOOD, "commentary": [{"period": 99, "marker": True, "label": "L", "text": "t"}]}
     with pytest.raises(GuardError):
         scenarios.validate_scenario(bad)
+
+def test_validate_rejects_missing_commentary_period():
+    bad = {**GOOD, "commentary": [{"marker": True, "label": "L", "text": "t"}]}
+    with pytest.raises(GuardError):
+        scenarios.validate_scenario(bad)
