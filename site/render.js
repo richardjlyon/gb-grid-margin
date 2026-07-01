@@ -93,9 +93,9 @@ const ARC_RELIABLE = [
   ['biofuel', 'Biofuel', '#4a9c73', (v) => v.biomass_mw],
   ['hydro', 'Hydro & other', '#79c1a0', (v) => v.other_mw],
 ];
-const COL_WIND = '#1f6fc0';     // wind — the blue from Entry 02 (per-source identity, not red)
-const COL_SOLAR = '#e0921a';    // solar — the yellow-orange from Entry 02
-const COL_IMPORTS = '#c2188f';  // imports — magenta (interconnector flows)
+export const COL_WIND = '#1f6fc0';     // wind — the blue from Entry 02 (per-source identity, not red)
+export const COL_SOLAR = '#e0921a';    // solar — the yellow-orange from Entry 02
+export const COL_IMPORTS = '#c2188f';  // imports — magenta (interconnector flows)
 export const COL_EXPORT = '#c2188f';   // magenta — surplus sent abroad (interconnector flows)
 
 export function sourceArcModel(v) {

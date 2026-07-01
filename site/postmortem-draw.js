@@ -1,4 +1,4 @@
-import { reliableShareToColor, rgbCss, fmtPct, fmtMW } from './render.js';
+import { reliableShareToColor, rgbCss, fmtPct, COL_WIND, COL_SOLAR, COL_IMPORTS } from './render.js';
 
 export function activeCommentIndex(commentary, sp) {
   let idx = -1;
@@ -42,10 +42,10 @@ export function frameParts(frame) {
     { key: 'reliability', label: 'Reliable', value: frame.firm_pct, max: 100,
       valueText: fmtPct(frame.firm_pct), color: relColor },
     { key: 'wind', label: 'Wind', value: frame.wind_cf_pct ?? 0, max: 100,
-      valueText: fmtPct(frame.wind_cf_pct), color: '#3b6ea5' },
+      valueText: fmtPct(frame.wind_cf_pct), color: COL_WIND },
     { key: 'solar', label: 'Solar', value: frame.solar_cf_pct ?? 0, max: 100,
-      valueText: fmtPct(frame.solar_cf_pct), color: '#d9a521' },
+      valueText: fmtPct(frame.solar_cf_pct), color: COL_SOLAR },
     { key: 'imports', label: 'Imports', value: frame.import_cf_pct ?? 0, max: 100,
-      valueText: fmtPct(frame.import_cf_pct), color: '#8a5fb0' },
+      valueText: fmtPct(frame.import_cf_pct), color: COL_IMPORTS },
   ];
 }
