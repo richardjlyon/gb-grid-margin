@@ -28,8 +28,8 @@ def validate_scenario(s: dict) -> None:
     for k in ("from", "to"):
         require(k in s["window"], f"scenario {s['slug']}: window missing {k!r}")
     for c in s["commentary"]:
-        require(1 <= c["period"] <= 50, f"scenario {s['slug']}: commentary period {c['period']}")
-        for k in ("marker", "label", "text"):
+        for k in ("period", "marker", "label", "text"):
             require(k in c, f"scenario {s['slug']}: commentary missing {k!r}")
+        require(1 <= c["period"] <= 50, f"scenario {s['slug']}: commentary period {c['period']}")
     for k in ("kicker", "dek", "body_md", "attributed_figures"):
         require(k in s["hero"], f"scenario {s['slug']}: hero missing {k!r}")
