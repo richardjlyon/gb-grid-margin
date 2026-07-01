@@ -1,0 +1,64 @@
+{
+  "scenarios": [
+    {
+      "slug": "8-january-2025-costliest-day",
+      "title": "Anatomy of a price spike",
+      "category": "import-cost",
+      "event_date": "2025-01-08",
+      "window": { "from": "2025-01-08", "to": "2025-01-08" },
+      "hero": {
+        "kicker": "8 January 2025",
+        "dek": "The cold, still afternoon when the price of keeping the lights on hit £2,900 a megawatt-hour.",
+        "body_md": "On a cold, calm January day the wind faded to a tenth of its capacity while demand stayed high. Britain leaned on its interconnectors for close to six gigawatts of imported power — around three-fifths of everything the cables can carry — and the system price spiked to £2,900 a megawatt-hour, roughly forty times an ordinary afternoon. By the end of the day the bill for those imports came to £87.5 million, the most Britain has ever paid to import electricity in a single day. Press play and watch the day tighten.",
+        "attributed_figures": []
+      },
+      "commentary": [
+        { "period": 31, "marker": true, "label": "15:00 — the price spike",
+          "text": "The system price reaches £2,900/MWh — about forty times a normal afternoon — as a cold, calm day meets high demand and a fading wind fleet." },
+        { "period": 37, "marker": true, "label": "18:00 — peak imports",
+          "text": "Net imports peak near 6,000 MW, close to three-fifths of everything the interconnectors can carry. Britain is leaning hard on its neighbours at the evening peak." },
+        { "period": 44, "marker": false, "label": "21:30 — the wind bottoms out",
+          "text": "Wind delivers under a tenth of its capacity — the calm that made the whole day so expensive." }
+      ],
+      "panels": ["reliability", "wind", "solar", "imports", "price"],
+      "basis": "national",
+      "sources": [
+        "Elexon FUELHH (settled) — generation + interconnector flows",
+        "NESO embedded solar/wind (settled outturn)",
+        "Elexon system (imbalance) price — settled",
+        "DUKES 6.2 nameplate; DESNZ interconnector capacities"
+      ]
+    },
+    {
+      "slug": "24-june-2026-emergency",
+      "title": "Anatomy of an emergency",
+      "category": "import-squeeze",
+      "event_date": "2026-06-24",
+      "window": { "from": "2026-06-24", "to": "2026-06-24" },
+      "hero": {
+        "kicker": "24 June 2026",
+        "dek": "The day a windless Britain leaned on its neighbours — until they pulled the plug.",
+        "body_md": "A blocking high sat over north-west Europe and the wind fell away across the whole region at once. Through the morning Britain leaned hard on imports; by the evening peak, with demand high and the wind still flat, our neighbours kept their scarce power for themselves — and the system operator paid for emergency generation to keep the lights on. Press the play button and watch the day unfold.",
+        "attributed_figures": [
+          { "value": "~£1,400/MWh", "label": "reported price of evening emergency power, roughly fifteen times a normal day", "source": "NESO emergency notice / press coverage", "url": "" }
+        ]
+      },
+      "commentary": [
+        { "period": 24, "marker": true, "label": "10:30 — peak dependence",
+          "text": "Firm power is at its daily low. Net imports peak near 6,900 MW and the wind fleet is delivering about a tenth of its plate. This is the standing exposure — hours before anything goes wrong." },
+        { "period": 38, "marker": false, "label": "17:30 — the price turns",
+          "text": "The settled price jumps to £317/MWh as the evening peak builds and solar fades." },
+        { "period": 43, "marker": true, "label": "20:00 — the emergency",
+          "text": "Demand peaks. Gas has ramped to cover and imports have withdrawn as neighbours keep their power. Firm plant is now carrying the country — the ~£1,400/MWh emergency price is the market clearing that squeeze." }
+      ],
+      "panels": ["reliability", "wind", "solar", "imports", "price"],
+      "basis": "national",
+      "sources": [
+        "Elexon FUELHH (settled) — generation + interconnector flows",
+        "NESO embedded solar/wind (settled outturn)",
+        "Elexon system (imbalance) price — settled",
+        "DUKES 6.2 nameplate; DESNZ interconnector capacities"
+      ]
+    }
+  ]
+}

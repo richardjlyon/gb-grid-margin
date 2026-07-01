@@ -25,3 +25,12 @@ def test_validate_rejects_missing_commentary_period():
     bad = {**GOOD, "commentary": [{"marker": True, "label": "L", "text": "t"}]}
     with pytest.raises(GuardError):
         scenarios.validate_scenario(bad)
+
+
+def test_real_scenarios_file_validates():
+    ss = scenarios.load_scenarios()
+    slugs = {s["slug"] for s in ss}
+    assert "8-january-2025-costliest-day" in slugs
+    assert "24-june-2026-emergency" in slugs
+    for s in ss:
+        scenarios.validate_scenario(s)
