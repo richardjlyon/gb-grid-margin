@@ -29,3 +29,23 @@ def test_frame_matches_compute_verdict():
     assert f["import_cf_pct"] == 50.0
     assert f["price_gbp_mwh"] == 77.0
     assert f["t"] == "2026-06-24T10:30:00Z" and f["sp"] == 24
+
+
+import json
+from engine import history, embedded_history, system_price_history, derived
+
+def _stores():
+    return (history.read_store(), embedded_history.read_store(),
+            system_price_history.read_store(),
+            derived.load_nameplate_series(),
+            {c: l["capacity_mw"] for c, l in json.load(open("data/interconnectors.json"))["links"].items()})
+
+def test_series_real_anchors_8jan2025():
+    fh, emb, pr, ns, caps = _stores()
+    frames = snapshot.extract_series("2025-01-08", "2025-01-08",
+                                     fuelhh_rows=fh, embedded_rows=emb, price_rows=pr, ns=ns, caps=caps)
+    assert len(frames) == 48
+    by_sp = {f["sp"]: f for f in frames}
+    assert by_sp[31]["price_gbp_mwh"] == 2900.0
+    assert by_sp[37]["net_import_mw"] == 6014
+    assert frames == sorted(frames, key=lambda f: f["t"])
