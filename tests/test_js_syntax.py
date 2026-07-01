@@ -17,6 +17,8 @@ ENTRY_POINTS = [
     REPO / "site" / "warnings.js",
     REPO / "site" / "share.js",
     REPO / "site" / "render.js",
+    REPO / "site" / "postmortem.js",
+    REPO / "site" / "postmortem-draw.js",
 ]
 
 

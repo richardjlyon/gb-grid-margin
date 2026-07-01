@@ -1,0 +1,26 @@
+/* site/postmortem.css */
+.postmortem .pm-hero { max-width: 46rem; margin: 2rem auto; }
+.pm-instrument { max-width: 60rem; margin: 2rem auto; }
+.pm-time { display: flex; align-items: center; gap: 1rem; justify-content: center; margin-bottom: 1rem; }
+.pm-cal { display: grid; text-align: center; border: 1px solid #15181C; border-radius: 6px; overflow: hidden; width: 4rem; }
+.pm-cal .cal-wd { background: #15181C; color: #fff; font: 600 11px/1.6 "Spline Sans Mono", monospace; }
+.pm-cal .cal-day { font: 700 26px/1.1 "Space Grotesk", sans-serif; }
+.pm-cal .cal-mo { font: 600 11px/1.4 "Spline Sans Mono", monospace; color: #6b6b6b; padding-bottom: 3px; }
+.pm-clock { font: 700 40px "Space Grotesk", sans-serif; font-variant-numeric: tabular-nums; }
+.pm-gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+.pm-gauge-cell { text-align: center; }
+.pm-gauge-label { font: 600 12px "Spline Sans Mono", monospace; text-transform: uppercase; color: #6b6b6b; }
+.pm-price-wrap { margin: 1.5rem 0; }
+.pm-price-title { font: 600 12px "Spline Sans Mono", monospace; text-transform: uppercase; color: #6b6b6b; }
+.pm-price { width: 100%; height: auto; }
+.pm-commentary { min-height: 3.5rem; border-left: 3px solid #D6121F; padding: 0.5rem 0 0.5rem 1rem; margin: 1rem 0; font: 400 17px/1.5 "Newsreader", serif; }
+.pm-transport { display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0; }
+.pm-btn { font-size: 18px; padding: 0.3rem 0.6rem; cursor: pointer; background: #fff; border: 1px solid #cfcbc2; border-radius: 4px; }
+.pm-btn:focus-visible { outline: 2px solid #15181C; }
+.pm-scrub { flex: 1; }
+.pm-markers { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.pm-marker { font: 600 12px "Spline Sans Mono", monospace; background: #f2efe8; border: 0; padding: 0.3rem 0.6rem; border-radius: 999px; cursor: pointer; }
+.pm-index { list-style: none; padding: 0; }
+.pm-index a { display: flex; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid #e6e3dc; text-decoration: none; color: inherit; }
+.pm-index .pm-title { flex: 1; font-weight: 600; }
+@media (max-width: 640px) { .pm-gauges { grid-template-columns: repeat(2, 1fr); } }
