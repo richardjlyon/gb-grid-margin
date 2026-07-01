@@ -64,3 +64,14 @@ def test_generate_pages_writes_page_and_index(tmp_path):
     assert 'class="masthead"' in html and "postmortem.js" in html
     assert 'href="../methodology.html"' in html  # relativised nav
     assert "Anatomy of an emergency" in html
+
+
+def test_build_all_returns_named_payloads(tmp_path):
+    fh, emb, pr, ns, caps = __import__("tests.test_snapshot", fromlist=["_stores"])._stores()
+    site = tmp_path / "site"; (site / "data").mkdir(parents=True)
+    named = scenarios.build_all(fh, emb, pr, ns, caps, "2026-07-01T00:00:00Z", site=site)
+    names = [n for n, _ in named]
+    # 8 Jan 2025 is fully covered and renders; 24 June 2026 is skipped (embedded not yet published).
+    assert "scenario_8-january-2025-costliest-day" in names
+    assert "scenario_24-june-2026-emergency" not in names
+    assert (site / "post-mortem" / "8-january-2025-costliest-day.html").exists()
