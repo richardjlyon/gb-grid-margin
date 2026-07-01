@@ -54,3 +54,17 @@ def resolve_payload(scenario: dict, *, fuelhh_rows, embedded_rows, price_rows,
         "panels": scenario["panels"], "sources": scenario.get("sources", []),
         "frames": frames, "markers": markers,
     }
+
+
+def guard_payload(payload: dict) -> None:
+    frames = payload["frames"]
+    require(len(frames) > 0, f"scenario {payload.get('slug')}: no frames")
+    for f in frames:
+        require(0.0 <= f["firm_pct"] <= 120.0, f"firm_pct {f['firm_pct']} out of [0,120]")
+        require(f["demand_mw"] > 0, "non-positive demand in a frame")
+    if "price" in payload["panels"]:
+        require(any(f["price_gbp_mwh"] is not None for f in frames), "price panel but no price data")
+    if "solar" in payload["panels"]:
+        require(any(f["solar_cf_pct"] is not None for f in frames), "solar panel but no solar data")
+    for m in payload["markers"]:
+        require(0 <= m["index"] < len(frames), f"marker index {m['index']} out of range")
