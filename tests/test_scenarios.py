@@ -64,6 +64,23 @@ def test_generate_pages_writes_page_and_index(tmp_path):
     assert 'class="masthead"' in html and "postmortem.js" in html
     assert 'href="../methodology.html"' in html  # relativised nav
     assert "Anatomy of an emergency" in html
+    # shared-chrome head assets must be relativised for the /post-mortem/ subfolder
+    assert 'href="../style.css"' in html
+    assert 'href="../fonts.css"' in html
+    assert 'href="../favicon.svg"' in html
+    assert 'href="../fonts/space-grotesk-latin.woff2"' in html
+    assert 'href="style.css"' not in html
+    assert 'href="fonts.css"' not in html
+    assert 'href="favicon.svg"' not in html
+
+    index_html = index.read_text()
+    assert 'href="../style.css"' in index_html
+    assert 'href="../fonts.css"' in index_html
+    assert 'href="../favicon.svg"' in index_html
+    assert 'href="../fonts/space-grotesk-latin.woff2"' in index_html
+    assert 'href="style.css"' not in index_html
+    assert 'href="fonts.css"' not in index_html
+    assert 'href="favicon.svg"' not in index_html
 
 
 def test_build_all_returns_named_payloads(tmp_path):

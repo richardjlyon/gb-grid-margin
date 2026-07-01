@@ -84,10 +84,18 @@ def _relativise(html: str, prefix: str) -> str:
     return out
 
 
+def _relativise_assets(html: str, prefix: str) -> str:
+    """Point chrome's root-level head-asset hrefs at the parent folder for a subfolder page."""
+    out = html
+    for token in ('href="fonts/', 'href="fonts.css"', 'href="style.css"', 'href="favicon.svg"'):
+        out = out.replace(token, token.replace('href="', f'href="{prefix}'))
+    return out
+
+
 def _page_html(payload: dict) -> str:
     esc = _htmlmod.escape
     hero = payload["hero"]
-    head = chrome.ASSETS
+    head = _relativise_assets(chrome.ASSETS, "../")
     header = _relativise(chrome._header("post-mortem"), "../")
     footer = _relativise(chrome.FOOTER, "../")
     attributed = "".join(
@@ -135,13 +143,14 @@ def _index_html(payloads: list[dict]) -> str:
         for p in payloads)
     header = _relativise(chrome._header("post-mortem"), "../")
     footer = _relativise(chrome.FOOTER, "../")
+    head = _relativise_assets(chrome.ASSETS, "../")
     return f"""<!doctype html>
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Post-mortems — Grid Margin</title>
-{chrome.ASSETS}
+{head}
 <link rel="stylesheet" href="../postmortem.css">
 </head>
 <body>
