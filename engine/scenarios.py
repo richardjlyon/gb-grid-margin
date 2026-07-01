@@ -5,10 +5,12 @@ engine.snapshot from the settled stores (parity-locked). No modelled numbers on 
 """
 from __future__ import annotations
 
+import html as _htmlmod
 import json
 from pathlib import Path
 
-from engine import snapshot
+from engine import chrome, snapshot
+from engine.build_site import _atomic_write
 from engine.guards import require
 
 SCENARIOS_PATH = Path("data/scenarios.json")
@@ -68,3 +70,99 @@ def guard_payload(payload: dict) -> None:
         require(any(f["solar_cf_pct"] is not None for f in frames), "solar panel but no solar data")
     for m in payload["markers"]:
         require(0 <= m["index"] < len(frames), f"marker index {m['index']} out of range")
+
+
+_IN_SITE_LINKS = ("methodology.html", "about.html", "share.html", "import.html", "wind.html")
+
+
+def _relativise(html: str, prefix: str) -> str:
+    """Point chrome's root-level in-site links at the parent folder for a subfolder page."""
+    out = html
+    for name in _IN_SITE_LINKS:
+        out = out.replace(f'href="{name}"', f'href="{prefix}{name}"')
+    return out
+
+
+def _page_html(payload: dict) -> str:
+    esc = _htmlmod.escape
+    hero = payload["hero"]
+    head = chrome.ASSETS
+    header = _relativise(chrome._header("post-mortem"), "../")
+    footer = _relativise(chrome.FOOTER, "../")
+    attributed = "".join(
+        f'<p class="attributed"><strong>{esc(a["value"])}</strong> — {esc(a["label"])} '
+        f'<span class="src">({esc(a["source"])})</span></p>'
+        for a in hero["attributed_figures"])
+    return f"""<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(payload['title'])} — Grid Margin</title>
+<meta name="description" content="{esc(hero['dek'])}">
+<link rel="canonical" href="https://gridmargin.co.uk/post-mortem/{esc(payload['slug'])}">
+{head}
+<link rel="stylesheet" href="../postmortem.css">
+</head>
+<body>
+{header}
+<main id="main" class="container postmortem" data-slug="{esc(payload['slug'])}">
+  <section class="pm-hero">
+    <p class="eyebrow">Post-mortem · {esc(hero['kicker'])}</p>
+    <h1 class="headline">{esc(payload['title'])}</h1>
+    <p class="def pm-dek">{esc(hero['dek'])}</p>
+    <div class="pm-body">{esc(hero['body_md'])}</div>
+    {attributed}
+  </section>
+  <section class="pm-instrument" aria-label="Reconstruction of {esc(payload['event_date'])}">
+    <div id="pm-player" data-loading>Loading the reconstruction…</div>
+  </section>
+</main>
+{footer}
+<script type="module" src="../postmortem.js"></script>
+</body>
+</html>
+"""
+
+
+def _index_html(payloads: list[dict]) -> str:
+    esc = _htmlmod.escape
+    items = "".join(
+        f'<li><a href="{esc(p["slug"])}.html"><span class="pm-cat">{esc(p["category"])}</span>'
+        f'<span class="pm-title">{esc(p["title"])}</span>'
+        f'<span class="pm-date">{esc(p["event_date"])}</span></a></li>'
+        for p in payloads)
+    header = _relativise(chrome._header("post-mortem"), "../")
+    footer = _relativise(chrome.FOOTER, "../")
+    return f"""<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-mortems — Grid Margin</title>
+{chrome.ASSETS}
+<link rel="stylesheet" href="../postmortem.css">
+</head>
+<body>
+{header}
+<main id="main" class="container">
+  <h1 class="headline">Post-mortems</h1>
+  <p class="def">Reconstructions of past events on the GB grid, played back half-hour by half-hour from the settled record.</p>
+  <ul class="pm-index">{items}</ul>
+</main>
+{footer}
+</body>
+</html>
+"""
+
+
+def generate_pages(payloads: list[dict], site: Path = Path("site")) -> list[Path]:
+    out_dir = site / "post-mortem"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for p in payloads:
+        path = out_dir / f"{p['slug']}.html"
+        _atomic_write(path, _page_html(p))
+        written.append(path)
+    _atomic_write(out_dir / "index.html", _index_html(payloads))
+    return written
