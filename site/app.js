@@ -12,7 +12,7 @@ import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
   unreliableNowPct, integerShares, reliablePct,
-  carpetCellColor, gaugeCalibration, unreliabilityColor, reliabilityColor,
+  carpetCellColor, gaugeCalibration, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
   importValueColor, importCostCaption, fmtRatePerH,
 } from './render.js';
@@ -45,7 +45,10 @@ function entryFooter(section, further) {
   const links = has
     ? `<div class="entry-further">${further.map((f) => `<a href="${f.href}">→ ${f.label}</a>`).join('')}</div>`
     : '';
-  return `<div class="entry-foot">${going}`
+  return `<div class="entry-foot entry-foot-legend">`
+    + `<a class="entry-foot-src" href="methodology.html#interpreting-the-legend">Interpreting the legend →</a>`
+    + `</div>`
+    + `<div class="entry-foot">${going}`
     + `<a class="entry-foot-src" href="methodology.html#src-group-${section}">Sources &amp; method →</a>`
     + `</div>${links}`;
 }
@@ -290,9 +293,6 @@ const DIAL_PALETTE = {
   import: { track: '#f0d2e6', band: '#dc9ec8', core: '#c0589f', full: '#c2188f', fullRgb: [194, 24, 143] },
 };
 
-// Reliability dial/carpet — single red. Bands behind the needle are red-tinted greys (luma-matched
-// to the wind/solar band greys); full = the gauge's unreliable red.
-const REL_PALETTE = { track: '#e3d2d4', band: '#cda9ad', core: '#b3565d', full: '#d6121f', fullRgb: [214, 18, 31] };
 
 // Import-cost dial/legend — the cost-red family (cheaper = pale, costlier = deep red). Track and
 // distribution bands tinted red so the central-tendency box reads as "cost" without a gradient track.
@@ -520,14 +520,14 @@ function renderTrap(v) {
   const windCapMw = g.wind_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.wind_gw : 32.082) * 1000);
   const solarCapMw = g.solar_nameplate_mw || Math.round((NAMEPLATE ? NAMEPLATE.solar_gw : 18.28) * 1000);
   const has = !!(CAPACITY && CAPACITY.wind && CAPACITY.solar && CAPACITY.sat);
-  const cfgFor = (kind, label, sourceMw, capMw) => {
+  const cfgFor = (kind, label, sourceMw, capMw, keyNote = '') => {
     const days = has ? CAPACITY[kind].days : null;
     const dist = has ? distForDays(CAPACITY[kind], days) : null;
     return {
       kind, label, palette: DIAL_PALETTE[kind], nameplateMw: capMw,
       sat: has ? CAPACITY.sat[kind] : 1, days, dist,
       liveCf: capMw ? (sourceMw / capMw) : 0,
-      keyNote: '',   // the shared box-plot key is shown once, under the Entry-01 reliability block
+      keyNote,   // the shared box-plot key is shown once, under the first box-plot panel (Wind §02)
       gaugeExtra: dialNowLine(kind, sourceMw, capMw, 'capacity'),   // live MW + capacity factor (matches the dial/lamp)
     };
   };
@@ -535,7 +535,7 @@ function renderTrap(v) {
   // with wind's drought detail link beneath its own. Imports (§03) follows the same source→deeper scheme.
   $('trap-body').innerHTML = `
     <div class="trap-grid${has ? '' : ' gauge-only'}">
-      ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw))}
+      ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw, KEY_NOTE_HTML))}
     </div>
     ${entryFooter('wind', [{ href: 'wind.html', label: 'When the wind stops, it stops for days — the whole wind record since 2016' }])}
     <div class="trap-grid${has ? '' : ' gauge-only'}">
@@ -549,15 +549,55 @@ function renderTrap(v) {
   }
 }
 
-// Entry 01: the reliability metric block, rendered under the gauge+receipt into #reliability-body.
-// Third consumer of renderMetricBlock. It reads RELIABILITY — the firm share of demand — so its dial
-// moves the SAME way as the verdict gauge above it: the needle swings RIGHT toward green as the grid
-// leans on firm power, and LEFT into red (the alarm) as it leans on weather and imports. No nameplate
-// (a plain 0-100% share), so the MW calibration labels are suppressed.
-//   The carpet stores the UNRELIABLE share per half-hour and is painted unchanged (red = the bad
-// half-hours either way), so only the dial, the legend ends and the box-plot are flipped onto the
-// reliable axis: the live needle, the now-caret and the percentile box are derived from 1 − unreliable.
-let REL_CARPET = null;   // site/data/reliability_carpet.json (days x 48 of unreliable share)
+// The reliability strip's legend: the KEY to the strip's three background bands, NOT a gradient. Three
+// solid zones on the 0–100% reliable axis — red below the firm-share p25, amber across the usual half
+// (p25–p75), green above p75 — split at the very same percentiles the strip bands use. Green and red are
+// the shared dial inks (reliabilityColor(1)/(0) = the verdict gauge's green/red), so the strip inherits
+// the main dial's simplicity and only adds the amber middle. The "now" caret marks the live firm share;
+// the two split points are labelled with their percentile values, so the legend also serves as the
+// percentile readout the other panels show via a box-plot.
+function reliabilityLegend(liveCf, dist, nowLabel) {
+  const rgb = (t) => { const [r, g, b] = reliabilityColor(t); return `rgb(${r},${g},${b})`; };
+  const RED = rgb(0), AMBER = rgb(0.5), GREEN = rgb(1);
+  const clamp = (x) => Math.max(0, Math.min(100, x));
+  const p25 = dist ? clamp(dist.p25) : 25;
+  const p75 = dist ? clamp(dist.p75) : 75;
+  const bar = `linear-gradient(90deg, ${RED} 0%, ${RED} ${p25}%, ${AMBER} ${p25}%, `
+    + `${AMBER} ${p75}%, ${GREEN} ${p75}%, ${GREEN} 100%)`;
+  const nowPos = liveCf == null ? null : clamp(liveCf * 100);
+  const nowCaret = nowPos == null ? ''
+    : `<span class="cl-now" style="left:${nowPos.toFixed(1)}%" title="Now: ${nowLabel == null ? Math.round(nowPos) : nowLabel}% firm">now</span>`;
+  const splits = dist ? `
+        <span class="cl-nums">
+          <span class="cl-num" style="left:${p25.toFixed(1)}%">${Math.round(dist.p25)}%</span>
+          <span class="cl-num" style="left:${p75.toFixed(1)}%">${Math.round(dist.p75)}%</span>
+        </span>` : '';
+  return `
+    <div class="carpet-legend rel-legend">
+      <span class="cl-lab">Unreliable</span>
+      <span class="cl-bar-wrap">
+        <span class="cl-bar" style="background:${bar}" aria-hidden="true"></span>
+        ${nowCaret}
+        ${splits}
+      </span>
+      <span class="cl-lab">Reliable</span>
+    </div>`;
+}
+
+// Entry 01: the reliability record, rendered under the gauge+receipt into #reliability-body.
+// The verdict gauge above already reads the live firm share, so this block drops the (duplicate) dial
+// and shows the RECORD instead: a full-width line of the daily MINIMUM firm share — the firm
+// (dispatchable) share of demand in each settled day's WORST half-hour — across the rolling year, with
+// a 0.5 alarm line. The background is banded by the half-hourly firm-share p25/p75: green where a day's
+// worst half-hour still sits in the year's top quartile (reliable all day), red where it drops into the
+// bottom quartile, amber between. Because a daily MINIMUM is by definition at the low end, most days
+// read red. The legend above is the KEY to those bands: three solid zones split at the same p25/p75
+// (red · amber · green) — its green and red are the SAME two inks as the main dial, so the only new
+// idea is the amber middle; no gradient, no box-plot.
+//   REL_CARPET stores the UNRELIABLE share per half-hour; firm = 1 − it, so the day's worst half-hour is
+// 1 − the highest unreliable reading, and the legend's split points mirror the carpet's percentiles onto
+// the reliable axis (reliable = 100 − unreliable, so the order reverses).
+let REL_CARPET = null;   // site/data/reliability_carpet.json (days x 48 of unreliable share; firm = 1 − it)
 
 function renderReliabilityBlock(v) {
   const host = $('reliability-body');
@@ -565,39 +605,37 @@ function renderReliabilityBlock(v) {
   const has = !!(REL_CARPET && REL_CARPET.days && REL_CARPET.days.length);
   const m = v ? sourceArcModel(v) : null;
   const u = m ? unreliableNowPct(m.firmPct) : null;        // unreliable share now, 0..100 (clamped)
-  const nowPct = u == null ? null : 100 - u;               // RELIABLE share now — the dial NEEDLE position
-  // The number the dial DISPLAYS is the verdict gauge's integer reliable share (largest-remainder, so
-  // it matches the receipt), NOT round(nowPct): the two adjacent reliability readings must never differ
-  // by a rounding point. Needle stays at the continuous nowPct above; only the label is pinned.
+  const nowPct = u == null ? null : 100 - u;               // RELIABLE share now — the legend "now" caret
+  // The number DISPLAYED is the verdict gauge's integer reliable share (largest-remainder, so it matches
+  // the receipt), NOT round(nowPct): the two adjacent reliability readings must never differ by a point.
   const nowLabel = m ? reliablePct(m) : null;
   const days = has ? REL_CARPET.days : null;
-  // The carpet's distribution is over the unreliable share; mirror each percentile onto the reliable
-  // axis (reliable = 100 − unreliable, so the percentile order reverses) for the dial + legend box.
+  // The legend box-plot is the reliable-share distribution: mirror the carpet's UNRELIABLE percentiles
+  // onto the reliable axis (reliable = 100 − unreliable, so the percentile order reverses).
   const uDist = has ? distForDays(REL_CARPET, days) : null;
   const dist = uDist ? {
     p10: 100 - uDist.p90, p25: 100 - uDist.p75, p50: 100 - uDist.p50,
     p75: 100 - uDist.p25, p90: 100 - uDist.p10, mean: 100 - uDist.mean,
   } : null;
+  const liveCf = nowPct == null ? null : nowPct / 100;
+  const legend = has ? reliabilityLegend(liveCf, dist, nowLabel) : '';
+  const chart = has ? `
+      <div class="rel-line-wrap">
+        <canvas id="carpet-reliability" class="rel-line-canvas" role="img"
+          aria-label="The firm (dispatchable) share of GB national demand in each day's WORST half-hour, over the last year. Date runs left to right; the ratio runs 0 at the bottom to 1 at the top. The dashed line marks the 0.5 alarm. The background is green where the worst half-hour still sits in the year's top quarter of readings, amber in the middle half, red where it falls into the bottom quarter."></canvas>
+        <span class="rel-y rel-y-top" aria-hidden="true">1</span>
+        <span class="rel-line-alarm-lab">0.5 alarm</span>
+        <span class="rel-y rel-y-bot" aria-hidden="true">0</span>
+      </div>
+      <div class="carpet-xaxis" id="carpet-reliability-x"></div>` : '';
   host.innerHTML = `
-    <div class="trap-grid${has ? '' : ' gauge-only'}">
-      ${renderMetricBlock({
-        kind: 'reliability', label: 'Reliability', palette: REL_PALETTE,
-        nameplateMw: null, sat: has ? REL_CARPET.sat : 1, days, dist,
-        liveCf: nowPct == null ? null : nowPct / 100,
-        nowPctLabel: nowLabel,
-        keyNote: has ? KEY_NOTE_HTML : '',
-        unitNoun: 'demand',
-        rampFn: reliabilityColor, rampLabels: { lo: 'Unreliable', hi: 'Reliable' },
-        gaugeLabel: 'Reliability — firm share of national demand',
-        carpetAria: 'Reliable (firm) share of GB national demand, every half-hour of the last year. Date runs left to right; time of day runs top (00:00) to bottom (24:00). Green = demand fully met by firm power, through amber to deep red = increasingly leaning on weather and imports.',
-      })}
+    <div class="reliability-line">
+      <p class="trap-label">Reliability — firm share in the day's worst half-hour</p>
+      ${legend}
+      ${chart}
     </div>
     ${entryFooter('reliability')}`;
-  if (has) {
-    syncBlockHeights();
-    drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null,
-      { rampFn: unreliabilityColor, keepWorstHigh: true });
-  }
+  if (has) drawReliabilityLine('carpet-reliability', REL_CARPET.days);
 }
 
 // Match each carpet to the VISIBLE DIAL height beside it (the semicircle arc, not the gauge's full
@@ -607,12 +645,18 @@ function renderReliabilityBlock(v) {
 // later Entry-01 metric block also gets sized), keying each to the dial beside it within that grid.
 const DIAL_ARC_RATIO = 86 / 232;   // buildGauge R / viewBox width — keep in sync with buildGauge
 function syncBlockHeights() {
+  let trapH = 0;
   document.querySelectorAll('.trap-grid').forEach((grid) => {
     const gauge = grid.querySelector('.trap-gauge-cell .gauge');
     if (!gauge) return;
     const h = Math.round(gauge.getBoundingClientRect().width * DIAL_ARC_RATIO);
-    if (h > 0) grid.style.setProperty('--carpet-h', `${h}px`);
+    if (h > 0) { grid.style.setProperty('--carpet-h', `${h}px`); trapH = h; }
   });
+  // The dial-less reliability strip (Entry 01) has no gauge of its own to key off, so it borrows the
+  // wind/solar/import carpet height (they all share one dial width) — set on :root so it survives the
+  // strip's per-poll re-render. renderTrap runs this BEFORE renderReliabilityBlock, and the resize
+  // handler runs it before the strip's redraw, so the height is always current when the line is drawn.
+  if (trapH > 0) document.documentElement.style.setProperty('--rel-strip-h', `${trapH}px`);
 }
 
 // Month ticks for a carpet's date (X) axis: one label at each month boundary, positioned by its
@@ -682,6 +726,93 @@ function drawCarpetCanvas(canvasId, days, satFull, full, opts = {}) {
       ctx.fillRect(sx, p * rowH, 1, Math.ceil(rowH));
     }
   }
+  layoutCarpetAxis(canvasId.replace('carpet-', ''), days);
+}
+
+// Entry 01 reliability line: the daily MINIMUM firm share (the firm/dispatchable share of demand in the
+// day's worst half-hour) across the rolling year, over a green/amber/red background banded by the
+// half-hourly firm-share p25/p75 — the SAME percentiles as the box-plot legend above (computed the same
+// way as distForDays, so the bands line up with its markers). A day is green when even its worst
+// half-hour stays in the year's top quartile, red when the worst half-hour drops into the bottom
+// quartile, amber between; a dashed 0.5 alarm line runs across. DPR-aware; redrawn on resize with its
+// month axis re-laid out. Replaces the old half-hourly heatmap carpet.
+function drawReliabilityLine(canvasId, days) {
+  const canvas = $(canvasId);
+  if (!canvas || !days || !days.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  if (!cssW || !cssH) return;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const n = days.length;
+  // Daily minimum firm share = 1 − the worst (highest) unreliable half-hour that day; null if the day
+  // has no readings (so the line breaks and the band goes clear rather than reading a false 0).
+  const firmMin = days.map((d) => {
+    let mx = -Infinity;
+    for (const uu of d.cf) if (uu != null && uu > mx) mx = uu;
+    return mx === -Infinity ? null : 1 - mx;
+  });
+  // Band thresholds: p25/p75 of EVERY half-hour's firm share over the year (not of the daily minima),
+  // matched to distForDays' quantile so they line up with the legend's box-plot markers.
+  const hh = [];
+  for (const d of days) for (const uu of d.cf) if (uu != null) hh.push(1 - uu);
+  hh.sort((a, b) => a - b);
+  const q = (p) => (hh.length ? hh[Math.min(hh.length - 1, Math.floor(p * hh.length))] : p);
+  const lo = q(0.25), hi = q(0.75);
+
+  const tint = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+  const GREEN_T = tint(reliabilityColor(1), 0.18);    // reliable end of the shared ramp
+  const AMBER_T = tint(reliabilityColor(0.5), 0.18);
+  const RED_T = tint(reliabilityColor(0), 0.14);      // unreliable end
+  const colorAt = (i) => {
+    const f = firmMin[i];
+    if (f == null) return null;
+    if (f >= hi) return GREEN_T;
+    if (f < lo) return RED_T;
+    return AMBER_T;
+  };
+  const xLeft = (i) => (i / n) * cssW;
+  const yOf = (f) => (1 - f) * cssH;
+
+  // 1. background bands — consecutive same-colour days merged into one rect so translucent fills never
+  //    seam or double-darken at day boundaries.
+  let runStart = 0, runCol = colorAt(0);
+  for (let i = 1; i <= n; i++) {
+    const c = i < n ? colorAt(i) : null;
+    if (i === n || c !== runCol) {
+      if (runCol) { ctx.fillStyle = runCol; ctx.fillRect(xLeft(runStart), 0, xLeft(i) - xLeft(runStart), cssH); }
+      runStart = i; runCol = c;
+    }
+  }
+
+  // 2. the 0.5 alarm line — dashed red.
+  ctx.save();
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = RED;
+  ctx.lineWidth = 1;
+  const ya = Math.round(yOf(0.5)) + 0.5;
+  ctx.beginPath(); ctx.moveTo(0, ya); ctx.lineTo(cssW, ya); ctx.stroke();
+  ctx.restore();
+
+  // 3. the data line — daily minimum firm share, ink, with gaps breaking the stroke.
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.4;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  let pen = false;
+  for (let i = 0; i < n; i++) {
+    const f = firmMin[i];
+    if (f == null) { pen = false; continue; }
+    const x = ((i + 0.5) / n) * cssW, y = yOf(f);
+    if (pen) ctx.lineTo(x, y); else { ctx.moveTo(x, y); pen = true; }
+  }
+  ctx.stroke();
+
   layoutCarpetAxis(canvasId.replace('carpet-', ''), days);
 }
 
@@ -1351,7 +1482,7 @@ async function main() {
     if (CAPACITY && CAPACITY.sat) syncBlockHeights();
     if (CAPACITY && CAPACITY.wind && CAPACITY.sat) drawCarpetCanvas('carpet-wind', CAPACITY.wind.days, CAPACITY.sat.wind, DIAL_PALETTE.wind.fullRgb);
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
-    if (REL_CARPET && REL_CARPET.days) drawCarpetCanvas('carpet-reliability', REL_CARPET.days, REL_CARPET.sat, null, { rampFn: unreliabilityColor, keepWorstHigh: true });
+    if (REL_CARPET && REL_CARPET.days) drawReliabilityLine('carpet-reliability', REL_CARPET.days);
     if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
     if (window.__importData) drawImportCarpet(window.__importData);
     if (window.__importRateData) { syncBlockHeights(); drawCarpetCanvas('carpet-import', window.__importRateData.days, window.__importRateData.cap_per_h, IMPORT_DIAL_PALETTE.fullRgb, { keepWorstHigh: true }); }

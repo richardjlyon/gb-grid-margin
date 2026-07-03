@@ -74,7 +74,9 @@ REGISTRY: dict[str, dict] = {
         "label": "Reliability strip (settled, per half-hour)",
         "section": "reliability",
         "cadence": "settled",
-        "method_anchor": "reliability",
+        # The strip runs the verdict's own firm-share formula over the settled year; its full method is
+        # the verdict section (the standalone reliability-block section was retired with the old dial).
+        "method_anchor": "verdict",
         "feeds": [_ELEXON_FUELHH, _NESO_HISTORIC_DEMAND, _PV_LIVE],
         "basis": ("Reliable (firm) share of demand per half-hour, by the same parity-locked formula as "
                   "the live gauge (engine.grid_engine.compute_verdict), over the rolling 365 settled "

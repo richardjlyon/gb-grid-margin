@@ -25,7 +25,7 @@
       "label": "Reliability strip (settled, per half-hour)",
       "section": "reliability",
       "cadence": "settled",
-      "method_anchor": "reliability",
+      "method_anchor": "verdict",
       "feeds": [
         {
           "name": "Elexon FUELHH (settled)",

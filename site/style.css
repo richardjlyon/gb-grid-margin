@@ -546,6 +546,26 @@ main { padding-bottom: 40px; }
 /* extra bottom room so the legend's box-plot value markers clear the full-width carpet below */
 .import-full .carpet-legend { grid-column: auto; align-self: auto; margin: 4px 0 30px; }
 
+/* ---------- Entry 01 — reliability line (firm share, daily minimum) ---------- */
+/* No dial (the verdict gauge above already reads the live share): a full-width line of the daily
+   worst-half-hour firm share, banded green/amber/red, with the box-plot legend on top. The legend is
+   reset out of its old two-column grid placement so it sits full-width over the chart. */
+.reliability-line { margin-top: 6px; }
+/* clearance below the title so the legend's "now" caret doesn't ride up into it */
+.reliability-line .carpet-legend { grid-column: auto; align-self: auto; margin: 24px 0 30px; }
+/* full-bleed plot: the canvas spans the whole content column; the 0/1 ticks overlay the left edge
+   (0.5 is already marked by the alarm line) so no width is given up to a y-axis gutter. Its height
+   tracks --rel-strip-h (set by syncBlockHeights) so the strip matches the wind/solar/import carpets. */
+.rel-line-wrap { position: relative; width: 100%; }
+.rel-line-canvas { width: 100%; height: var(--rel-strip-h, 120px); display: block; }
+.rel-y { position: absolute; left: 3px; font: 500 11px var(--mono); color: var(--ink);
+  background: rgba(244, 245, 246, 0.7); padding: 0 3px; pointer-events: none; }
+.rel-y-top { top: 0; }
+.rel-y-bot { bottom: 0; }
+.rel-line-alarm-lab { position: absolute; top: 50%; left: 3px; transform: translateY(-50%);
+  font: 500 11px var(--mono); color: var(--red);
+  background: rgba(244, 245, 246, 0.82); padding: 0 4px; pointer-events: none; }
+
 /* Methodology — generated source cards (engine/methodology.py). One card per provenance unit,
    grouped by section. Scannable replacement for dense per-figure source prose. */
 .sources-at-a-glance { margin-top: 1.5rem; }
@@ -580,6 +600,9 @@ main { padding-bottom: 40px; }
 /* Front-page per-group footer: a bold sans "Going further:" label (left) shares the row with the
    right-aligned "Sources & method →"; the deeper-analysis page link(s) list single-spaced below. */
 .entry-foot { display: flex; align-items: baseline; margin: 1.1rem 0 0; font: 500 0.9rem/1.5 var(--display); }
+/* the "Interpreting the legend →" pointer sits on its own row directly above "Sources & method →",
+   both right-aligned; tighten the gap between the two rows so they read as a pair. */
+.entry-foot-legend + .entry-foot { margin-top: 0.15rem; }
 .entry-foot-going { font-family: var(--display); font-weight: 700; color: var(--ink); }
 .entry-foot-src { margin-left: auto; white-space: nowrap; color: var(--red); text-decoration-color: var(--rule); }
 .entry-foot-src:hover { text-decoration-color: var(--red); }
