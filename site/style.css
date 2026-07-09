@@ -156,21 +156,43 @@ a:hover { color: var(--red); }
 }
 .cond-cell[data-state="active"] .cond-legend { color: var(--cond-amber-ink); }
 .cond-cell[data-state="active"] .cond-status { color: #E8A13A; }
-/* in_force (official scarcity notice) — red, the only red on the panel; rapid pulse = urgent */
+/* in_force (official NESO scarcity notice) — the ONE red lamp on the panel, deliberately distinct
+   from the amber computed lamps beside it (WIND LULL / UNRELIABLE / HEAVY IMPORTS / OVERCAST). One
+   authoritative red for BOTH EMN and CMN; NESO does not rank the two. EMN vs CMN is told apart by
+   SHAPE, not colour (a severity tint was imperceptible at lamp scale): EMN is the filled dot, CMN a
+   hollow red ring. The status text ("EMN in force" / "CMN in force") still names which it is. The
+   dot is enlarged to 15px here (vs 11px elsewhere) with border-box so the filled-vs-ring difference
+   is legible. Steady glow (no pulse): a standing state, not a moment. Dark/unlit = no notice. */
 .cond-cell[data-state="in_force"] .cond-led {
-  background: var(--cond-red); box-shadow: 0 0 10px 2px rgba(214, 18, 31, .8), 0 0 0 1px #7d2228;
-  animation: cond-pulse-red .8s ease-in-out infinite;
+  width: 15px; height: 15px; box-sizing: border-box;
+  background: var(--cond-red); box-shadow: 0 0 11px 3px rgba(255, 81, 88, .8), 0 0 0 1px #7d2228;
+  animation: none;
+}
+.cond-cell[data-state="in_force"] .cond-legend { color: var(--cond-red); }
+.cond-cell[data-state="in_force"] .cond-status { color: var(--cond-red); }
+/* CMN — hollow red ring: same red, transparent centre (a ~5px hole inside a 5px-thick red border),
+   glow retained so it still reads as lit. EMN keeps the filled dot above. */
+.cond-cell[data-state="in_force"].scarcity-cmn .cond-led {
+  background: transparent;
+  border: 5px solid var(--cond-red);
+  box-shadow: 0 0 11px 3px rgba(255, 81, 88, .8);
+}
+/* RESERVED — brightest-red emergency tier for a future HRDR/DCI notice; a slow pulse is acceptable
+   here. Defined, never activated yet (no runtime code adds .sev-emergency). */
+.cond-cell[data-state="in_force"].sev-emergency .cond-led {
+  background: #ff2d34; box-shadow: 0 0 13px 4px rgba(255, 45, 52, .9), 0 0 0 1px #7d2228;
+  animation: cond-pulse-red-slow 2.4s ease-in-out infinite;
+}
+.cond-cell[data-state="in_force"].sev-emergency .cond-legend,
+.cond-cell[data-state="in_force"].sev-emergency .cond-status { color: var(--cond-red); }
+@keyframes cond-pulse-red-slow {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(255, 45, 52, .5), 0 0 0 1px #7d2228; }
+  50%      { box-shadow: 0 0 16px 5px rgba(255, 45, 52, 1), 0 0 0 1px #7d2228; }
 }
 @keyframes cond-pulse-amber {
   0%, 100% { opacity: .5; box-shadow: 0 0 3px 1px rgba(255, 179, 71, .25), 0 0 0 1px #6b4e1c; }
   50%      { opacity: 1; box-shadow: 0 0 15px 4px rgba(255, 179, 71, 1), 0 0 0 1px #6b4e1c; }
 }
-@keyframes cond-pulse-red {
-  0%, 100% { box-shadow: 0 0 5px 1px rgba(214, 18, 31, .45), 0 0 0 1px #7d2228; }
-  50%      { box-shadow: 0 0 15px 4px rgba(214, 18, 31, 1), 0 0 0 1px #7d2228; }
-}
-.cond-cell[data-state="in_force"] .cond-legend { color: #f0a9ad; }
-.cond-cell[data-state="in_force"] .cond-status { color: var(--cond-red); }
 /* unavailable — dim, no accent */
 .cond-cell[data-state="unavailable"] .cond-status { color: #9398a0; font-style: italic; }
 @media (max-width: 720px) {

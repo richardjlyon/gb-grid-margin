@@ -37,7 +37,7 @@ _ELEXON_FUELHH = {"name": "Elexon FUELHH (settled)",
                   "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELHH"}
 _ELEXON_SYSPRICE = {"name": "Elexon system (cash-out) price",
                     "url": "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/system-prices"}
-_ELEXON_SYSWARN = {"name": "Elexon SYSWARN (active notices)",
+_ELEXON_SYSWARN = {"name": "Elexon SYSWARN (system warnings)",
                    "url": "https://data.elexon.co.uk/bmrs/api/v1/system/warnings"}
 _NESO_EMBEDDED_FORECAST = {"name": "NESO embedded wind & solar forecast",
                            "url": "https://www.neso.energy/data-portal/embedded-wind-and-solar-forecasts"}
@@ -198,10 +198,10 @@ REGISTRY: dict[str, dict] = {
         "cadence": "live",
         "method_anchor": "warnings",
         "feeds": [_ELEXON_SYSWARN],
-        "basis": ("Red while NESO has at least one active margin notice on Elexon SYSWARN. Three-tier "
-                  "scarcity ladder, most to least severe: NISM (Notice of Insufficient System Margin), "
-                  "EMN (Electricity Margin Notice), CMN (Capacity Market Notice). The only authoritative "
-                  "lamp."),
+        "basis": ("Red while a NESO margin notice is in force. Two-rung scarcity ladder, most to least "
+                  "severe: EMN (Electricity Margin Notice), CMN (Capacity Market Notice). NESO notices "
+                  "via the Elexon SYSWARN feed; in-force state derived by Grid Margin. The only "
+                  "authoritative lamp."),
         "caveats": [
             "A margin notice means the buffer is thin — the operator asking the market for more with "
             "hours of warning — not that the lights are going out.",

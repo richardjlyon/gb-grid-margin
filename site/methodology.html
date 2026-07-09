@@ -158,8 +158,8 @@
     </article>
     <article class="source-card" data-unit="warnings" id="src-warnings">
       <div class="source-card__head"><h3>SCARCITY NOTICE — operational warnings (live)</h3><span class="cadence cadence--live">live</span></div>
-      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings" rel="noopener">Elexon SYSWARN (active notices)</a></p>
-      <p class="source-card__basis"><span class="k">Basis</span> Red while NESO has at least one active margin notice on Elexon SYSWARN. Three-tier scarcity ladder, most to least severe: NISM (Notice of Insufficient System Margin), EMN (Electricity Margin Notice), CMN (Capacity Market Notice). The only authoritative lamp.</p>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings" rel="noopener">Elexon SYSWARN (system warnings)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Red while a NESO margin notice is in force. Two-rung scarcity ladder, most to least severe: EMN (Electricity Margin Notice), CMN (Capacity Market Notice). NESO notices via the Elexon SYSWARN feed; in-force state derived by Grid Margin. The only authoritative lamp.</p>
       <ul class="source-card__caveats"><li>A margin notice means the buffer is thin — the operator asking the market for more with hours of warning — not that the lights are going out.</li></ul>
       <p class="source-card__more"><a href="#warnings">→ full method</a></p>
     </article>
@@ -461,7 +461,7 @@
             <p class="meta">
                 Sources: Elexon FUELINST + NESO embedded (live wind CF, solar
                 CF, firm share, net imports) &#247; DUKES nameplate &amp; DESNZ
-                interconnector capacity · Elexon SYSWARN (active notices, live)
+                interconnector capacity · Elexon SYSWARN (system warnings, live)
                 · cadence: all lamps live, ~5 min
             </p>
             <p>
@@ -562,12 +562,12 @@
                     export hour is a negative share and never trips.
                 </li>
                 <li>
-                    <strong>SCARCITY NOTICE.</strong> Red when Elexon SYSWARN
-                    carries at least one active margin notice. This is the
+                    <strong>SCARCITY NOTICE.</strong> Red when a NESO margin
+                    notice is in force. This is the
                     <strong>only authoritative lamp</strong> and the only one
                     exempt from the usual-half rule &#8212; it is a NESO notice,
-                    not a computed band. The three-tier ladder (NISM &#8594; EMN
-                    &#8594; CMN) is described in the
+                    not a computed band. The two-rung ladder (EMN &#8594; CMN)
+                    is described in the
                     <a href="#warnings">Operational warnings</a> section. The
                     lamp is dormant when no notice is in force.
                 </li>
@@ -588,20 +588,19 @@
                 <a href="https://data.elexon.co.uk/bmrs/api/v1/system/warnings"
                     >Elexon SYSWARN</a
                 >
-                (active-only feed) · live in the browser · cadence: polled, ~5
-                min
+                — NESO notices; in-force state derived by Grid Margin · live in
+                the browser · cadence: polled, ~5 min
             </p>
             <p>
                 When the system operator is worried about margin, it says so on
                 the record. We surface those notices and nothing else — counted
-                and contextualised, never catastrophised. Three notice types
+                and contextualised, never catastrophised. Two notice types
                 form a <strong>scarcity ladder</strong>, shown here most to
                 least severe:
             </p>
             <p class="formula">
-                NISM — Notice of Insufficient System Margin (most severe) EMN —
-                Electricity Margin Notice CMN — Capacity Market Notice (least
-                severe)
+                EMN — Electricity Margin Notice (more severe) CMN — Capacity
+                Market Notice (less severe)
             </p>
             <p>
                 The <strong>SCARCITY NOTICE</strong> lamp in the GRID WARNINGS

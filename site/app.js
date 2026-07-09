@@ -7,7 +7,7 @@
 // its baked source line. Pure maths lives in render.js (unit-tested).
 import { resolveState } from './live.js';
 import { resolveWarnings } from './warnings.js';
-import { windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcityLamp } from './conditions.js';
+import { windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcityLamp, scarcityShapeClass } from './conditions.js';
 import {
   gaugeNeedleAngle, firmStatus, sourceArcModel, COL_EXPORT,
   fmtGW, fmtMW,
@@ -983,6 +983,10 @@ async function updateScarcityLamp() {
     l = { state: 'unavailable' };
   }
   setLamp('cond-scarcity', l.state, _scarcityStatus(l), `Scarcity notice — ${_scarcityStatus(l).replace(/<[^>]+>/g, '')}`);
+  // EMN vs CMN told apart by SHAPE, not colour: EMN keeps the filled red dot, CMN becomes a hollow
+  // red ring. Driven by a runtime class so the bot-generated index.html is never hand-edited.
+  const el = $('cond-scarcity');
+  if (el) el.classList.toggle('scarcity-cmn', l.state === 'in_force' && scarcityShapeClass(l.type) === 'scarcity-cmn');
 }
 
 // ============================================================ shared years×day-of-year carpet drawer

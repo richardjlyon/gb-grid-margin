@@ -1,6 +1,6 @@
 [project]
 name = "grid-gauge"
-version = "0.1.0"
+version = "0.2.0"
 description = "Live GB grid mix verdict — every figure traces to Elexon/NESO."
 requires-python = ">=3.13"
 dependencies = [

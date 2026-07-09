@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcityLamp,
+  windLullLamp, firmMajorityLamp, heavyImportsLamp, overcastLamp, scarcityLamp, scarcityShapeClass,
 } from './conditions.js';
 
 // SITE POLICY: a lamp goes amber when the live reading leaves the "usual half" (the IQR box,
@@ -85,4 +85,23 @@ test('scarcityLamp — maps warning states', () => {
 });
 test('scarcityLamp — malformed object with no status', () => {
   assert.equal(scarcityLamp({}).state, 'unavailable');
+});
+// One authoritative red for both notices: EMN and CMN both resolve to the same in_force red state;
+// the type/label flows through to the status text so the reader still sees which notice it is.
+test('scarcityLamp — EMN and CMN both light the same in_force red, carrying their own type/label', () => {
+  const emn = scarcityLamp({ status: 'in_force', type: 'EMN', typeLabel: 'Electricity Margin Notice' });
+  assert.equal(emn.state, 'in_force');
+  assert.equal(emn.type, 'EMN');
+  assert.equal(emn.label, 'Electricity Margin Notice');
+  const cmn = scarcityLamp({ status: 'in_force', type: 'CMN', typeLabel: 'Capacity Market Notice' });
+  assert.equal(cmn.state, 'in_force');
+  assert.equal(cmn.type, 'CMN');
+  assert.equal(cmn.label, 'Capacity Market Notice');
+});
+// Same red, distinguished by SHAPE: EMN is the filled dot (no extra class), CMN the hollow ring.
+test('scarcityShapeClass — CMN gets the hollow-ring class, EMN (and anything else) stays filled', () => {
+  assert.equal(scarcityShapeClass('CMN'), 'scarcity-cmn');
+  assert.equal(scarcityShapeClass('EMN'), '');
+  assert.equal(scarcityShapeClass(undefined), '');
+  assert.equal(scarcityShapeClass('HRDR'), '');
 });

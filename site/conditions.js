@@ -53,8 +53,17 @@ export function overcastLamp(cfNow, cell) {
   return { state: cfNow < p25 ? 'active' : 'nominal', cfNow, clearFrac };
 }
 
-// The official guest. Active state is 'in_force' (red), all-clear is 'clear'. Mirrors resolveWarnings().
-// The usual-half rule does NOT apply: this is the authoritative NESO SYSWARN notice, not a computed band.
+// Both notices share the one authoritative red; EMN vs CMN is told apart by SHAPE, not colour. EMN
+// (the headline) is the default filled dot; CMN is a hollow red ring. Returns the CSS class to add
+// for the ring form, or '' for the filled default. Colour-intensity distinction was imperceptible at
+// lamp scale — shape is legible.
+export function scarcityShapeClass(type) {
+  return type === 'CMN' ? 'scarcity-cmn' : '';
+}
+
+// The official guest. Active state is 'in_force' (one authoritative red for both EMN and CMN — the
+// status text names which notice it is), all-clear is 'clear'. Mirrors resolveWarnings(). The
+// usual-half rule does NOT apply: this is the authoritative NESO SYSWARN notice, not a computed band.
 export function scarcityLamp(warn) {
   if (!warn || !warn.status || warn.status === 'unavailable') return { state: 'unavailable' };
   if (warn.status === 'in_force') return { state: 'in_force', type: warn.type, label: warn.typeLabel };

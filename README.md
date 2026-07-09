@@ -83,6 +83,22 @@ capacity trap, and wind unreliability — on the live and settled layers, with a
 page. The settled layer refreshes daily via a scheduled job that appends newly-settled half-hours,
 rebuilds the derived series, and publishes. Open methodology decisions are tracked in `engine/NOTES.md`.
 
+## Changelog
+
+### 0.2.0 — 2026-07-09
+
+- Operational-warnings scarcity ladder corrected: removed the obsolete NISM (Notice of
+  Insufficient System Margin) tier — National Grid retired it in 2016; it was the Electricity
+  Margin Notice's predecessor, not a separate or more-severe notice.
+- Live scarcity lamp fixed to query the Elexon SYSWARN feed by warning type, so an in-force
+  EMN/CMN is detected reliably rather than only when it happens to be the most recent notice of
+  any type.
+- Scarcity lamp shows a steady authoritative red while an EMN or CMN is in force (the rapid
+  pulse dropped), kept distinct from the amber computed lamps; which notice it is appears in the
+  label text and the dot shape — EMN a filled dot, CMN a hollow ring. A hotter red is reserved
+  for the future HRDR/DCI emergency tier.
+- Corrected the methodology wording that described the SYSWARN feed as "active-only".
+
 ## Licence
 
 - **Code** — [MIT](LICENSE). Use it freely.
