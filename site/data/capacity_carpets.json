@@ -4,7 +4,7 @@
   "seam_note": "The live gauge reads NESO's embedded FORECAST; the carpets read settled OUTTURN, ~3 weeks behind \u2014 the same measures, a forecast-vs-settlement seam.",
   "source_wind": "Elexon FUELHH (settled) + NESO embedded wind / DUKES 6.2 wind nameplate (annual-step)",
   "source_solar": "NESO embedded solar / NESO embedded-solar capacity (settled outturn)",
-  "generated_utc": "2026-07-08T08:38:20.201305+00:00",
+  "generated_utc": "2026-07-09T09:55:38.288070+00:00",
   "window": "rolling_365d",
   "range": {
     "from": "2025-05-28",
