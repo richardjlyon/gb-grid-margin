@@ -1,0 +1,23 @@
+#!/bin/sh
+# pre-commit — refuse to commit bot-owned generated files from a local machine.
+# The daily "Refresh settled data" Action is the sole author of these paths; committing
+# them locally is what makes rebases conflict. Keep local commits to source only.
+# (The Action sets CI=true, so it is never affected. Bypass once: git commit --no-verify.)
+
+[ -n "$CI" ] && exit 0
+
+# Exactly the paths the refresh-data.yml bot stages.
+generated='^(data/history/|site/data/|site/share/|site/s/|site/index\.html$)'
+
+clash=$(git diff --cached --name-only | grep -E "$generated")
+if [ -n "$clash" ]; then
+  echo ""
+  echo "pre-commit BLOCKED: these are bot-owned generated files (authored by the daily Action):"
+  printf '    %s\n' $clash
+  echo "Unstage them and commit only source:"
+  echo "    git restore --staged <path>"
+  echo "  bypass once:  git commit --no-verify"
+  echo ""
+  exit 1
+fi
+exit 0

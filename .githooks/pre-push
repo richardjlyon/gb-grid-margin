@@ -1,0 +1,29 @@
+#!/bin/sh
+# pre-push — guard against forking history away from the daily data bot.
+#
+# These repos have a scheduled GitHub Action that commits generated data to this
+# branch and pushes; that push IS the daily Vercel release. If your local branch
+# is behind the remote when you push, you fork history (the divergence you hit).
+# This hook blocks that early and tells you the one-command fix. It does NOT rebase
+# for you — mutating refs inside pre-push is unreliable; use `git up` (see setup).
+#
+# Bypass once with:  git push --no-verify
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+remote=$(git config "branch.$branch.remote" 2>/dev/null || echo origin)
+
+# Offline / no upstream → don't block.
+git fetch -q "$remote" "$branch" 2>/dev/null || exit 0
+
+behind=$(git rev-list --count "HEAD..$remote/$branch" 2>/dev/null || echo 0)
+if [ "${behind:-0}" -gt 0 ]; then
+  echo ""
+  echo "pre-push BLOCKED: local '$branch' is $behind commit(s) behind $remote (the data bot pushed)."
+  echo "Sync first — it rebases your commits on top of the bot's data:"
+  echo "    git up            # = git pull --rebase --autostash && git push"
+  echo "  or manually:  git pull   (pull.rebase=true is configured)  then push"
+  echo "  bypass once:  git push --no-verify"
+  echo ""
+  exit 1
+fi
+exit 0

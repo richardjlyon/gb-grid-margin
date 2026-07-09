@@ -1,0 +1,13 @@
+#!/bin/sh
+# setup — run once per clone to activate the hooks and the rebase-on-pull policy
+# that keep local work atop the daily data bot. Safe to re-run.
+#
+#   sh .githooks/setup
+#
+cd "$(git rev-parse --show-toplevel)" || exit 1
+git config core.hooksPath .githooks
+git config pull.rebase true
+git config rebase.autoStash true
+git config alias.up '!git pull --rebase --autostash && git push'
+echo "activated: core.hooksPath=.githooks | pull.rebase=true | rebase.autoStash=true"
+echo "new alias: 'git up' = git pull --rebase --autostash && git push"
