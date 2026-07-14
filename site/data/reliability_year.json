@@ -7,7 +7,7 @@
     "The live gauge reads NESO's embedded forecast; this settled series reads NESO's embedded outturn estimate (same owner, sibling product) and lags ~21 days, so it ends before today \u2014 the live 'now' caret is not part of the settled series.",
     "The reliable share can read above 100% on net-export half-hours, because firm generation exceeded GB demand and the surplus was exported. This is faithful to the live gauge, not an error."
   ],
-  "generated_utc": "2026-07-13T09:38:38.902266+00:00",
+  "generated_utc": "2026-07-14T08:18:53.052834+00:00",
   "start_utc": "2025-05-28T22:30:00Z",
   "step_minutes": 30,
   "values": [
