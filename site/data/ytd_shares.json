@@ -1,7 +1,7 @@
 {
   "basis": "Transmission-system mix: settled FUELHH generation + net interconnector flow over transmission supply. Pumped-storage round-trip and embedded solar/wind are both excluded. This is NOT the live national-demand verdict and must not be compared to it: embedded solar is netted off national demand and cannot appear in a settled-data transmission share. Source: Elexon FUELHH (settled).",
   "source": "Elexon FUELHH (settled)",
-  "generated_utc": "2026-07-20T09:26:22.201876+00:00",
+  "generated_utc": "2026-07-21T08:38:11.452992+00:00",
   "no_solar_note": "Embedded solar is netted off national demand and absent from settled FUELHH; it cannot appear in a settled-data transmission share.",
   "signed_imports_note": "net_imports is a signed net flow: a net-export year is negative (e.g. 2022). Shares still sum to 100% but a pie/stacked chart must render net interconnectors as a signed bar, not a wedge.",
   "latest_year": 2026,
@@ -130,14 +130,14 @@
       "partial": false
     },
     "2026": {
-      "supply_mwh": 128743851.0,
+      "supply_mwh": 129322966.5,
       "shares_pct": {
-        "wind": 31.63,
-        "gas": 30.88,
+        "wind": 31.54,
+        "gas": 30.96,
         "nuclear": 13.8,
-        "biomass": 7.9,
-        "other": 4.07,
-        "net_imports": 11.72
+        "biomass": 7.91,
+        "other": 4.08,
+        "net_imports": 11.71
       },
       "partial": true
     }
