@@ -12,10 +12,10 @@
     {
       "slug": "recent-lull",
       "figure": "3 days",
-      "label": "the most recent wind lull \u2014 12\u201314 Oct 2025, when wind fell as low as 3.9% of capacity. Britain has had 45 such spells since 2016.",
+      "label": "the most recent wind lull \u2014 8\u201310 Jul 2026, when wind fell as low as 7.3% of capacity. Britain has had 46 such spells since 2016.",
       "kind": "settled",
-      "version": "4d9a93ffa6",
-      "png": "/share/recent-lull.png?v=4d9a93ffa6"
+      "version": "41940ff21f",
+      "png": "/share/recent-lull.png?v=41940ff21f"
     }
   ]
 }
