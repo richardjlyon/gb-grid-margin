@@ -182,3 +182,21 @@ def test_render_writes_1200x630_pngs(tmp_path):
         p = tmp_path / f"{slug}.png"
         assert p.exists() and p.stat().st_size > 0
         assert _png_size(p) == (1200, 630)
+
+
+def test_stamp_index_og_survives_formatter_reflow(tmp_path):
+    """Regression (Aug 2026): a formatter reflowed the og:image <meta> to multi-line
+    attributes and the tag-shaped regex stopped matching — four days of frozen cards.
+    The stamp must match the hero URL itself, in any tag formatting, old stamp or none."""
+    multi = (tmp_path / "index.html")
+    multi.write_text(
+        '<meta\n    property="og:image"\n'
+        f'    content="{sharecards.SITE_URL}/share/hero.png?v=oldtoken"\n/>\n')
+    sharecards.stamp_index_og(multi, "newtoken")
+    assert f'{sharecards.SITE_URL}/share/hero.png?v=newtoken' in multi.read_text()
+    assert "oldtoken" not in multi.read_text()
+
+    none = (tmp_path / "none.html")
+    none.write_text("<meta property='og:title' content='x'>")
+    with pytest.raises(ValueError, match="found 0"):
+        sharecards.stamp_index_og(none, "tok")

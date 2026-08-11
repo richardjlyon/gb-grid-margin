@@ -372,9 +372,12 @@ def render(cards: list[dict], out_dir: Path | str) -> None:
 def stamp_index_og(index_path: Path | str, version: str) -> None:
     """Stamp the homepage og:image (the evergreen hero) with the content-hash token."""
     index = Path(index_path)
+    # Match the URL itself, not the tag markup around it: a formatter reflowing the
+    # <meta> to multi-line attributes broke the tag-shaped regex (Aug 2026, four days
+    # of frozen share cards). The one-occurrence guard below still catches drift.
     base = f"{SITE_URL}/share/hero.png"
-    pattern = re.compile(rf'(<meta property="og:image" content="){re.escape(base)}(?:\?[^"]*)?(">)')
-    html, n = pattern.subn(rf'\g<1>{base}?v={version}\g<2>', index.read_text())
+    pattern = re.compile(rf'{re.escape(base)}(?:\?[^"]*)?')
+    html, n = pattern.subn(f'{base}?v={version}', index.read_text())
     if n != 1:
         raise ValueError(f"expected exactly one hero og:image in {index}, found {n}")
     index.write_text(html)

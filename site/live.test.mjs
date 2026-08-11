@@ -21,7 +21,10 @@ const nesoBody = () => ({
     EMBEDDED_SOLAR_CAPACITY: 22000, EMBEDDED_WIND_CAPACITY: 6400,
   }] },
 });
-const demandBody = (mw = 17500) => ({ data: [{ initialDemandOutturn: mw }] });
+// startTime 13:15 → period midpoint 13:30 == SNAP, so the recon evaluates at the
+// same bucket/row as the published verdict (like-for-like, zero ramp skew).
+const demandBody = (mw = 17500, startTime = '2026-06-25T13:15:00Z') =>
+  ({ data: [{ startTime, initialDemandOutturn: mw }] });
 
 // A well-formed latest.json with an OLDER snapshot than the live one (so H1 won't trip).
 const latestJson = (over = {}) => ({
@@ -102,6 +105,31 @@ test('M1: a genuine INDO reconcile breach falls back', async () => {
   const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), demand: demandBody(40000), latest: latestJson() });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'fallback');
+});
+
+// Regression (morning-ramp false alarm, Aug 2026): an INDO period that cannot be
+// time-aligned with the feed data must DEGRADE the check, never breach — comparing
+// "now" against a lagged reference tripped the guard every steep morning ramp.
+test('INDO period misaligned with feed data stays LIVE with a degraded note', async () => {
+  const httpGet = makeHttpGet({
+    fuel: fuelBody(), neso: nesoBody(),
+    demand: demandBody(40000, '2026-06-25T10:00:00Z'), // 3h before any bucket
+    latest: latestJson(),
+  });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'live');
+  assert.match(s.reconcileNote, /unavailable/);
+});
+
+test('INDO row without a parseable startTime stays LIVE with a degraded note', async () => {
+  const httpGet = makeHttpGet({
+    fuel: fuelBody(), neso: nesoBody(),
+    demand: { data: [{ initialDemandOutturn: 40000 }] },
+    latest: latestJson(),
+  });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'live');
+  assert.match(s.reconcileNote, /unavailable/);
 });
 
 // Regression (reconcile-guard-export-bug): on an export night the reconcile must use INDO

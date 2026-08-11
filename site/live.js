@@ -6,7 +6,8 @@
 // fallback on one screen, and never shows a number it cannot stand behind. The decision
 // logic takes an injectable httpGet so it can be unit-tested without a network or DOM.
 import {
-  computeVerdict, latestSnapshot, validateSnapshot, embeddedInWindow, capacityTrap, roundHalfEven1,
+  computeVerdict, latestSnapshot, snapshotAt, validateSnapshot, embeddedInWindow, capacityTrap,
+  roundHalfEven1,
 } from './verdict.js';
 
 const ELEXON = 'https://data.elexon.co.uk/bmrs/api/v1';
@@ -143,23 +144,37 @@ async function tryLive(faults, clockNow, httpGet) {
   if (!validateSnapshot(mix, verdict.national_demand_mw)) throw { reason: 'incomplete FUELINST snapshot', feeds };
   if (!embeddedInWindow(embedded.time, snapshot)) throw { reason: 'embedded estimate out of window', feeds };
 
-  // INDO (national demand) reconcile tripwire — only a finite, positive reference can breach;
-  // otherwise degrade. INDO, not ITSDO: ITSDO adds interconnector exports + station load + PS
-  // pumping as demand, so it diverged from this national-demand reconstruction by the export
-  // volume on an export night and false-alarmed. PARITY-LOCKED with grid_engine.sanity_check.
+  // INDO (national demand) reconcile tripwire — only a finite, positive, TIME-ALIGNED
+  // reference can breach; otherwise degrade. INDO lags real time by ~30-60 min, so the
+  // reconstruction is re-evaluated at the INDO period's midpoint from the same feed
+  // bodies — comparing "now" against a lagged reference breached every steep morning
+  // ramp. INDO, not ITSDO: ITSDO adds interconnector exports + station load + PS
+  // pumping as demand, so it diverged from this national-demand reconstruction by the
+  // export volume on an export night and false-alarmed. PARITY-LOCKED with
+  // grid_engine.sanity_check.
   let reconcileNote = '';
   const rows = demand.status === 'fulfilled' ? demand.value.body?.data : null;
   const lastWithIndo = Array.isArray(rows)
     ? [...rows].reverse().find((r) => Number.isFinite(r?.initialDemandOutturn)) : null;
-  const indoMw = lastWithIndo ? lastWithIndo.initialDemandOutturn : null;
-  const expected = Number.isFinite(indoMw) ? indoMw + embedded.solar_mw + embedded.wind_mw : null;
-  if (expected != null && expected > 0) {
-    if (Math.abs(verdict.national_demand_mw - expected) / expected > RECONCILE_TOL) {
-      throw { reason: 'INDO reconciliation breached', feeds };
+  const indoStartMs = lastWithIndo ? Date.parse(lastWithIndo.startTime) : NaN;
+  let reconciled = false;
+  if (lastWithIndo && Number.isFinite(indoStartMs)) {
+    const midMs = indoStartMs + 15 * 60 * 1000;
+    const midIso = isoMinZ(new Date(midMs));
+    const recon = snapshotAt(fuel.value.body, midMs);
+    const reconEmb = pickEmbedded(neso.value.body.result.records, midMs);
+    if (embeddedInWindow(recon.snapshot, midIso) && embeddedInWindow(reconEmb.time, midIso)) {
+      const expected = lastWithIndo.initialDemandOutturn + reconEmb.solar_mw + reconEmb.wind_mw;
+      if (expected > 0) {
+        reconciled = true;
+        const reconDemand = computeVerdict(recon.mix, reconEmb).national_demand_mw;
+        if (Math.abs(reconDemand - expected) / expected > RECONCILE_TOL) {
+          throw { reason: 'INDO reconciliation breached', feeds };
+        }
+      }
     }
-  } else {
-    reconcileNote = 'reconciliation check unavailable';
   }
+  if (!reconciled) reconcileNote = 'reconciliation check unavailable';
 
   return { verdict, capacity: capacityTrap(verdict, embedded), snapshot, feeds, reconcileNote };
 }

@@ -8,15 +8,21 @@ from datetime import datetime
 import pytest
 
 from engine import build_site, grid_engine
-from engine.models import FuelInstRecord
+from engine.models import EmbeddedRow, FuelInstRecord
 
 SNAP = "2026-06-25T13:30:00Z"
 MIX = {"CCGT": 6000, "WIND": 5000, "NUCLEAR": 3000, "BIOMASS": 2000,
        "INTFR": 1500, "OTHER": 500}
 EMBEDDED = {"solar_mw": 8000, "wind_mw": 1000, "solar_capacity_mw": 22000,
             "wind_capacity_mw": 6400, "time": "2026-06-25T13:30Z"}
+EMBEDDED_ROWS = [EmbeddedRow.model_validate({
+    "DATE_GMT": "2026-06-25T00:00:00", "TIME_GMT": "13:30",
+    "EMBEDDED_SOLAR_FORECAST": 8000, "EMBEDDED_WIND_FORECAST": 1000,
+    "EMBEDDED_SOLAR_CAPACITY": 22000, "EMBEDDED_WIND_CAPACITY": 6400,
+})]
 PVLIVE = {"solar_mw": 8200, "time": SNAP}   # within 10% of embedded solar
 INDO = 18000                                 # indo + embedded(9000) == demand(27000)
+INDO_START = "2026-06-25T13:15:00Z"          # midpoint 13:30 == SNAP → aligned recon
 
 
 @pytest.fixture
@@ -24,9 +30,9 @@ def patched(monkeypatch):
     records = [FuelInstRecord.model_validate(
         {"startTime": SNAP, "fuelType": k, "generation": v}) for k, v in MIX.items()]
     monkeypatch.setattr(grid_engine, "fetch_fuelinst", lambda: records)
-    monkeypatch.setattr(grid_engine, "fetch_embedded_neso", lambda: dict(EMBEDDED))
+    monkeypatch.setattr(grid_engine, "fetch_embedded_rows", lambda: list(EMBEDDED_ROWS))
     monkeypatch.setattr(grid_engine, "fetch_pvlive_solar", lambda: dict(PVLIVE))
-    monkeypatch.setattr(grid_engine, "fetch_indo", lambda: INDO)
+    monkeypatch.setattr(grid_engine, "fetch_indo", lambda: (INDO, INDO_START))
 
 
 def test_build_writes_payload_with_full_provenance(patched, tmp_path):

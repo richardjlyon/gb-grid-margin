@@ -243,9 +243,10 @@ def build(target: Path = LATEST_JSON) -> int:
     try:
         records = grid_engine.fetch_fuelinst()
         snapshot, mix = grid_engine.latest_snapshot(records)
-        embedded = grid_engine.fetch_embedded_neso()
+        embedded_rows = grid_engine.fetch_embedded_rows()
+        embedded = grid_engine.pick_embedded(embedded_rows, datetime.now(timezone.utc))
         pvlive = grid_engine.fetch_pvlive_solar()
-        indo = grid_engine.fetch_indo()
+        indo, indo_start = grid_engine.fetch_indo()
 
         verdict = compute_verdict(mix, embedded)
         verdict["snapshot"] = snapshot
@@ -254,7 +255,10 @@ def build(target: Path = LATEST_JSON) -> int:
             raise RuntimeError("incomplete FUELINST snapshot — refusing to publish")
         if not embedded_in_window(embedded["time"], snapshot):
             raise RuntimeError("embedded estimate outside the freshness window")
-        grid_engine.sanity_check(verdict, pvlive["solar_mw"], indo, embedded)
+        neso_solar, recon_demand, recon_embedded = grid_engine.aligned_refs(
+            records, embedded_rows, pvlive["time"], indo_start)
+        grid_engine.sanity_check(
+            verdict, pvlive["solar_mw"], neso_solar, indo, recon_demand, recon_embedded)
     except Exception as e:  # any failure must leave the good fallback untouched
         print(f"build failed ({type(e).__name__}): {e}", file=sys.stderr)
         return 1

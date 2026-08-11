@@ -103,6 +103,24 @@ export function latestSnapshot(records) {
   return { snapshot: latest, mix };
 }
 
+// Collapse FUELINST records to the 5-minute bucket nearest anchorMs: {snapshot, mix}.
+// Mirrors engine/grid_engine.snapshot_at — the reconciliation guard on both sides
+// reconstructs demand at the reference's own time, not at "now".
+export function snapshotAt(records, anchorMs) {
+  if (!records || records.length === 0) {
+    throw new Error('FUELINST returned no records');
+  }
+  let nearest = records[0].startTime;
+  let bestDiff = Math.abs(Date.parse(nearest) - anchorMs);
+  for (const r of records) {
+    const diff = Math.abs(Date.parse(r.startTime) - anchorMs);
+    if (diff < bestDiff) { bestDiff = diff; nearest = r.startTime; }
+  }
+  const mix = {};
+  for (const r of records) if (r.startTime === nearest) mix[r.fuelType] = r.generation;
+  return { snapshot: nearest, mix };
+}
+
 // True only if the FUELINST bucket looks complete (not a partial publish).
 export function validateSnapshot(mix, demand) {
   for (const f of REQUIRED_FUELS) if (!has(mix, f)) return false;
