@@ -3,10 +3,10 @@
   "source": "Elexon FUELHH net interconnector flow \u00d7 Elexon system (cash-out) price, settled, back to 2016",
   "metric_label": "net imported energy valued at the GB system price",
   "caveat": "Net imported energy valued at the GB system (cash-out) price \u2014 not the contractual cost of the imports, which clear in the day-ahead auction.",
-  "generated_utc": "2026-08-13T07:42:20.829429+00:00",
+  "generated_utc": "2026-08-14T07:40:16.513387+00:00",
   "range": {
     "first": "2016-01-01",
-    "last": "2026-08-08"
+    "last": "2026-08-09"
   },
   "partial_years": [
     2026
@@ -23,10 +23,10 @@
   "distribution": {
     "p10": 688072.0,
     "p25": 1895458.4,
-    "p50": 3196117.8,
-    "p75": 6979693.4,
+    "p50": 3197610.7,
+    "p75": 6980128.7,
     "p90": 10935288.4,
-    "mean": 4859219.0
+    "mean": 4859816.5
   },
   "carpet": {
     "years": [
@@ -4313,7 +4313,7 @@
         9792280.3,
         4368238.7,
         2590682.0,
-        null,
+        7173817.3,
         null,
         null,
         null,
@@ -4511,8 +4511,8 @@
       "2023": 2658141582.8,
       "2024": 2567642834.3,
       "2025": 2645874927.1,
-      "2026": 1874274932.7
+      "2026": 1881448750.0
     },
-    "year_to_date": 1874274932.7
+    "year_to_date": 1881448750.0
   }
 }
