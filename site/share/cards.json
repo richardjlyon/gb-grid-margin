@@ -1,21 +1,21 @@
 {
-  "asof": "20 August 2026",
+  "asof": "22 August 2026",
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "63%",
-      "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
+      "figure": "62%",
+      "label": "of Britain's grid depended on weather and imports \u2014 wind, solar and interconnectors that fall away together.",
       "kind": "live",
-      "version": "6c278b4830",
-      "png": "/share/live-balance.png?v=6c278b4830"
+      "version": "a719628cc6",
+      "png": "/share/live-balance.png?v=a719628cc6"
     },
     {
       "slug": "recent-lull",
       "figure": "3 days",
       "label": "the most recent wind lull \u2014 8\u201310 Jul 2026, when wind fell as low as 7.3% of capacity. Britain has had 46 such spells since 2016.",
       "kind": "settled",
-      "version": "3b13d6da58",
-      "png": "/share/recent-lull.png?v=3b13d6da58"
+      "version": "41940ff21f",
+      "png": "/share/recent-lull.png?v=41940ff21f"
     }
   ]
 }
