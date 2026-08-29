@@ -1,13 +1,13 @@
 {
-  "asof": "26 August 2026",
+  "asof": "29 August 2026",
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "56%",
+      "figure": "48%",
       "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
       "kind": "live",
-      "version": "18c1c89cfe",
-      "png": "/share/live-balance.png?v=18c1c89cfe"
+      "version": "7297d20489",
+      "png": "/share/live-balance.png?v=7297d20489"
     },
     {
       "slug": "recent-lull",
