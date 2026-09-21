@@ -2,8 +2,8 @@
   "basis": "Per (week-of-year, settlement-period) cell: the empirical distribution of half-hourly solar capacity factor (embedded solar / NESO embedded-solar capacity) over the whole record, pooled across a +/-1-week window. p25 = the relative overcast line (live CF below it = the cloudiest quarter for this slot); ceiling = P95 of the cell, a robust clear-sky reference (not the raw max). The OVERCAST lamp trips below p25 and reads live CF / ceiling as '% of a clear day'. Night / low-sun cells (ceiling <= 0.05) are null \u2014 a daytime-only instrument. Entirely empirical; no clear-sky physics model.",
   "source": "NESO embedded solar / NESO embedded-solar capacity (settled outturn, whole record)",
   "seam_note": "The live lamp reads NESO's embedded FORECAST capacity factor; this grid is settled OUTTURN \u2014 the same measure, a forecast-vs-settlement seam.",
-  "generated_utc": "2026-09-20T11:03:14.140431+00:00",
-  "rows": 186766,
+  "generated_utc": "2026-09-21T12:30:11.910523+00:00",
+  "rows": 186814,
   "weeks": 52,
   "periods": 48,
   "day_floor": 0.05,
@@ -3992,11 +3992,11 @@
       null,
       null,
       [
-        0.0302,
+        0.0301,
         0.077
       ],
       [
-        0.0572,
+        0.0566,
         0.1295
       ],
       [
@@ -4004,59 +4004,59 @@
         0.1883
       ],
       [
-        0.129,
+        0.1284,
         0.2564
       ],
       [
-        0.1647,
+        0.1627,
         0.3212
       ],
       [
-        0.1961,
+        0.1953,
         0.3879
       ],
       [
-        0.2318,
+        0.231,
         0.4415
       ],
       [
-        0.2601,
+        0.2575,
         0.4937
       ],
       [
-        0.2885,
+        0.2881,
         0.5261
       ],
       [
-        0.3008,
+        0.3002,
         0.5586
       ],
       [
-        0.3083,
+        0.308,
         0.5856
       ],
       [
-        0.318,
+        0.3164,
         0.6039
       ],
       [
-        0.3208,
+        0.3187,
         0.6069
       ],
       [
-        0.3115,
+        0.3092,
         0.6036
       ],
       [
-        0.3087,
+        0.3081,
         0.5865
       ],
       [
-        0.2987,
+        0.2961,
         0.565
       ],
       [
-        0.2761,
+        0.2758,
         0.5294
       ],
       [
@@ -4072,23 +4072,23 @@
         0.3532
       ],
       [
-        0.1495,
+        0.1487,
         0.2874
       ],
       [
-        0.1116,
+        0.1114,
         0.2216
       ],
       [
-        0.0747,
+        0.0743,
         0.1624
       ],
       [
-        0.043,
+        0.0425,
         0.1135
       ],
       [
-        0.0183,
+        0.0181,
         0.0655
       ],
       null,
@@ -4117,63 +4117,63 @@
       null,
       null,
       [
-        0.0243,
+        0.0242,
         0.0659
       ],
       [
-        0.0516,
+        0.0508,
         0.1171
       ],
       [
-        0.0817,
+        0.0789,
         0.1811
       ],
       [
-        0.1176,
+        0.1172,
         0.246
       ],
       [
-        0.1559,
+        0.1541,
         0.3172
       ],
       [
-        0.191,
+        0.1907,
         0.3782
       ],
       [
-        0.2216,
+        0.2213,
         0.4387
       ],
       [
-        0.2521,
+        0.2518,
         0.4908
       ],
       [
-        0.2812,
+        0.2769,
         0.5236
       ],
       [
-        0.2945,
+        0.2937,
         0.5529
       ],
       [
-        0.2976,
+        0.2975,
         0.582
       ],
       [
-        0.3039,
+        0.3031,
         0.5946
       ],
       [
-        0.2954,
+        0.2953,
         0.5938
       ],
       [
-        0.284,
+        0.2827,
         0.5905
       ],
       [
-        0.2744,
+        0.2724,
         0.5704
       ],
       [
@@ -4239,63 +4239,63 @@
       null,
       null,
       [
-        0.0141,
+        0.0139,
         0.0528
       ],
       [
-        0.04,
+        0.0389,
         0.1027
       ],
       [
-        0.0723,
+        0.0709,
         0.1631
       ],
       [
-        0.109,
+        0.1075,
         0.2342
       ],
       [
-        0.1472,
+        0.1471,
         0.3053
       ],
       [
-        0.1878,
+        0.1823,
         0.3703
       ],
       [
-        0.2176,
+        0.2158,
         0.4231
       ],
       [
-        0.2481,
+        0.2472,
         0.4764
       ],
       [
-        0.2706,
+        0.2694,
         0.5081
       ],
       [
-        0.2937,
+        0.2905,
         0.5281
       ],
       [
-        0.2952,
+        0.295,
         0.5553
       ],
       [
-        0.3022,
+        0.3015,
         0.5685
       ],
       [
-        0.2985,
+        0.2928,
         0.5803
       ],
       [
-        0.2825,
+        0.2819,
         0.5706
       ],
       [
-        0.2694,
+        0.2675,
         0.5606
       ],
       [
