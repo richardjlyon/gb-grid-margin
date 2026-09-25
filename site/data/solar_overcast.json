@@ -2,8 +2,8 @@
   "basis": "Per (week-of-year, settlement-period) cell: the empirical distribution of half-hourly solar capacity factor (embedded solar / NESO embedded-solar capacity) over the whole record, pooled across a +/-1-week window. p25 = the relative overcast line (live CF below it = the cloudiest quarter for this slot); ceiling = P95 of the cell, a robust clear-sky reference (not the raw max). The OVERCAST lamp trips below p25 and reads live CF / ceiling as '% of a clear day'. Night / low-sun cells (ceiling <= 0.05) are null \u2014 a daytime-only instrument. Entirely empirical; no clear-sky physics model.",
   "source": "NESO embedded solar / NESO embedded-solar capacity (settled outturn, whole record)",
   "seam_note": "The live lamp reads NESO's embedded FORECAST capacity factor; this grid is settled OUTTURN \u2014 the same measure, a forecast-vs-settlement seam.",
-  "generated_utc": "2026-09-24T11:28:35.131100+00:00",
-  "rows": 186958,
+  "generated_utc": "2026-09-25T11:34:11.818726+00:00",
+  "rows": 187006,
   "weeks": 52,
   "periods": 48,
   "day_floor": 0.05,
@@ -3992,7 +3992,7 @@
       null,
       null,
       [
-        0.0301,
+        0.0299,
         0.077
       ],
       [
@@ -4076,7 +4076,7 @@
         0.2874
       ],
       [
-        0.1094,
+        0.108,
         0.2216
       ],
       [
@@ -4084,11 +4084,11 @@
         0.1624
       ],
       [
-        0.0421,
+        0.0418,
         0.1135
       ],
       [
-        0.0179,
+        0.0178,
         0.0655
       ],
       null,
