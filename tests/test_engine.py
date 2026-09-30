@@ -240,22 +240,6 @@ def test_sanity_check_trips_on_solar_crosscheck_divergence():
                      recon_embedded=EMBEDDED)
 
 
-@pytest.mark.parametrize("neso,pvlive", [(7961, 10375), (6815, 4722)])
-def test_sanity_check_tolerates_observed_forecast_error(neso, pvlive):
-    """NESO's solar is a forecast; cloudy-day misses of 23-44% vs PV_Live outturn
-    (2026-09-30, 2026-09-12) are weather, not a broken feed, and must not trip."""
-    v = _verdict()
-    sanity_check(v, pvlive_solar=pvlive, neso_solar_at_pvlive=neso, indo=17300,
-                 recon_demand_mw=v["national_demand_mw"], recon_embedded=EMBEDDED)
-
-
-def test_sanity_check_trips_on_zeroed_solar_feed():
-    v = _verdict()
-    with pytest.raises(AssertionError, match="cross-check"):
-        sanity_check(v, pvlive_solar=10000, neso_solar_at_pvlive=0, indo=17300,
-                     recon_demand_mw=v["national_demand_mw"], recon_embedded=EMBEDDED)
-
-
 def test_sanity_check_trips_on_demand_reconciliation_divergence():
     v = _verdict()
     with pytest.raises(AssertionError, match="reconciliation"):

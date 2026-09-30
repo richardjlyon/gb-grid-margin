@@ -879,12 +879,8 @@
                     <a href="https://www.solar.sheffield.ac.uk"
                         >Sheffield Solar PV_Live</a
                     >
-                    outturn and the build fails if NESO is below
-                    <strong>60%</strong> or above <strong>167%</strong> of
-                    PV_Live. The band is wide because NESO&#8217;s figure is a
-                    forecast and misses by 10&#8211;45% on cloudy days; the check
-                    exists to catch a zeroed, doubled or wrong-unit feed, not
-                    forecast error. (PV_Live sends no CORS header, so it
+                    outturn and the build fails if they disagree by more than
+                    <strong>10%</strong>. (PV_Live sends no CORS header, so it
                     can only ever be the server-side auditor, never the live
                     figure.)
                 </li>
