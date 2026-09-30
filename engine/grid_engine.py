@@ -53,7 +53,17 @@ WIND = {"WIND"}
 # Interconnectors are INT*; pumped storage is PS — both handled specially below.
 
 # Build-time guard tolerances.
-SOLAR_CROSSCHECK_TOL = 0.10   # NESO vs PV_Live solar — tight; tests the embedded feed
+# NESO EMBEDDED_SOLAR_FORECAST vs Sheffield PV_Live OUTTURN. These are a forecast and a
+# measurement, so their normal disagreement IS forecast error, not a feed fault: over the
+# full 2016-2026 store, above the floor, the median gap is 13.5% and p95 is 49%. A 10%
+# tolerance therefore policed the weather — it tripped 19 of the last 20 daily builds
+# (2026-08-21 .. 2026-09-29), each one silently staling site/data/latest.json until the
+# live dashboard passed the 12 h UNAVAILABLE cutoff and went dark on any feed hiccup.
+# The tripwire's actual job is a GROSS feed fault — zeroed, doubled or wrong-unit — each
+# of which is a ~100% error. 0.50 catches all three while tripping 0.46% of the midday
+# half-hours the build samples. Recalibrate with scripts/calibrate_solar_guard.py, never
+# by taste.
+SOLAR_CROSSCHECK_TOL = 0.50   # NESO forecast vs PV_Live outturn — gross-fault tripwire
 # Below this PV_Live reading the relative check does not bind: at dawn/dusk solar is a
 # few hundred MW on a ~22 GW fleet, where forecast-vs-outturn error routinely exceeds
 # 10% while the absolute gap is headline-irrelevant noise (2026-08-11: NESO 256 vs

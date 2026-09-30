@@ -880,9 +880,15 @@
                         >Sheffield Solar PV_Live</a
                     >
                     outturn and the build fails if they disagree by more than
-                    <strong>10%</strong>. (PV_Live sends no CORS header, so it
-                    can only ever be the server-side auditor, never the live
-                    figure.)
+                    <strong>50%</strong>. The NESO figure is a forecast and
+                    PV_Live is a measurement, so a routine gap between them is
+                    forecast error, not a fault: across 2016&ndash;2026 the
+                    median gap is 13.5% and the 95th percentile is 49%. This
+                    guard is therefore set to catch a gross feed fault &mdash; a
+                    zeroed, doubled or wrong-unit feed, each around a 100% error
+                    &mdash; and not to police the weather. (PV_Live sends no
+                    CORS header, so it can only ever be the server-side auditor,
+                    never the live figure.)
                 </li>
                 <li>
                     <strong>Demand reconciliation (live).</strong> The

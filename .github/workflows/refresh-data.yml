@@ -11,7 +11,11 @@ name: Refresh settled data
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 06:00 UTC daily — settled data lags days, so the hour is slack
+    # Every 6 h, not daily. The settled layer only needs a daily cadence, but this job
+    # also writes site/data/latest.json, which the dashboard rejects once it passes 12 h
+    # old. On a daily cron a single failed run left the fallback 24-48 h stale and the
+    # live site dark; at 6 h, three consecutive failures are needed before anything shows.
+    - cron: '0 */6 * * *'
   workflow_dispatch: {}    # allow a manual run from the Actions tab
 
 permissions:
@@ -68,10 +72,13 @@ jobs:
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
 
-      - name: Refresh live fallback snapshot (non-fatal — live layer is primary)
-        run: |
-          uv run python -m engine.build_site build \
-            || echo "::warning::live fallback rebuild failed; keeping last-good latest.json"
+      - name: Refresh live fallback snapshot (FATAL — a stale fallback is a dark site)
+        # NOT best-effort. site/data/latest.json is what the dashboard shows when a
+        # visitor's browser cannot reach Elexon/NESO; past 12 h old the page refuses it
+        # and renders UNAVAILABLE. This step used to `|| echo ::warning`, so 19 of 20
+        # consecutive failures (2026-08-21 .. 2026-09-29) passed as green runs while the
+        # fallback aged to 65 h and the live site went dark. A failure here must be loud.
+        run: uv run python -m engine.build_site build
 
       - name: Cache Playwright Chromium
         uses: actions/cache@v4

@@ -234,8 +234,37 @@ def test_sanity_check_passes_for_consistent_inputs():
 
 def test_sanity_check_trips_on_solar_crosscheck_divergence():
     v = _verdict()
+    # A 100% gap — the shape of a doubled/zeroed feed, which must always trip.
     with pytest.raises(AssertionError, match="cross-check"):
         sanity_check(v, pvlive_solar=5000, neso_solar_at_pvlive=EMBEDDED["solar_mw"],
+                     indo=17300, recon_demand_mw=v["national_demand_mw"],
+                     recon_embedded=EMBEDDED)
+
+
+def test_sanity_check_tolerates_ordinary_forecast_error():
+    """NESO embedded solar is a FORECAST, PV_Live is a MEASUREMENT: a routine gap
+    between them is forecast error and must not fail the build.
+
+    The 10% tolerance this replaces tripped 19 of 20 consecutive daily builds
+    (2026-08-21 .. 2026-09-29), staling site/data/latest.json until the live
+    dashboard crossed its 12 h cutoff and went dark. Measured over the whole
+    2016-2026 store above the MW floor, the median gap is 13.5% and p95 is 49%.
+    """
+    # 8000 vs a 10000 forecast = 25% — above p75 of the real distribution, still
+    # ordinary weather, must pass.
+    v = _verdict()
+    sanity_check(v, pvlive_solar=8000, neso_solar_at_pvlive=EMBEDDED["solar_mw"],
+                 indo=17300, recon_demand_mw=v["national_demand_mw"],
+                 recon_embedded=EMBEDDED)
+
+
+@pytest.mark.parametrize("neso_solar", [0, 20000])
+def test_sanity_check_still_catches_gross_feed_faults(neso_solar):
+    """The guard's real job: a zeroed or doubled feed is a ~100% error and must
+    still fail the build loudly at the widened tolerance."""
+    v = _verdict()
+    with pytest.raises(AssertionError, match="cross-check"):
+        sanity_check(v, pvlive_solar=10000, neso_solar_at_pvlive=neso_solar,
                      indo=17300, recon_demand_mw=v["national_demand_mw"],
                      recon_embedded=EMBEDDED)
 
