@@ -346,7 +346,8 @@ predicates (not bare `assert`s, so `python -O` cannot strip them).
 
 **Where they run.**
 - *Live verdict* (`engine.grid_engine.sanity_check`, pre-dating this module): demand > 0, share
-  ranges, the PV_Live solar cross-check (±10%) and the INDO reconcile (±12%). Unchanged.
+  ranges, the PV_Live solar cross-check (NESO within 60–167% of PV_Live; widened from ±10% on
+  2026-09-30, which tripped on ordinary forecast error) and the INDO reconcile (±12%).
 - *Derived figures* (`engine.derived.guard_outputs`, new): before `derived.build` writes
   `site/data/*.json` it asserts the stripe's daily CF range and date order/uniqueness, the failure
   counters' nesting (`below_5 ≤ below_10 ≤ observed`), each year's transmission shares summing to

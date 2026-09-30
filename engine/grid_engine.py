@@ -53,7 +53,13 @@ WIND = {"WIND"}
 # Interconnectors are INT*; pumped storage is PS — both handled specially below.
 
 # Build-time guard tolerances.
-SOLAR_CROSSCHECK_TOL = 0.10   # NESO vs PV_Live solar — tight; tests the embedded feed
+# NESO vs PV_Live solar: fail only if NESO is outside [1/FACTOR, FACTOR] x PV_Live.
+# The NESO figure is a day-ahead-style FORECAST and PV_Live is an outturn ESTIMATE, so
+# ordinary forecast error runs 10-45% on cloudy days (Aug-Sep 2026: a ±10% band tripped
+# 22 of 40 daily builds, worst 44%). The guard exists to catch a zeroed/doubled/
+# wrong-unit feed, not forecast skill: a 1.67x band (NESO at 60%-167% of PV_Live)
+# clears that observed weather error and still trips on a doubled or zeroed feed.
+SOLAR_CROSSCHECK_FACTOR = 1.67
 # Below this PV_Live reading the relative check does not bind: at dawn/dusk solar is a
 # few hundred MW on a ~22 GW fleet, where forecast-vs-outturn error routinely exceeds
 # 10% while the absolute gap is headline-irrelevant noise (2026-08-11: NESO 256 vs
@@ -294,10 +300,11 @@ def sanity_check(v: dict, pvlive_solar: float, neso_solar_at_pvlive: float | Non
 
     # Cross-check: NESO embedded solar vs Sheffield PV_Live, both at PV_Live's timestamp.
     if pvlive_solar >= SOLAR_CROSSCHECK_FLOOR_MW and neso_solar_at_pvlive is not None:
-        diff = abs(neso_solar_at_pvlive - pvlive_solar) / pvlive_solar
-        assert diff <= SOLAR_CROSSCHECK_TOL, (
+        ratio = neso_solar_at_pvlive / pvlive_solar
+        assert 1 / SOLAR_CROSSCHECK_FACTOR <= ratio <= SOLAR_CROSSCHECK_FACTOR, (
             f"solar cross-check failed: NESO {neso_solar_at_pvlive} vs "
-            f"PV_Live {pvlive_solar:.0f} ({diff:.1%} > {SOLAR_CROSSCHECK_TOL:.0%})")
+            f"PV_Live {pvlive_solar:.0f} (ratio {ratio:.2f} outside "
+            f"{1 / SOLAR_CROSSCHECK_FACTOR:.2f}-{SOLAR_CROSSCHECK_FACTOR:.2f})")
 
     # Reconciliation: supply-side reconstruction vs Elexon INDO (national demand) +
     # embedded, all evaluated at the INDO period's midpoint. PARITY-LOCKED with
