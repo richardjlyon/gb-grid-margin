@@ -292,3 +292,64 @@ def test_sanity_check_skips_checks_it_cannot_time_align():
     sanity_check(v, pvlive_solar=99999, neso_solar_at_pvlive=None, indo=1,
                  recon_demand_mw=None, recon_embedded=None)
     assert v["reconcile_residual_pct"] is None
+
+
+# --- NESO transient-blip resilience ----------------------------------------
+#
+# Observed 2026-09-30T05:25Z: the NESO origin answered 200 with an EMPTY record
+# set, fetch_embedded_rows raised, and the build failed — staling
+# site/data/latest.json toward the 12 h cutoff that darkens the live dashboard.
+# site/live.js already retried this (NESO_RETRIES), so the browser rode out a
+# blip the build did not. These pin the two halves of that asymmetry.
+
+def test_fetch_embedded_rows_retries_an_empty_payload(monkeypatch):
+    """A 200-with-no-records is a blip, not an empty horizon: retry, don't fail."""
+    from engine import grid_engine as g
+
+    calls = []
+    good = {"result": {"records": [{
+        "DATE_GMT": "2026-09-30T00:00:00", "TIME_GMT": "12:00",
+        "EMBEDDED_SOLAR_FORECAST": 8000, "EMBEDDED_WIND_FORECAST": 1000,
+        "EMBEDDED_SOLAR_CAPACITY": 22000, "EMBEDDED_WIND_CAPACITY": 6500,
+    }]}}
+
+    def fake_get(url, retries=0, backoff_s=2.0):
+        calls.append(url)
+        return {"result": {"records": []}} if len(calls) == 1 else good
+
+    monkeypatch.setattr(g, "_get_json", fake_get)
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    rows = g.fetch_embedded_rows()
+    assert len(calls) == 2, "an empty payload must be retried, not accepted"
+    assert len(rows) == 1
+
+
+def test_fetch_embedded_rows_still_fails_when_neso_stays_empty(monkeypatch):
+    """A persistently empty feed is a real fault and must still raise loudly."""
+    from engine import grid_engine as g
+
+    monkeypatch.setattr(g, "_get_json",
+                        lambda url, retries=0, backoff_s=2.0: {"result": {"records": []}})
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    with pytest.raises(RuntimeError, match="no records"):
+        g.fetch_embedded_rows()
+
+
+def test_get_json_retries_a_transient_transport_error(monkeypatch):
+    """_get_json(retries=1) rides out one thrown blip and returns the retry's body."""
+    from engine import grid_engine as g
+
+    attempts = []
+
+    def flaky(req, timeout=30):
+        attempts.append(1)
+        raise OSError("connection reset")
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", flaky)
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    with pytest.raises(OSError, match="connection reset"):
+        g._get_json("https://example.invalid", retries=1)
+    assert len(attempts) == 2, "retries=1 must mean two attempts total"
