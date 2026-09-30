@@ -72,13 +72,22 @@ jobs:
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
 
-      - name: Refresh live fallback snapshot (FATAL — a stale fallback is a dark site)
-        # NOT best-effort. site/data/latest.json is what the dashboard shows when a
-        # visitor's browser cannot reach Elexon/NESO; past 12 h old the page refuses it
-        # and renders UNAVAILABLE. This step used to `|| echo ::warning`, so 19 of 20
-        # consecutive failures (2026-08-21 .. 2026-09-29) passed as green runs while the
-        # fallback aged to 65 h and the live site went dark. A failure here must be loud.
-        run: uv run python -m engine.build_site build
+      # Loud, but NOT control-flow fatal — the two rules have to coexist:
+      #   * a failure here must fail the run (it used to `|| echo ::warning`, so 19 of 20
+      #     consecutive failures, 2026-08-21 .. 2026-09-29, passed as green runs while the
+      #     fallback aged to 65 h and the live dashboard went dark);
+      #   * but it must not abort the FUELHH → derived → deploy path, the same rule the
+      #     embedded/system-price steps above follow — settled data still publishes.
+      # So: record the outcome, carry on, and fail the job at the end (see the final step).
+      - name: Refresh live fallback snapshot
+        id: fallback
+        run: |
+          if uv run python -m engine.build_site build; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error::live fallback rebuild FAILED — site/data/latest.json is not refreshing; past 12 h old the dashboard renders UNAVAILABLE"
+          fi
 
       - name: Cache Playwright Chromium
         uses: actions/cache@v4
@@ -116,3 +125,14 @@ jobs:
           else
             echo "::warning::VERCEL_DEPLOY_HOOK not set — relying on git-integration auto-deploy"
           fi
+
+      # Last, so the deploy above still happens: a stale live fallback is a dark
+      # dashboard, so it must turn the run RED and page someone. Deliberately after
+      # the publish steps — settled data ships either way.
+      - name: Fail the run if the live fallback did not refresh
+        if: steps.fallback.outputs.ok != 'true'
+        run: |
+          echo "live fallback rebuild failed — see the 'Refresh live fallback snapshot' step."
+          echo "site/data/latest.json is what the dashboard shows when a browser cannot"
+          echo "reach Elexon/NESO. Past 12 h old, live.js refuses it and renders UNAVAILABLE."
+          exit 1
