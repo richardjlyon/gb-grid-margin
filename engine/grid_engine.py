@@ -30,6 +30,7 @@ Shares sum to 100% by construction. See engine/NOTES.md.
 from __future__ import annotations
 
 import json
+import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -53,7 +54,17 @@ WIND = {"WIND"}
 # Interconnectors are INT*; pumped storage is PS — both handled specially below.
 
 # Build-time guard tolerances.
-SOLAR_CROSSCHECK_TOL = 0.10   # NESO vs PV_Live solar — tight; tests the embedded feed
+# NESO EMBEDDED_SOLAR_FORECAST vs Sheffield PV_Live OUTTURN. These are a forecast and a
+# measurement, so their normal disagreement IS forecast error, not a feed fault: over the
+# full 2016-2026 store, above the floor, the median gap is 13.5% and p95 is 49%. A 10%
+# tolerance therefore policed the weather — it tripped 19 of the last 20 daily builds
+# (2026-08-21 .. 2026-09-29), each one silently staling site/data/latest.json until the
+# live dashboard passed the 12 h UNAVAILABLE cutoff and went dark on any feed hiccup.
+# The tripwire's actual job is a GROSS feed fault — zeroed, doubled or wrong-unit — each
+# of which is a ~100% error. 0.50 catches all three while tripping 0.46% of the midday
+# half-hours the build samples. Recalibrate with scripts/calibrate_solar_guard.py, never
+# by taste.
+SOLAR_CROSSCHECK_TOL = 0.50   # NESO forecast vs PV_Live outturn — gross-fault tripwire
 # Below this PV_Live reading the relative check does not bind: at dawn/dusk solar is a
 # few hundred MW on a ~22 GW fleet, where forecast-vs-outturn error routinely exceeds
 # 10% while the absolute gap is headline-irrelevant noise (2026-08-11: NESO 256 vs
@@ -68,9 +79,14 @@ SOLAR_CROSSCHECK_FLOOR_MW = 1000
 # as demand, so it diverged from this national-demand reconstruction by the export
 # volume on an export night and false-alarmed (engine/NOTES.md §3). This guard exists
 # to catch a gross feed failure (zeroed/doubled/wrong-unit), not to certify accuracy —
-# the headline-moving solar figure is policed separately by the tight PV_Live
-# cross-check. The residual is reported (reconcile_residual_pct) rather than hidden.
+# the headline-moving solar figure is policed separately by the PV_Live cross-check.
+# The residual is reported (reconcile_residual_pct) rather than hidden.
 RECONCILE_TOL = 0.12          # denominator vs INDO + embedded
+
+# Retry budget for the flaky NESO origin, mirroring NESO_RETRIES in site/live.js so the
+# build tolerates exactly what the live browser layer already tolerates.
+NESO_RETRIES = 1
+NESO_RETRY_BACKOFF_S = 2.0
 
 # Snapshot/embedded preconditions — mirrored byte-for-byte in site/verdict.js so the
 # browser refuses a structurally-valid-but-incomplete feed exactly as the build does.
@@ -101,10 +117,24 @@ def embedded_in_window(embedded_time: str, snapshot_time: str) -> bool:
     return abs((emb - snap).total_seconds()) <= EMBEDDED_WINDOW_MIN * 60
 
 
-def _get_json(url: str) -> dict | list:
+def _get_json(url: str, retries: int = 0, backoff_s: float = 2.0) -> dict | list:
+    """GET and parse JSON, optionally retrying a transient failure.
+
+    `retries` mirrors NESO_RETRIES in site/live.js. The browser already retried a
+    flaky NESO origin once while this build did not, so a blip the live page rode
+    out instead failed the build and staled site/data/latest.json.
+    """
     req = urllib.request.Request(url, headers={"User-Agent": "grid-gauge/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+    last: Exception | None = None
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.load(r)
+        except Exception as exc:                      # noqa: BLE001 — retry any transport/parse blip
+            last = exc
+            if attempt < retries:
+                time.sleep(backoff_s * (attempt + 1))
+    raise last if last else RuntimeError(f"no response from {url}")
 
 
 # --- Elexon FUELINST -------------------------------------------------------
@@ -155,20 +185,29 @@ def snapshot_at(records: list[FuelInstRecord], anchor: datetime) -> tuple[str, d
 # --- NESO embedded solar/wind ----------------------------------------------
 
 def fetch_embedded_rows() -> list[EmbeddedRow]:
-    """Return the full NESO embedded forecast horizon, one fetch.
+    """Return the full NESO embedded forecast horizon.
 
     limit=1000 + explicit sort, mirroring site/live.js: limit=100 with no sort relied on
     NESO keeping _id=1 pinned to ~now, and a late republish silently dropped the row
     nearest the anchor.
+
+    Retried NESO_RETRIES times, matching site/live.js. The NESO origin intermittently
+    answers 200 with an EMPTY record set (seen 2026-09-30T05:25Z), which is a blip and
+    not an empty horizon — so the retry covers the empty payload, not just a thrown
+    transport error. Without it a blip the live page rides out instead failed the build
+    and left site/data/latest.json to age past its 12 h cutoff.
     """
     url = (f"{NESO}/datastore_search"
            f"?resource_id={NESO_EMBEDDED_RID}&limit=1000&sort=_id")
-    payload = _get_json(url)
-    assert isinstance(payload, dict), "NESO datastore_search did not return an object"
-    raw = payload["result"]["records"]
-    if not raw:
-        raise RuntimeError("NESO embedded forecast returned no records")
-    return [EmbeddedRow.model_validate(r) for r in raw]
+    for attempt in range(NESO_RETRIES + 1):
+        payload = _get_json(url, retries=NESO_RETRIES)
+        assert isinstance(payload, dict), "NESO datastore_search did not return an object"
+        raw = payload["result"]["records"]
+        if raw:
+            return [EmbeddedRow.model_validate(r) for r in raw]
+        if attempt < NESO_RETRIES:
+            time.sleep(NESO_RETRY_BACKOFF_S * (attempt + 1))
+    raise RuntimeError("NESO embedded forecast returned no records")
 
 
 def pick_embedded(rows: list[EmbeddedRow], at: datetime) -> dict:

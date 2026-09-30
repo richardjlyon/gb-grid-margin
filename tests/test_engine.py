@@ -234,8 +234,37 @@ def test_sanity_check_passes_for_consistent_inputs():
 
 def test_sanity_check_trips_on_solar_crosscheck_divergence():
     v = _verdict()
+    # A 100% gap — the shape of a doubled/zeroed feed, which must always trip.
     with pytest.raises(AssertionError, match="cross-check"):
         sanity_check(v, pvlive_solar=5000, neso_solar_at_pvlive=EMBEDDED["solar_mw"],
+                     indo=17300, recon_demand_mw=v["national_demand_mw"],
+                     recon_embedded=EMBEDDED)
+
+
+def test_sanity_check_tolerates_ordinary_forecast_error():
+    """NESO embedded solar is a FORECAST, PV_Live is a MEASUREMENT: a routine gap
+    between them is forecast error and must not fail the build.
+
+    The 10% tolerance this replaces tripped 19 of 20 consecutive daily builds
+    (2026-08-21 .. 2026-09-29), staling site/data/latest.json until the live
+    dashboard crossed its 12 h cutoff and went dark. Measured over the whole
+    2016-2026 store above the MW floor, the median gap is 13.5% and p95 is 49%.
+    """
+    # 8000 vs a 10000 forecast = 25% — above p75 of the real distribution, still
+    # ordinary weather, must pass.
+    v = _verdict()
+    sanity_check(v, pvlive_solar=8000, neso_solar_at_pvlive=EMBEDDED["solar_mw"],
+                 indo=17300, recon_demand_mw=v["national_demand_mw"],
+                 recon_embedded=EMBEDDED)
+
+
+@pytest.mark.parametrize("neso_solar", [0, 20000])
+def test_sanity_check_still_catches_gross_feed_faults(neso_solar):
+    """The guard's real job: a zeroed or doubled feed is a ~100% error and must
+    still fail the build loudly at the widened tolerance."""
+    v = _verdict()
+    with pytest.raises(AssertionError, match="cross-check"):
+        sanity_check(v, pvlive_solar=10000, neso_solar_at_pvlive=neso_solar,
                      indo=17300, recon_demand_mw=v["national_demand_mw"],
                      recon_embedded=EMBEDDED)
 
@@ -263,3 +292,64 @@ def test_sanity_check_skips_checks_it_cannot_time_align():
     sanity_check(v, pvlive_solar=99999, neso_solar_at_pvlive=None, indo=1,
                  recon_demand_mw=None, recon_embedded=None)
     assert v["reconcile_residual_pct"] is None
+
+
+# --- NESO transient-blip resilience ----------------------------------------
+#
+# Observed 2026-09-30T05:25Z: the NESO origin answered 200 with an EMPTY record
+# set, fetch_embedded_rows raised, and the build failed — staling
+# site/data/latest.json toward the 12 h cutoff that darkens the live dashboard.
+# site/live.js already retried this (NESO_RETRIES), so the browser rode out a
+# blip the build did not. These pin the two halves of that asymmetry.
+
+def test_fetch_embedded_rows_retries_an_empty_payload(monkeypatch):
+    """A 200-with-no-records is a blip, not an empty horizon: retry, don't fail."""
+    from engine import grid_engine as g
+
+    calls = []
+    good = {"result": {"records": [{
+        "DATE_GMT": "2026-09-30T00:00:00", "TIME_GMT": "12:00",
+        "EMBEDDED_SOLAR_FORECAST": 8000, "EMBEDDED_WIND_FORECAST": 1000,
+        "EMBEDDED_SOLAR_CAPACITY": 22000, "EMBEDDED_WIND_CAPACITY": 6500,
+    }]}}
+
+    def fake_get(url, retries=0, backoff_s=2.0):
+        calls.append(url)
+        return {"result": {"records": []}} if len(calls) == 1 else good
+
+    monkeypatch.setattr(g, "_get_json", fake_get)
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    rows = g.fetch_embedded_rows()
+    assert len(calls) == 2, "an empty payload must be retried, not accepted"
+    assert len(rows) == 1
+
+
+def test_fetch_embedded_rows_still_fails_when_neso_stays_empty(monkeypatch):
+    """A persistently empty feed is a real fault and must still raise loudly."""
+    from engine import grid_engine as g
+
+    monkeypatch.setattr(g, "_get_json",
+                        lambda url, retries=0, backoff_s=2.0: {"result": {"records": []}})
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    with pytest.raises(RuntimeError, match="no records"):
+        g.fetch_embedded_rows()
+
+
+def test_get_json_retries_a_transient_transport_error(monkeypatch):
+    """_get_json(retries=1) rides out one thrown blip and returns the retry's body."""
+    from engine import grid_engine as g
+
+    attempts = []
+
+    def flaky(req, timeout=30):
+        attempts.append(1)
+        raise OSError("connection reset")
+
+    monkeypatch.setattr(g.urllib.request, "urlopen", flaky)
+    monkeypatch.setattr(g.time, "sleep", lambda s: None)
+
+    with pytest.raises(OSError, match="connection reset"):
+        g._get_json("https://example.invalid", retries=1)
+    assert len(attempts) == 2, "retries=1 must mean two attempts total"
