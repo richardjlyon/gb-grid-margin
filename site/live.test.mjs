@@ -216,6 +216,41 @@ test('a transient NESO failure is retried and stays LIVE', async () => {
   assert.ok(Number.isFinite(s.verdict.solar_mw));
 });
 
+// NESO's republish blip is a 200 with ZERO records, not a thrown error (seen 2026-09-30 and
+// 2026-10-06). A retry wrapped only around transport errors never fires on it, so the page fell
+// through to a fallback too old to show and went dark. The empty body must be retried too.
+const noSleep = async () => {};
+test('a transient EMPTY NESO body is retried and stays LIVE', async () => {
+  let nesoCalls = 0;
+  const httpGet = async (url) => {
+    if (url.includes('FUELINST')) return fuelBody();
+    if (url.includes('demand/outturn')) return demandBody();
+    if (url.includes('latest.json')) return latestJson();
+    if (url.includes('datastore_search')) {
+      nesoCalls += 1;
+      return nesoCalls === 1 ? { result: { records: [] } } : nesoBody();
+    }
+    throw new Error(`unexpected url ${url}`);
+  };
+  const s = await resolveState(NO_FAULTS, clock, { httpGet, sleep: noSleep });
+  assert.equal(s.mode, 'live', s.reason);
+  assert.equal(nesoCalls, 2, 'the empty NESO body should be retried exactly once');
+});
+
+test('a persistently EMPTY NESO body still leaves LIVE', async () => {
+  let nesoCalls = 0;
+  const httpGet = async (url) => {
+    if (url.includes('FUELINST')) return fuelBody();
+    if (url.includes('demand/outturn')) return demandBody();
+    if (url.includes('latest.json')) return latestJson();
+    if (url.includes('datastore_search')) { nesoCalls += 1; return { result: { records: [] } }; }
+    throw new Error(`unexpected url ${url}`);
+  };
+  const s = await resolveState(NO_FAULTS, clock, { httpGet, sleep: noSleep });
+  assert.notEqual(s.mode, 'live');
+  assert.equal(nesoCalls, 2);
+});
+
 // pickEmbedded must select the row nearest the snapshot among ALL returned rows — not the first.
 // This is why the query now fetches the full forecast horizon rather than the first 100 rows.
 test('embedded row nearest the snapshot is chosen from many rows', async () => {
