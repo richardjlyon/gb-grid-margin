@@ -20,6 +20,8 @@ const SCHEMA_VERSION = 1;
 const PER_FEED_TIMEOUT_MS = 6000;
 const NESO_TIMEOUT_MS = 12000;     // NESO CKAN is the slow origin; give it more headroom than Elexon
 const NESO_RETRIES = 1;            // one retry before abandoning the live reading on a transient NESO blip
+const NESO_RETRY_BACKOFF_MS = 2000; // mirrors NESO_RETRY_BACKOFF_S in engine/grid_engine.py
+const realSleep = (ms) => new Promise((res) => setTimeout(res, ms));
 const RECONCILE_TOL = 0.12;
 const SKEW_TOL_MIN = 3;            // data this far in the future => device clock wrong
 const LIVE_LAG_UNCERTAIN_MIN = 20; // a just-fetched live snapshot older than this => age uncertain
@@ -82,15 +84,22 @@ async function fetchFeed(feed, faults, nowMs, clockNow, httpGet) {
   return { body, latencyMs: Math.round(clockNow() - t0) };
 }
 
-// fetchFeed with a small retry budget — for the flaky NESO origin. Retries only a thrown
-// failure (timeout / network / non-2xx); a successful-but-stale body is handled downstream.
-async function fetchFeedRetry(feed, faults, nowMs, clockNow, httpGet, retries) {
+// fetchFeed with a small retry budget — for the flaky NESO origin. Retries a thrown failure
+// (timeout / network / non-2xx) AND a 200 carrying zero records: NESO answers its republish
+// with an empty record set, and a retry that only caught throws let that blip darken the page
+// (2026-10-06). Mirrors fetch_embedded_rows in engine/grid_engine.py. A successful-but-stale
+// body is still handled downstream.
+async function fetchFeedRetry(feed, faults, nowMs, clockNow, httpGet, retries, sleep = realSleep) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      return await fetchFeed(feed, faults, nowMs, clockNow, httpGet);
+      const got = await fetchFeed(feed, faults, nowMs, clockNow, httpGet);
+      const records = got.body?.result?.records;
+      if (!Array.isArray(records) || records.length === 0) throw new Error('NESO embedded returned no rows');
+      return got;
     } catch (e) {
       lastErr = e;
+      if (attempt < retries) await sleep(NESO_RETRY_BACKOFF_MS * (attempt + 1));
     }
   }
   throw lastErr;
@@ -115,11 +124,11 @@ function pickEmbedded(records, anchorMs) {
 }
 
 // Try the live path. Throws { reason, feeds } if it cannot produce a trustworthy verdict.
-async function tryLive(faults, clockNow, httpGet) {
+async function tryLive(faults, clockNow, httpGet, sleep) {
   const nowMs = clockNow();
   const [fuel, neso, demand] = await Promise.allSettled([
     fetchFeed('fuelinst', faults, nowMs, clockNow, httpGet),
-    fetchFeedRetry('neso', faults, nowMs, clockNow, httpGet, NESO_RETRIES),
+    fetchFeedRetry('neso', faults, nowMs, clockNow, httpGet, NESO_RETRIES, sleep),
     fetchFeed('demand', faults, nowMs, clockNow, httpGet),
   ]);
   const feeds = {
@@ -201,7 +210,7 @@ async function fetchLatest(faults, httpGet) {
 }
 
 // Orchestrate one render cycle. Pure given httpGet + clockNow — returns a structured state.
-export async function resolveState(faults, clockNow, { httpGet = httpGetReal } = {}) {
+export async function resolveState(faults, clockNow, { httpGet = httpGetReal, sleep = realSleep } = {}) {
   const clientNowMs = clockNow();
   // Best-effort: fetch latest.json once. It is both the freshness floor for the live path
   // (H1) and the source for the fallback render.
@@ -209,7 +218,7 @@ export async function resolveState(faults, clockNow, { httpGet = httpGetReal } =
   try { fallbackData = await fetchLatest(faults, httpGet); } catch { /* handled in buildFallback */ }
 
   try {
-    const live = await tryLive(faults, clockNow, httpGet);
+    const live = await tryLive(faults, clockNow, httpGet, sleep);
     const snapMs = Date.parse(live.snapshot);
     // H1 (clock-independent): a prior successful build proves a newer snapshot exists, so a
     // live snapshot older than it is stale — never paint it as current.
