@@ -3,11 +3,11 @@
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "93%",
-      "label": "of Britain's grid ran on firm power \u2014 gas, nuclear and biomass that answer on demand.",
+      "figure": "46%",
+      "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
       "kind": "live",
-      "version": "ea281fe6f8",
-      "png": "/share/live-balance.png?v=ea281fe6f8"
+      "version": "078a5cbc91",
+      "png": "/share/live-balance.png?v=078a5cbc91"
     },
     {
       "slug": "recent-lull",
