@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>When Scotland’s wind stops — Grid Margin</title>
+<meta name="description" content="Every large wind farm in Scotland, half-hour by half-hour since 2019: how often the wind fails, how long the calms last, and what keeps the lights on when it does. From Elexon meter data.">
+<meta property="og:title" content="When Scotland’s wind stops — Grid Margin">
+<meta property="og:description" content="Scottish wind since 2019, half-hour by half-hour, from Elexon meter data: how often it fails and how long the calms last.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gridmargin.co.uk/scotland.html">
+<meta property="og:image" content="https://gridmargin.co.uk/share/hero.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://gridmargin.co.uk/scotland.html">
+<!-- chrome:fonts -->
+        <link rel="preload" href="fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <link rel="stylesheet" href="fonts.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <!-- Matomo (self-hosted, cookieless) -->
+  <script>
+    var _paq = window._paq = window._paq || [];
+    _paq.push(['disableCookies']);
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u = 'https://stats.kwlan.net/';
+      _paq.push(['setTrackerUrl', u + 'matomo.php']);
+      _paq.push(['setSiteId', '3']);
+      var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
+      g.async = true; g.src = u + 'matomo.js'; s.parentNode.insertBefore(g, s);
+    })();
+  </script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+        <header class="masthead">
+            <div class="container masthead-inner">
+                <div>
+                    <p class="brand"><a href="/"><span class="brand-tick" aria-hidden="true"></span>GB Grid Margin</a></p>
+                    <span class="masthead-snapshot" id="clockstrip"></span>
+                </div>
+                <nav aria-label="Primary"><a href="methodology.html">Methodology</a><a href="share.html">Share</a><a href="about.html">About</a><span class="live-dot" id="live-dot" aria-live="polite" hidden></span></nav>
+            </div>
+        </header>
+
+<main id="main" class="container">
+  <h1 class="visually-hidden">Scottish wind since 2019</h1>
+
+  <section class="entry" id="entry-scotland" aria-labelledby="h-scot">
+    <p class="eyebrow">Scotland · every large wind farm · half-hourly since 2019</p>
+    <h2 class="headline ink" id="h-scot">When Scotland’s wind stops</h2>
+    <p class="def">Scotland has more than two-fifths of all the wind capacity in Britain (<a href="https://www.gov.uk/government/statistics/regional-renewable-statistics">DESNZ, end of 2025</a>). This page follows every large Scottish wind farm on the national grid, about 14 GW in all, from its own settlement meter, and counts the hours when the wind gave almost nothing.</p>
+    <div id="scot-body"><p class="def">Reading the Scottish wind record…</p></div>
+  </section>
+</main>
+
+<footer class="footer">
+            <div class="container">
+                <p class="links">Made by <a href="https://theenergytrap.org">Richard Lyon</a> · <a href="methodology.html">Methodology &amp; Sources</a> · <a href="share.html">Share cards</a> · <a href="about.html">About this site</a> · <a href="https://github.com/richardjlyon/gb-grid-margin">Github</a></p>
+                <p class="trace">Every figure traces to Elexon, NESO and DUKES. No modelled numbers.</p>
+            </div>
+        </footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

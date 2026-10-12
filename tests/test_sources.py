@@ -18,7 +18,7 @@ GENERATED = "2026-06-29T00:00:00+00:00"
 EXPECTED_IDS = {
     "verdict", "reliability-carpet",
     "wind-dial", "wind-carpet", "solar-dial", "solar-carpet", "wind-unreliability",
-    "import-power", "import-cost",
+    "scotland-wind", "import-power", "import-cost",
     "overcast", "warnings", "lamps-computed",
 }
 

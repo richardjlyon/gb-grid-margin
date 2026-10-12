@@ -69,6 +69,15 @@ jobs:
             git checkout -- data/history/system_price_20*.csv
           fi
 
+      # Scottish wind (scotland.html): per-unit B1610 + PN for Scottish wind units, last 4 months
+      # re-fetched so later settlement runs replace earlier ones. Best-effort: on failure keep last-good.
+      - name: Update Scottish wind store (best-effort, revert on failure)
+        run: |
+          if ! uv run python -m engine.scotland_wind update; then
+            echo "::warning::scotland wind update failed — keeping last-good store"
+            git checkout -- data/history/scotland_wind_*.csv
+          fi
+
       - name: Rebuild derived settled series (site/data/*.json)
         run: uv run python -m engine.derived build
 

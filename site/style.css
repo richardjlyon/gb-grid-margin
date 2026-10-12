@@ -409,6 +409,7 @@ main { padding-bottom: 40px; }
   body { font-size: 1rem; }
   .container { padding: 0 16px; }
   .masthead-snapshot { padding-left: 16px; }   /* track the narrower gutter so it stays under GRID WARNINGS */
+  .masthead-snapshot { white-space: normal; }   /* the stale-feed notice is a sentence: wrap it, never push the page wide */
   .receipt .bar-cell { display: none; }
   .tally td.marks { display: none; }
 }
@@ -645,3 +646,22 @@ main { padding-bottom: 40px; }
 }
 .dial-now strong { font-weight: 600; }
 .dial-now-sub { color: var(--slate); }
+
+/* ---- Scotland detail (scotland.html) ---- */
+.scot-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 32px; margin: 8px 0 28px; }
+.scot-stats > div { display: flex; flex-direction: column; gap: 4px; }
+.scot-big { font: 700 2rem/1.1 var(--display); color: var(--red); }
+.scot-lab { font: 400 0.92rem/1.4 var(--read); color: var(--slate); }
+.scot-table { width: 100%; max-width: 640px; border-collapse: collapse; margin: 4px 0 8px; font: 400 0.92rem/1.4 var(--display); }
+.scot-table th { text-align: left; font-weight: 500; font-size: 0.78rem; color: var(--slate); border-bottom: 1px solid var(--rule); padding: 6px 8px 6px 0; }
+.scot-table td { border-bottom: 1px solid var(--rule-soft); padding: 6px 8px 6px 0; }
+.scot-table .num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+/* figures and the winter label never break mid-value; the headers carry the wrapping instead */
+.scot-table td { white-space: nowrap; }
+@media (max-width: 480px) {
+  .scot-table { font-size: 0.8rem; }
+  .scot-table th { font-size: 0.7rem; }
+  .scot-table th, .scot-table td { padding-right: 6px; }
+}
+.scot-limits { margin-top: 2rem; }
+#scot-trace + .wind-caption { margin-top: .5rem; }

@@ -537,7 +537,7 @@ function renderTrap(v) {
     <div class="trap-grid${has ? '' : ' gauge-only'}">
       ${renderMetricBlock(cfgFor('wind', 'Wind', v.wind_mw || 0, windCapMw, KEY_NOTE_HTML))}
     </div>
-    ${entryFooter('wind', [{ href: 'wind.html', label: 'When the wind stops, it stops for days — the whole wind record since 2016' }])}
+    ${entryFooter('wind', [{ href: 'wind.html', label: 'When the wind stops, it stops for days — the whole wind record since 2016' }, { href: 'scotland.html', label: 'When Scotland’s wind stops — every Scottish wind farm, half-hourly since 2019' }])}
     <div class="trap-grid${has ? '' : ' gauge-only'}">
       ${renderMetricBlock(cfgFor('solar', 'Solar', v.solar_mw || 0, solarCapMw))}
     </div>
@@ -1042,8 +1042,8 @@ function drawWindCarpet(data) {
   drawYearDoyCarpet('wind-carpet', data.carpet, (c) => carpetCellColor(c, 1, DIAL_PALETTE.wind.fullRgb),
     { yAxisId: 'wind-carpet-y', xAxisId: 'wind-carpet-x' });
 }
-function drawDroughtPlot(data) {
-  const cv = $('wind-drought'); if (!cv) return;
+function drawDroughtPlot(data, canvasId = 'wind-drought', opts = {}) {
+  const cv = $(canvasId); if (!cv) return;
   const lulls = data.lulls || [];
   const x0ms = Date.parse(data.range.from), x1ms = Date.parse(data.range.to);
   const cssW = cv.clientWidth || 960, cssH = 220, padB = 18;
@@ -1067,6 +1067,16 @@ function drawDroughtPlot(data) {
     ctx.lineWidth = s.minor ? 1 : 2;
     ctx.beginPath(); ctx.moveTo(s.x, plotH); ctx.lineTo(s.x, plotH - s.h); ctx.stroke();
   });
+  if (opts.yearTicks) {   // label each 1 January along the empty bottom strip
+    ctx.fillStyle = 'rgba(21,24,28,0.55)'; ctx.textAlign = 'center';
+    const y0 = new Date(x0ms).getUTCFullYear() + 1, y1 = new Date(x1ms).getUTCFullYear();
+    const every = Math.max(1, Math.ceil(((y1 - y0 + 1) * 34) / cssW));
+    for (let yr = y0; yr <= y1; yr += every) {
+      const tx = ((Date.UTC(yr, 0, 1) - x0ms) / Math.max(1, x1ms - x0ms)) * cssW;
+      ctx.fillText(String(yr), tx, cssH - 4);
+    }
+    ctx.textAlign = 'left';
+  }
   // annotate the record
   const rec = data.summary?.record_lull;
   if (rec) {
@@ -1093,6 +1103,110 @@ function renderWindUnreliability(data) {
     ${entryFooter('wind')}`;
   drawWindCarpet(data);
   drawDroughtPlot(data);
+}
+
+// ============================================================ Scotland detail (scotland.html)
+// Scottish wind units only (engine/scotland_wind.py). One headline row, the years×day carpet (same key
+// as wind.html), the year's longest calm against Scotland's firm stations, and the winter-evening table.
+const _fmtH = (h) => h >= 48 ? `${(h / 24).toFixed(1).replace(/\.0$/, '')} days` : `${Math.round(h)} hours`;
+const _dLong = (iso) => new Date(iso + 'T12:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const _dShort = (iso) => new Date(iso + 'T12:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+function drawScotTrace(data) {
+  const cv = $('scot-trace'); const tr = data.longest_calm_trace || [];
+  if (!cv || !tr.length) return;
+  const cssW = cv.clientWidth || 960, cssH = 230, padB = 18, padL = 44, padT = 10;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(cssW * dpr); cv.height = Math.round(cssH * dpr); cv.style.height = cssH + 'px';
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const plotH = cssH - padB, plotW = cssW - padL;
+  const cap = tr[tr.length - 1].cap;
+  const top = Math.ceil((cap * 1.1) / 2000) * 2000;
+  const x = (i) => padL + (i / (tr.length - 1)) * plotW, y = (v) => padT + (plotH - padT) - (Math.max(0, v) / top) * (plotH - padT);
+  ctx.font = '500 10px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  for (let g = 0; g <= top; g += 2000) {
+    ctx.strokeStyle = 'rgba(21,24,28,0.10)'; ctx.beginPath(); ctx.moveTo(padL, y(g)); ctx.lineTo(cssW, y(g)); ctx.stroke();
+    ctx.fillStyle = SLATE; ctx.textAlign = 'right'; ctx.fillText(`${g / 1000} GW`, padL - 6, y(g) + 3);
+  }
+  // the calm itself, shaded
+  const s = data.year.longest_calm;
+  const i0 = tr.findIndex((r) => r.d === s.start && r.sp === s.start_sp);
+  const i1 = tr.findIndex((r) => r.d === s.end && r.sp === s.end_sp);
+  if (i0 >= 0 && i1 >= 0) { ctx.fillStyle = 'rgba(214,18,31,0.07)'; ctx.fillRect(x(i0), padT, x(i1) - x(i0), plotH - padT); }
+  // capacity line
+  ctx.setLineDash([4, 3]); ctx.strokeStyle = SLATE; ctx.beginPath(); ctx.moveTo(padL, y(cap)); ctx.lineTo(cssW, y(cap)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textAlign = 'left'; ctx.fillStyle = SLATE; ctx.fillText('wind capacity', padL + 4, y(cap) - 4);
+  const line = (key, col, wdt) => {
+    ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath();
+    tr.forEach((r, i) => (i ? ctx.lineTo(x(i), y(r[key])) : ctx.moveTo(x(i), y(r[key])))); ctx.stroke(); ctx.lineWidth = 1;
+  };
+  line('f', INK, 1.5);
+  line('w', DIAL_PALETTE.wind.full, 2);
+  // day ticks
+  ctx.fillStyle = SLATE; ctx.textAlign = 'center';
+  const days = tr.filter((r) => r.sp === 25).length, every = Math.max(1, Math.ceil(days * 52 / plotW));
+  let k = 0;
+  tr.forEach((r, i) => { if (r.sp === 25 && (k++ % every === 0)) ctx.fillText(_dShort(r.d), x(i), cssH - 4); });
+}
+
+const _nTimes = (n) => ({ 2: 'twice', 3: 'three times', 4: 'four times' })[n] || `${n} times`;
+
+function scotDroughtCaption(data) {
+  const s = data.summary || {}, rec = s.record_lull;
+  if (!rec) return '';
+  const ties = s.record_lull_ties || [rec];
+  const longest = ties.length > 1
+    ? `The longest ran ${rec.days} days, ${_nTimes(ties.length)}: ${ties.map((t) => `${_dShort(t.start)} to ${_dLong(t.end)}`).join('; ')}.`
+    : `The longest ran ${rec.days} days, ${_dShort(rec.start)} to ${_dLong(rec.end)}.`;
+  return `Since March 2019 Scottish wind has had ${s.lulls_3d_plus} calm spells of three days or more and ${s.lulls_7d_plus} of a week or more. ${longest}`;
+}
+
+function renderScotland(data) {
+  const y = data.year, rec = data.summary?.record_lull, lc = y.longest_calm;
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const wp = data.winter_peak || [];
+  const ov = data.gb_overlap, cov = data.coverage, ties = data.summary?.record_lull_ties || [];
+  const ovLine = ov ? `On the ${ov.scot_calm_days} days since 2019 when Scottish wind averaged under a tenth of its capacity, wind in the rest of Britain averaged ${pct(ov.rest_mean_cf_on_those_days)} of its capacity, against ${pct(ov.rest_mean_cf_all_days)} on an ordinary day. It was under 15% on ${ov.rest_below_15pct} of those ${ov.scot_calm_days} days. A calm in Scotland is usually a calm in England and Wales too.` : '';
+  $('scot-body').innerHTML = `
+    <div class="scot-stats">
+      <div><span class="scot-big num">${pct(y.share_below_10pct)}</span><span class="scot-lab">of the last year’s half-hours, Scottish wind gave less than a tenth of its capacity: ${Math.round(y.hours_below_10pct).toLocaleString('en-GB')} hours</span></div>
+      <div><span class="scot-big num">${_fmtH(lc.hours)}</span><span class="scot-lab">the longest calm of the last year, ${_dShort(lc.start)} to ${_dLong(lc.end)}</span></div>
+      <div><span class="scot-big num">${rec ? rec.days + ' days' : '–'}</span><span class="scot-lab">the longest run of calm days since 2019${rec ? (ties.length > 1 ? `, reached ${_nTimes(ties.length)}, first ${_dShort(rec.start)} to ${_dLong(rec.end)}` : `, ${_dShort(rec.start)} to ${_dLong(rec.end)}`) : ''}</span></div>
+    </div>
+    <p class="wind-howto"><strong>Every day since March 2019.</strong> One row per year, January on the left. The colour is what Scotland’s wind farms could make that day, as a share of their capacity: pale when the wind barely turned, deep blue when it blew hard. The same key as the <a href="wind.html">whole-of-Britain record</a>.</p>
+    <div class="wind-carpet-cell">
+      <div class="wind-yaxis" id="scot-carpet-y"></div>
+      <canvas id="scot-carpet" class="wind-carpet" role="img" aria-label="Daily Scottish wind output as a share of capacity, every day since March 2019, one row per year."></canvas>
+    </div>
+    <div class="wind-carpet-x" id="scot-carpet-x"></div>
+
+    <p class="wind-howto"><strong>The longest calm of the last year.</strong> Blue is what Scotland’s wind farms could make, half-hour by half-hour; the dashed line is how much they could make in a full wind. Black is Torness nuclear station and Peterhead gas station together. The shaded stretch is the calm: ${_fmtH(lc.hours)} below a tenth of capacity.</p>
+    <canvas id="scot-trace" class="wind-drought" role="img" aria-label="Scottish wind output against Torness and Peterhead during the longest calm of the last year."></canvas>
+    <p class="wind-caption">Through those ${_fmtH(lc.hours)}, ${lc.fleet_mw.toLocaleString('en-GB')} MW of Scottish wind averaged ${lc.mean_mw.toLocaleString('en-GB')} MW. Torness and Peterhead, two stations, averaged ${lc.firm_mean_mw.toLocaleString('en-GB')} MW.</p>
+
+    <p class="wind-howto"><strong>How long the calm lasts.</strong> Each spike is a spell of one or more days running when Scottish wind averaged under a tenth of its capacity. Taller spikes lasted longer; darker red spikes fell further. The guide lines mark three days, a week and a fortnight.</p>
+    <canvas id="scot-drought" class="wind-drought" role="img" aria-label="${esc(scotDroughtCaption(data))}"></canvas>
+    <p class="wind-caption">${esc(scotDroughtCaption(data))}</p>
+
+    <p class="wind-howto"><strong>Winter evenings.</strong> Demand peaks between 4pm and 7pm in December, January and February. How Scottish wind did in those hours, each winter:</p>
+    <table class="scot-table">
+      <thead><tr><th>Winter</th><th class="num">Wind capacity</th><th class="num">Peak half-hours under 10%</th><th class="num">Lowest 5% of half-hours were below</th></tr></thead>
+      <tbody>${wp.map((r) => `<tr><td>${esc(r.winter)}</td><td class="num">${(r.fleet_mw / 1000).toFixed(1)} GW</td><td class="num">${pct(r.share_below_10pct)}</td><td class="num">${r.p5_mw.toLocaleString('en-GB')} MW</td></tr>`).join('')}</tbody>
+    </table>
+    <p class="wind-caption">${ovLine}</p>
+
+    <p class="wind-howto scot-limits"><strong>What this does not show.</strong> Small wind farms on local networks are not metered by Elexon and are not counted. Elexon meters only the farms connected to the transmission grid, so the metered total falls short of the official one${cov ? `: ${cov.metered_twh.toFixed(1)} TWh in ${cov.year}, against ${cov.official_twh.toFixed(1)} TWh in <a href="${cov.official_url}">the government’s figures</a> for all Scottish wind, ${Math.round(cov.shortfall * 100)}% less` : ''}. For that reason the page gives no annual output or capacity factor for Scottish wind; it counts calm hours, which the large farms show as clearly as the small ones. Elexon publishes no half-hourly figure for Scottish demand, so the page compares the wind with Scotland’s firm stations, not with what Scotland used, and gives no share of Scottish demand. When the grid pays a farm to switch off, its meter reads low although the wind was blowing: a half-hour counts as calm only if both the metered output and the output the farms planned were under a tenth of capacity, so switch-offs are not counted as calm.</p>
+    <p class="wind-howto">What Scotland’s wind farms are paid to switch off, farm by farm, is on the Subsidy Clock’s <a href="https://subsidyclock.co.uk/scotland">Scotland page</a>.</p>
+    ${entryFooter('wind')}`;
+  drawScotCharts(data);
+}
+
+function drawScotCharts(data) {
+  window.__scotData = data;
+  drawYearDoyCarpet('scot-carpet', data.carpet, (c) => carpetCellColor(c, 1, DIAL_PALETTE.wind.fullRgb),
+    { yAxisId: 'scot-carpet-y', xAxisId: 'scot-carpet-x', hatchYears: data.partial_years || [] });
+  drawScotTrace(data);
+  drawDroughtPlot(data, 'scot-drought', { yearTicks: true });
 }
 
 // ============================================================ import cost (Entry 04)
@@ -1424,6 +1538,15 @@ async function main() {
     }
   }
 
+  // Scotland detail (scotland.html, #scot-body) — independent fetch.
+  if ($('scot-body')) {
+    try {
+      renderScotland(await getJSON('data/scotland_wind.json'));
+    } catch (e) {
+      $('scot-body').innerHTML = `<p class="warn">Scottish wind data unavailable. ${esc(e.message || e)}</p>`;
+    }
+  }
+
   // The live import price block (build snapshot) feeds the import-page money analyses.
   const importLive = async () => {
     try { return (await getJSON('data/latest.json')).import ?? null; }
@@ -1488,6 +1611,7 @@ async function main() {
     if (CAPACITY && CAPACITY.solar && CAPACITY.sat) drawCarpetCanvas('carpet-solar', CAPACITY.solar.days, CAPACITY.sat.solar, DIAL_PALETTE.solar.fullRgb);
     if (REL_CARPET && REL_CARPET.days) drawReliabilityLine('carpet-reliability', REL_CARPET.days);
     if (window.__windData) { drawWindCarpet(window.__windData); drawDroughtPlot(window.__windData); }
+    if (window.__scotData) drawScotCharts(window.__scotData);
     if (window.__importData) drawImportCarpet(window.__importData);
     if (window.__importRateData) { syncBlockHeights(); drawCarpetCanvas('carpet-import', window.__importRateData.days, window.__importRateData.cap_per_h, IMPORT_DIAL_PALETTE.fullRgb, { keepWorstHigh: true }); }
     if (window.__importPowerData) { syncBlockHeights(); drawCarpetCanvas('carpet-import', window.__importPowerData.days, window.__importPowerData.sat, DIAL_PALETTE.import.fullRgb, { keepWorstHigh: true }); }

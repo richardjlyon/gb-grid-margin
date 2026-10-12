@@ -128,6 +128,13 @@
       <ul class="source-card__caveats"><li>Combined-basis figures supersede the former transmission-only lower bound; cached share images may show the higher old numbers.</li></ul>
       <p class="source-card__more"><a href="#wind-unreliability">→ full method</a></p>
     </article>
+    <article class="source-card" data-unit="scotland-wind" id="src-scotland-wind">
+      <div class="source-card__head"><h3>Scottish wind — output, calms and winter evenings (Scotland detail)</h3><span class="cadence cadence--settled">settled</span></div>
+      <p class="source-card__feeds"><span class="k">Feeds</span> <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610" rel="noopener">Elexon B1610 (settlement meter data, per unit)</a>, <a href="https://data.elexon.co.uk/bmrs/api/v1/datasets/PN" rel="noopener">Elexon PN (physical notifications, per unit)</a>, <a href="https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all" rel="noopener">Elexon BM unit register (zone, loss factor, capacity)</a></p>
+      <p class="source-card__basis"><span class="k">Basis</span> Scottish wind = every wind unit in Elexon's register in the North Scotland (_P) or South Scotland (_N) grid zone; the zone is Elexon's gspGroupId where filled, otherwise the zone whose units share the unit's transmission loss factor. Per half-hour: metered output (B1610, latest settlement run) and planned output (Final Physical Notification). What the wind allowed = the larger of the two, so a farm paid to switch off is not counted as becalmed. Capacity = registered capacity of the units that generated that month. A calm is a run of half-hours below 10% of capacity; a lull is a run of days.</p>
+      <ul class="source-card__caveats"><li>Small wind farms on local distribution networks are not in the Balancing Mechanism and are not counted; their output tends to move with the large farms'.</li><li>Elexon publishes no half-hourly demand for Scotland alone, so the page compares Scottish wind with Scotland's firm stations, not with Scottish demand.</li><li>Settlement meter data starts in March 2019.</li></ul>
+      <p class="source-card__more"><a href="#scotland-wind">→ full method</a></p>
+    </article>
   </section>
   <section class="source-group" id="src-group-solar">
     <h2>Solar (§02)</h2>

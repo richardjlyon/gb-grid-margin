@@ -32,7 +32,7 @@ SITE = Path("site")
 # share cards are generated elsewhere. Generated post-mortem/*.html pages are also excluded — they're
 # produced fresh each build by engine.scenarios from these same canonical ASSETS/FOOTER, so their
 # chrome can't drift.)
-PAGES = ["index.html", "methodology.html", "about.html", "import.html", "wind.html", "share.html"]
+PAGES = ["index.html", "methodology.html", "about.html", "import.html", "wind.html", "scotland.html", "share.html"]
 
 # Pages that own a primary-nav entry get aria-current; the home page and the detail pages do not.
 ACTIVE = {"methodology.html": "methodology", "about.html": "about", "share.html": "share"}

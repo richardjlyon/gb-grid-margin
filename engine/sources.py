@@ -47,6 +47,12 @@ _DUKES_62 = {"name": "DUKES 2025, Table 6.2 (UK nameplate, end-2024)",
              "url": "https://www.gov.uk/government/statistical-data-sets/dukes-renewable-sources-of-energy-chapter-6"}
 _DESNZ_INTERCONNECTORS = {"name": "DESNZ GB interconnector capacity",
                           "url": "https://www.gov.uk/government/publications/next-steps-for-electricity-interconnection-in-great-britain/next-steps-for-electricity-interconnection-in-great-britain-accessible-webpage"}
+_ELEXON_B1610 = {"name": "Elexon B1610 (settlement meter data, per unit)",
+                 "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610"}
+_ELEXON_PN = {"name": "Elexon PN (physical notifications, per unit)",
+              "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/PN"}
+_ELEXON_BMU_REGISTER = {"name": "Elexon BM unit register (zone, loss factor, capacity)",
+                        "url": "https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all"}
 _PV_LIVE = {"name": "Sheffield Solar PV_Live (cross-check)",
             "url": "https://www.solar.sheffield.ac.uk"}
 
@@ -149,6 +155,27 @@ REGISTRY: dict[str, dict] = {
         "caveats": [
             "Combined-basis figures supersede the former transmission-only lower bound; cached share "
             "images may show the higher old numbers.",
+        ],
+    },
+    "scotland-wind": {
+        "label": "Scottish wind — output, calms and winter evenings (Scotland detail)",
+        "section": "wind",
+        "cadence": "settled",
+        "method_anchor": "scotland-wind",
+        "feeds": [_ELEXON_B1610, _ELEXON_PN, _ELEXON_BMU_REGISTER],
+        "basis": ("Scottish wind = every wind unit in Elexon's register in the North Scotland (_P) or "
+                  "South Scotland (_N) grid zone; the zone is Elexon's gspGroupId where filled, otherwise "
+                  "the zone whose units share the unit's transmission loss factor. Per half-hour: metered "
+                  "output (B1610, latest settlement run) and planned output (Final Physical Notification). "
+                  "What the wind allowed = the larger of the two, so a farm paid to switch off is not "
+                  "counted as becalmed. Capacity = registered capacity of the units that generated that "
+                  "month. A calm is a run of half-hours below 10% of capacity; a lull is a run of days."),
+        "caveats": [
+            "Small wind farms on local distribution networks are not in the Balancing Mechanism and are "
+            "not counted; their output tends to move with the large farms'.",
+            "Elexon publishes no half-hourly demand for Scotland alone, so the page compares Scottish "
+            "wind with Scotland's firm stations, not with Scottish demand.",
+            "Settlement meter data starts in March 2019.",
         ],
     },
     "import-power": {

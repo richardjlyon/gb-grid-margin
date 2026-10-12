@@ -22,7 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from engine import (capacity, chrome, embedded_history, import_cost, methodology, reliability,
-                    solar_overcast, sources, system_price_history, wind_unreliability)
+                    solar_overcast, sources, system_price_history, wind_unreliability,
+                    scotland_wind)
 from engine.build_site import _atomic_write
 from engine.grid_engine import GAS, WIND
 from engine.guards import GuardError, check_nameplate_sane, check_shares_sum_100
@@ -223,6 +224,20 @@ def build(out_dir: Path = SITE_DATA) -> int:
             print(f"wind unreliability build failed (GuardError): {e}", file=sys.stderr)
             return 1
         reliability_files.append(("wind_unreliability", wu_payload))
+
+        # Scotland detail (scotland.html): Scottish wind units only, from their own B1610 store.
+        # Best-effort like the embedded layers — an empty store skips the page's data, never the run.
+        scot_rows = scotland_wind.read_store()
+        if scot_rows:
+            sw_payload = scotland_wind.build_payload(scot_rows, wu_series, generated)
+            try:
+                scotland_wind.guard_payload(sw_payload)
+            except GuardError as e:
+                print(f"scotland wind build failed (GuardError): {e}", file=sys.stderr); return 1
+            reliability_files.append(("scotland_wind", sw_payload))
+        else:
+            print("scotland_wind store empty — skipping scotland_wind.json "
+                  "(run python -m engine.scotland_wind backfill)")
 
         # Conditional solar 'overcast' grid (Grid Conditions OVERCAST lamp): per (week, settlement
         # period) cell, the p25 overcast line + a robust P95 clear-sky reference, over the whole

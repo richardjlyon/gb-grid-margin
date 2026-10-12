@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-10-12T14:00:54.234955+00:00",
+  "generated_utc": "2026-10-12T18:28:30.685307+00:00",
   "units": {
     "verdict": {
       "label": "Reliability gauge (live)",
@@ -144,6 +144,32 @@
       "basis": "Daily wind capacity factor = mean power of (transmission WIND [Elexon FUELHH] + embedded wind [NESO outturn]) \u00f7 DUKES total UK wind nameplate (annual-step), back to 2016. A lull is a run of consecutive days below 10%; severe if it touches below 5%.",
       "caveats": [
         "Combined-basis figures supersede the former transmission-only lower bound; cached share images may show the higher old numbers."
+      ]
+    },
+    "scotland-wind": {
+      "label": "Scottish wind \u2014 output, calms and winter evenings (Scotland detail)",
+      "section": "wind",
+      "cadence": "settled",
+      "method_anchor": "scotland-wind",
+      "feeds": [
+        {
+          "name": "Elexon B1610 (settlement meter data, per unit)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610"
+        },
+        {
+          "name": "Elexon PN (physical notifications, per unit)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/datasets/PN"
+        },
+        {
+          "name": "Elexon BM unit register (zone, loss factor, capacity)",
+          "url": "https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all"
+        }
+      ],
+      "basis": "Scottish wind = every wind unit in Elexon's register in the North Scotland (_P) or South Scotland (_N) grid zone; the zone is Elexon's gspGroupId where filled, otherwise the zone whose units share the unit's transmission loss factor. Per half-hour: metered output (B1610, latest settlement run) and planned output (Final Physical Notification). What the wind allowed = the larger of the two, so a farm paid to switch off is not counted as becalmed. Capacity = registered capacity of the units that generated that month. A calm is a run of half-hours below 10% of capacity; a lull is a run of days.",
+      "caveats": [
+        "Small wind farms on local distribution networks are not in the Balancing Mechanism and are not counted; their output tends to move with the large farms'.",
+        "Elexon publishes no half-hourly demand for Scotland alone, so the page compares Scottish wind with Scotland's firm stations, not with Scottish demand.",
+        "Settlement meter data starts in March 2019."
       ]
     },
     "import-power": {
