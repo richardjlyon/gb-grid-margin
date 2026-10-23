@@ -1,10 +1,10 @@
 {
   "basis": "Scottish wind = every transmission-connected wind unit in Elexon's register whose grid zone is North Scotland (_P) or South Scotland (_N); the zone comes from gspGroupId where Elexon fills it and otherwise from the unit's transmission loss factor, which Elexon sets per zone. Output = Elexon B1610 settlement meter data, latest settlement run. Capacity = registered capacity of the units that generated in the month. Planned output = Final Physical Notification (FPN). What the wind allowed = the larger of metered and planned output, so a farm paid to switch off is not counted as becalmed. A calm is a run of half-hours in which what the wind allowed stayed below 10% of capacity. Firm = metered Torness + Peterhead. Small distribution-connected wind is not metered by Elexon and is not included.",
   "source": "Elexon B1610 (settlement meter data) + PN (physical notifications) + BM unit register",
-  "generated_utc": "2026-10-23T10:47:58.298856+00:00",
+  "generated_utc": "2026-10-23T16:13:41.766346+00:00",
   "range": {
     "from": "2019-03-01",
-    "to": "2026-10-15"
+    "to": "2026-10-18"
   },
   "partial_years": [
     2019,
@@ -3246,24 +3246,24 @@
         0.2165,
         0.5781,
         0.6529,
-        0.3137,
-        0.5619,
-        0.3298,
-        0.598,
-        0.5738,
-        0.1288,
-        0.1468,
-        0.2323,
-        0.5606,
-        0.6175,
-        0.1104,
-        0.5028,
-        0.6808,
-        0.6427,
-        0.4164,
-        null,
-        null,
-        null,
+        0.3109,
+        0.5573,
+        0.3271,
+        0.5932,
+        0.5692,
+        0.1278,
+        0.1456,
+        0.2305,
+        0.5561,
+        0.6125,
+        0.1095,
+        0.4987,
+        0.6753,
+        0.6375,
+        0.413,
+        0.2118,
+        0.0853,
+        0.0458,
         null,
         null,
         null,
@@ -5013,6 +5013,14 @@
       "min_cf": 0.0566,
       "min_cf_date": "2026-09-13",
       "severe": false
+    },
+    {
+      "start": "2026-10-17",
+      "end": "2026-10-18",
+      "days": 2,
+      "min_cf": 0.0458,
+      "min_cf_date": "2026-10-18",
+      "severe": true
     }
   ],
   "summary": {
@@ -5054,16 +5062,16 @@
     "lulls_7d_plus": 6
   },
   "year": {
-    "from": "2025-10-16",
-    "to": "2026-10-15",
+    "from": "2025-10-19",
+    "to": "2026-10-18",
     "half_hours": 17520,
-    "fleet_mw": 13967,
-    "mean_mw": 3064,
-    "metered_mean_cf": 0.2222,
+    "fleet_mw": 14081,
+    "mean_mw": 3056,
+    "metered_mean_cf": 0.2217,
     "mean_cf": 0.3344,
-    "hours_below_10pct": 1410.5,
-    "hours_below_5pct": 464.5,
-    "share_below_10pct": 0.161,
+    "hours_below_10pct": 1402.0,
+    "hours_below_5pct": 458.5,
+    "share_below_10pct": 0.16,
     "spells_24h_plus": 13,
     "longest_calm": {
       "start": "2026-07-11",
@@ -5077,16 +5085,16 @@
       "fpn_mean_mw": 639,
       "firm_mean_mw": 1852
     },
-    "avail_mean_mw": 4616,
+    "avail_mean_mw": 4619,
     "lowest": {
       "date": "2026-07-16",
       "sp": 18,
       "mw": 39,
       "fleet_mw": 14067
     },
-    "calm_fpn_mean_mw": 813,
-    "calm_metered_mean_mw": 698,
-    "calm_firm_mean_mw": 1493
+    "calm_fpn_mean_mw": 818,
+    "calm_metered_mean_mw": 670,
+    "calm_firm_mean_mw": 1472
   },
   "year_spells": [
     {
@@ -5126,18 +5134,6 @@
       "firm_mean_mw": 1480
     },
     {
-      "start": "2025-10-16",
-      "start_sp": 1,
-      "end": "2025-10-17",
-      "end_sp": 45,
-      "hours": 46.5,
-      "mean_mw": 582,
-      "fleet_mw": 13508,
-      "min_mw": 87,
-      "fpn_mean_mw": 509,
-      "firm_mean_mw": 2282
-    },
-    {
       "start": "2026-08-15",
       "start_sp": 48,
       "end": "2026-08-17",
@@ -5160,6 +5156,18 @@
       "min_mw": 172,
       "fpn_mean_mw": 630,
       "firm_mean_mw": 1323
+    },
+    {
+      "start": "2026-10-17",
+      "start_sp": 21,
+      "end": "2026-10-18",
+      "end_sp": 48,
+      "hours": 38.0,
+      "mean_mw": 619,
+      "fleet_mw": 14081,
+      "min_mw": -1016,
+      "fpn_mean_mw": 619,
+      "firm_mean_mw": 1715
     },
     {
       "start": "2026-08-29",
