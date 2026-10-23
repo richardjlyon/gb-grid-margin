@@ -1,7 +1,7 @@
 {
   "basis": "Scottish wind = every transmission-connected wind unit in Elexon's register whose grid zone is North Scotland (_P) or South Scotland (_N); the zone comes from gspGroupId where Elexon fills it and otherwise from the unit's transmission loss factor, which Elexon sets per zone. Output = Elexon B1610 settlement meter data, latest settlement run. Capacity = registered capacity of the units that generated in the month. Planned output = Final Physical Notification (FPN). What the wind allowed = the larger of metered and planned output, so a farm paid to switch off is not counted as becalmed. A calm is a run of half-hours in which what the wind allowed stayed below 10% of capacity. Firm = metered Torness + Peterhead. Small distribution-connected wind is not metered by Elexon and is not included.",
   "source": "Elexon B1610 (settlement meter data) + PN (physical notifications) + BM unit register",
-  "generated_utc": "2026-10-23T02:45:23.959983+00:00",
+  "generated_utc": "2026-10-23T10:47:58.298856+00:00",
   "range": {
     "from": "2019-03-01",
     "to": "2026-10-15"
@@ -3221,7 +3221,7 @@
         0.3856,
         0.6027,
         0.4292,
-        0.5041,
+        0.5045,
         0.5043,
         0.6503,
         0.1758,
