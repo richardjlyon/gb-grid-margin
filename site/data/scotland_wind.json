@@ -1,10 +1,10 @@
 {
   "basis": "Scottish wind = every transmission-connected wind unit in Elexon's register whose grid zone is North Scotland (_P) or South Scotland (_N); the zone comes from gspGroupId where Elexon fills it and otherwise from the unit's transmission loss factor, which Elexon sets per zone. Output = Elexon B1610 settlement meter data, latest settlement run. Capacity = registered capacity of the units that generated in the month. Planned output = Final Physical Notification (FPN). What the wind allowed = the larger of metered and planned output, so a farm paid to switch off is not counted as becalmed. A calm is a run of half-hours in which what the wind allowed stayed below 10% of capacity. Firm = metered Torness + Peterhead. Small distribution-connected wind is not metered by Elexon and is not included.",
   "source": "Elexon B1610 (settlement meter data) + PN (physical notifications) + BM unit register",
-  "generated_utc": "2026-10-29T12:02:52.708714+00:00",
+  "generated_utc": "2026-10-29T22:16:06.881393+00:00",
   "range": {
     "from": "2019-03-01",
-    "to": "2026-10-21"
+    "to": "2026-10-22"
   },
   "partial_years": [
     2019,
@@ -3267,7 +3267,7 @@
         0.231,
         0.5269,
         0.3014,
-        null,
+        0.3655,
         null,
         null,
         null,
@@ -5062,16 +5062,16 @@
     "lulls_7d_plus": 6
   },
   "year": {
-    "from": "2025-10-22",
-    "to": "2026-10-21",
+    "from": "2025-10-23",
+    "to": "2026-10-22",
     "half_hours": 17520,
     "fleet_mw": 14081,
-    "mean_mw": 3047,
-    "metered_mean_cf": 0.221,
-    "mean_cf": 0.3347,
-    "hours_below_10pct": 1374.5,
-    "hours_below_5pct": 445.5,
-    "share_below_10pct": 0.1569,
+    "mean_mw": 3044,
+    "metered_mean_cf": 0.2207,
+    "mean_cf": 0.3349,
+    "hours_below_10pct": 1369.0,
+    "hours_below_5pct": 442.5,
+    "share_below_10pct": 0.1563,
     "spells_24h_plus": 12,
     "longest_calm": {
       "start": "2026-07-11",
@@ -5085,15 +5085,15 @@
       "fpn_mean_mw": 639,
       "firm_mean_mw": 1852
     },
-    "avail_mean_mw": 4625,
+    "avail_mean_mw": 4627,
     "lowest": {
       "date": "2026-07-16",
       "sp": 18,
       "mw": 39,
       "fleet_mw": 14067
     },
-    "calm_fpn_mean_mw": 819,
-    "calm_metered_mean_mw": 672,
+    "calm_fpn_mean_mw": 820,
+    "calm_metered_mean_mw": 673,
     "calm_firm_mean_mw": 1461
   },
   "year_spells": [
