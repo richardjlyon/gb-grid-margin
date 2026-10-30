@@ -1,7 +1,7 @@
 {
   "basis": "Scottish wind = every transmission-connected wind unit in Elexon's register whose grid zone is North Scotland (_P) or South Scotland (_N); the zone comes from gspGroupId where Elexon fills it and otherwise from the unit's transmission loss factor, which Elexon sets per zone. Output = Elexon B1610 settlement meter data, latest settlement run. Capacity = registered capacity of the units that generated in the month. Planned output = Final Physical Notification (FPN). What the wind allowed = the larger of metered and planned output, so a farm paid to switch off is not counted as becalmed. A calm is a run of half-hours in which what the wind allowed stayed below 10% of capacity. Firm = metered Torness + Peterhead. Small distribution-connected wind is not metered by Elexon and is not included.",
   "source": "Elexon B1610 (settlement meter data) + PN (physical notifications) + BM unit register",
-  "generated_utc": "2026-10-30T03:45:55.839367+00:00",
+  "generated_utc": "2026-10-30T11:56:41.834390+00:00",
   "range": {
     "from": "2019-03-01",
     "to": "2026-10-22"
@@ -3162,7 +3162,7 @@
         0.4581,
         0.2569,
         0.1253,
-        0.0819,
+        0.082,
         0.0695,
         0.0837,
         0.0664,
@@ -3226,7 +3226,7 @@
         0.6503,
         0.1758,
         0.4177,
-        0.2956,
+        0.2957,
         0.5134,
         0.0566,
         0.2552,
@@ -3253,7 +3253,7 @@
         0.5692,
         0.1278,
         0.1457,
-        0.2305,
+        0.2313,
         0.5561,
         0.6125,
         0.1095,
@@ -5295,7 +5295,7 @@
     {
       "d": "2026-07-09",
       "sp": 1,
-      "w": 1601,
+      "w": 1603,
       "f": 2011,
       "cap": 14067
     },
@@ -5372,28 +5372,28 @@
     {
       "d": "2026-07-09",
       "sp": 12,
-      "w": 809,
+      "w": 807,
       "f": 2420,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 13,
-      "w": 837,
+      "w": 835,
       "f": 2417,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 14,
-      "w": 916,
+      "w": 914,
       "f": 2418,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 15,
-      "w": 949,
+      "w": 948,
       "f": 2424,
       "cap": 14067
     },
@@ -5435,35 +5435,35 @@
     {
       "d": "2026-07-09",
       "sp": 21,
-      "w": 939,
+      "w": 938,
       "f": 2419,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 22,
-      "w": 971,
+      "w": 972,
       "f": 2183,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 23,
-      "w": 1028,
+      "w": 1029,
       "f": 2254,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 24,
-      "w": 1160,
+      "w": 1161,
       "f": 2014,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 25,
-      "w": 1369,
+      "w": 1370,
       "f": 2001,
       "cap": 14067
     },
@@ -5477,14 +5477,14 @@
     {
       "d": "2026-07-09",
       "sp": 27,
-      "w": 1399,
+      "w": 1398,
       "f": 2004,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 28,
-      "w": 1428,
+      "w": 1427,
       "f": 2005,
       "cap": 14067
     },
@@ -5547,84 +5547,84 @@
     {
       "d": "2026-07-09",
       "sp": 37,
-      "w": 1131,
+      "w": 1132,
       "f": 2339,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 38,
-      "w": 1159,
+      "w": 1164,
       "f": 2226,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 39,
-      "w": 1209,
+      "w": 1210,
       "f": 2183,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 40,
-      "w": 1191,
+      "w": 1194,
       "f": 2120,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 41,
-      "w": 1029,
+      "w": 1034,
       "f": 2126,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 42,
-      "w": 984,
+      "w": 986,
       "f": 2281,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 43,
-      "w": 1031,
+      "w": 1034,
       "f": 2239,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 44,
-      "w": 1102,
+      "w": 1106,
       "f": 2143,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 45,
-      "w": 1177,
+      "w": 1181,
       "f": 2016,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 46,
-      "w": 1160,
+      "w": 1164,
       "f": 2003,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 47,
-      "w": 1141,
+      "w": 1143,
       "f": 1999,
       "cap": 14067
     },
     {
       "d": "2026-07-09",
       "sp": 48,
-      "w": 1053,
+      "w": 1055,
       "f": 2105,
       "cap": 14067
     },
