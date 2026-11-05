@@ -1,10 +1,10 @@
 {
   "basis": "Daily wind capacity factor = mean-power of (transmission WIND [Elexon FUELHH, settled] + embedded wind [NESO outturn]) over the day's joined half-hours / DUKES total UK wind nameplate (annual-step). Combined basis: a true load factor, artifact-free across years (unlike the transmission-only lower bound). A lull is a run of consecutive days with CF below 10%; severity is the lowest CF reached (below 5% = severe). Supersedes the former stripe/tally figures.",
   "source": "Elexon FUELHH (settled) + NESO embedded wind / DUKES 6.2 wind nameplate (annual-step)",
-  "generated_utc": "2026-11-04T23:03:39.082014+00:00",
+  "generated_utc": "2026-11-05T04:29:17.792760+00:00",
   "range": {
     "from": "2016-01-01",
-    "to": "2026-10-10"
+    "to": "2026-10-11"
   },
   "partial_years": [
     2026
@@ -4362,7 +4362,7 @@
         0.4138,
         0.6329,
         0.6388,
-        null,
+        0.22,
         null,
         null,
         null,
@@ -6475,7 +6475,7 @@
       "2025": 3,
       "2026": 3
     },
-    "mean_cf": 0.2924,
+    "mean_cf": 0.2923,
     "below_10pct_days": 435,
     "below_5pct_days": 78
   }
