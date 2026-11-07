@@ -238,6 +238,7 @@ export async function resolveState(faults, clockNow, { httpGet = httpGetReal, sl
       verdict: live.verdict,
       capacity: live.capacity,
       feeds: live.feeds,
+      snapshot: live.snapshot,
       lastUpdated: `${lead} · snapshot ${snapHH} UTC (${age.text})`,
       reconcileNote: live.reconcileNote,
       veryStale: !age.uncertain && age.ageMin != null && age.ageMin > STALE_MIN,
@@ -299,6 +300,7 @@ export function buildFallback(data, clientNowMs, liveErr) {
       denominator_basis: 'NESO GB-DC live',
     },
     feeds: liveErr?.feeds || {},
+    snapshot: p.snapshot,
     lastUpdated: `Showing last good reading — snapshot ${snapHH} UTC, built ${builtHH} UTC (${age.text}). ${cause}`,
     reconcileNote: '',
     veryStale: age.uncertain || (age.ageMin != null && age.ageMin > STALE_MIN), // L3: uncertain age is also "may be stale"

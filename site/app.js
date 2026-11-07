@@ -14,7 +14,7 @@ import {
   unreliableNowPct, integerShares, reliablePct,
   carpetCellColor, gaugeCalibration, reliabilityColor,
   windDroughtColor, droughtSpikes, droughtCaption, carpetMonthTicks,
-  importValueColor, importCostCaption, fmtRatePerH,
+  importValueColor, importCostCaption, fmtRatePerH, readingStamp,
 } from './render.js';
 
 const $ = (id) => document.getElementById(id);
@@ -246,6 +246,14 @@ function renderVerdict(state) {
     ? `<tr class="export-row"><td class="fuel">${extra.label}</td><td class="n">${fmtMW(extra.mw)}</td><td class="n">—</td><td class="bar-cell"><div class="bar" style="width:16px;background:${extra.color}"></div></td></tr>`
     : '';
 
+  const st = readingStamp(state.snapshot);
+  const stampHtml = st ? `
+        <p class="reading-stamp">
+          <span class="rs-label">${state.mode === 'live' ? 'Read' : 'Last good reading'}</span>
+          <time class="rs-when" datetime="${st.iso}"><span class="rs-time">${esc(st.time)}</span><span class="rs-date">${esc(st.date)}</span></time>
+          <span class="rs-src">Elexon generation snapshot · gridmargin.co.uk</span>
+        </p>` : '';
+
   $('verdict-body').innerHTML = `
     <div class="verdict-cols">
       <div class="verdict-gauge">
@@ -274,6 +282,7 @@ function renderVerdict(state) {
             ${extraRow}
           </tbody>
         </table>
+        ${stampHtml}
       </div>
     </div>`;
 

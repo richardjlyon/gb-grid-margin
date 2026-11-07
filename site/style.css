@@ -665,3 +665,23 @@ main { padding-bottom: 40px; }
 }
 .scot-limits { margin-top: 2rem; }
 #scot-trace + .wind-caption { margin-top: .5rem; }
+
+/* ---------- the receipt's reading stamp: when the figures were read, printed like a till
+   receipt's date line, so any screenshot of Entry 01 carries its own time and source ---------- */
+.reading-stamp {
+  display: grid; grid-template-columns: auto 1fr; column-gap: 14px; row-gap: 2px; align-items: baseline;
+  margin: 14px 0 0; padding: 12px 8px 0; border-top: 1px dashed var(--rule-strong);
+  font-family: var(--display); color: var(--ink);
+}
+.rs-label {
+  font-size: 0.66rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--slate);
+}
+.rs-when { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; }
+.rs-time {
+  font-weight: 700; font-size: 1.3rem; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.rs-date { font-size: 0.95rem; font-weight: 500; }
+.rs-src {
+  grid-column: 2; font-family: var(--mono); font-size: 0.7rem; color: var(--slate); letter-spacing: 0.01em;
+}

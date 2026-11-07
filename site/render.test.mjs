@@ -9,7 +9,7 @@ import {
   droughtCaption, carpetMonthTicks,
   importRatePerHour,
   importValueColor, importRateAngle, importCostCaption,
-  fmtRatePerH,
+  fmtRatePerH, readingStamp,
 } from './render.js';
 
 const approx = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
@@ -319,4 +319,22 @@ test('importCostCaption — contains £m figure and formatted date; fallback whe
   assert.ok(typeof fb === 'string' && fb.length > 0, 'fallback should be a non-empty string');
   const fb2 = importCostCaption({});
   assert.ok(typeof fb2 === 'string' && fb2.length > 0, 'empty-object fallback should be non-empty');
+});
+
+test('readingStamp — winter reading is GMT, with the long date', () => {
+  const st = readingStamp('2026-11-07T15:35Z');
+  assert.equal(st.time, '15:35 GMT');
+  assert.equal(st.date, 'Saturday 7 November 2026');
+  assert.equal(st.iso, '2026-11-07T15:35:00.000Z');
+});
+
+test('readingStamp — summer reading is BST, and a late UTC time rolls to the next UK day', () => {
+  const st = readingStamp('2026-06-23T23:30Z');
+  assert.equal(st.time, '00:30 BST');
+  assert.equal(st.date, 'Wednesday 24 June 2026');
+});
+
+test('readingStamp — missing or unparseable time gives null (no stamp shown)', () => {
+  assert.equal(readingStamp(undefined), null);
+  assert.equal(readingStamp('not a time'), null);
 });

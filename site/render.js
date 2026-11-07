@@ -188,6 +188,27 @@ export const fmtPct0 = (x) => (Number.isFinite(x) ? `${Math.round(x)}%` : '—')
 export const fmtGW = (mw) => (Number.isFinite(mw) ? `${(mw / 1000).toFixed(1)} GW` : '—');
 export const fmtMW = (mw) => (Number.isFinite(mw) ? `${Math.round(mw).toLocaleString('en-GB')} MW` : '—');
 
+// When a reading was taken, in UK clock time with its zone (GMT or BST), for the stamp under the
+// Entry 01 receipt, so a screenshot always carries its own time. ISO string in; null if unparseable.
+// e.g. '2026-11-07T15:35Z' -> { time: '15:35 GMT', date: 'Saturday 7 November 2026', iso: '…' }
+const _UK_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short',
+});
+const _UK_DATE = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+});
+export function readingStamp(iso) {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms);
+  const part = (type) => _UK_DATE.formatToParts(d).find((p) => p.type === type).value;
+  return {
+    time: _UK_TIME.format(d),
+    date: `${part('weekday')} ${part('day')} ${part('month')} ${part('year')}`,
+    iso: d.toISOString(),
+  };
+}
+
 // --- the capacity-trap carpets + gauge calibration (Entry 02) ----------------
 const _CARPET_PAPER = [251, 251, 249], _CARPET_FULL = [214, 18, 31], _CARPET_GAP = [232, 232, 230];
 
