@@ -76,7 +76,7 @@ remaining positive transmission fuels (`NPSHYD`, `OTHER`, `COAL`, `OIL`).
 
 **Reconciliation guard — against INDO, not ITSDO.** The build compares this denominator against
 an independent figure — Elexon's Initial (National) Demand Outturn, **INDO**, plus the same
-embedded estimate — and fails if they disagree by more than 12%. INDO is the right reference
+embedded estimate — and fails if they disagree by more than 33% (12% until 2026-11-09; see below). INDO is the right reference
 because the supply reconstruction above computes *national* demand. **ITSDO (transmission system
 demand) is the wrong reference and was the source of a false alarm:** by Elexon's definition
 `ITSDO = INDO + interconnector exports + station load + pump-storage pumping`, so on an export
@@ -92,6 +92,20 @@ low. The guard's job is to catch a gross feed failure (a zeroed, doubled or wron
 to certify accuracy — the accuracy of the one estimate that moves the headline (solar) is defended
 separately by the PV_Live cross-check in #1. The actual residual is recorded each run
 (`reconcile_residual_pct`) rather than hidden.
+
+**Tolerance recalibrated, 2026-11-09: 12% → 33%.** The "roughly demand-independent ~0.5–1 GW"
+offset above understated the night gap. The reconstruction counts the power serving pumped-storage
+pumping, station load and losses, which INDO leaves out, and the gap grows through the night as
+demand falls: on 2026-11-09 it rose from 6% at 00:30Z to 16% at 03:30Z, and the 03:50Z build failed
+on good data (28,439 vs 24,722, 15.0%), leaving `latest.json` to age. `scripts/calibrate_reconcile_guard.py`
+measures the gap over the whole settled store (2016–2026, 185k half-hours): the largest gap on an
+ordinary night is +24.8%; every half-hour more than ~18% *below* INDO is a hole in the settled data
+(CCGT or wind zeroed); and a zeroed, doubled or wrong-unit FUELINST injected into a clean half-hour
+misses by at least 41.4% (smallest on a sunny summer weekend, when embedded solar is large). 33%
+sits midway between +24.8% and 41.4%; in ten years it trips only the data holes (0.05% of
+half-hours). Pinned by `tests/test_engine.py::test_reconcile_survives_low_demand_night`,
+`::test_reconcile_catches_zeroed_feed_on_sunny_weekend` and a node case in `site/live.test.mjs`.
+Both margins narrow as night gaps and embedded solar grow: re-run the calibration, never tune by taste.
 
 ## 4. Interconnectors
 
@@ -346,7 +360,7 @@ predicates (not bare `assert`s, so `python -O` cannot strip them).
 
 **Where they run.**
 - *Live verdict* (`engine.grid_engine.sanity_check`, pre-dating this module): demand > 0, share
-  ranges, the PV_Live solar cross-check (±10%) and the INDO reconcile (±12%). Unchanged.
+  ranges, the PV_Live solar cross-check (±50%, `SOLAR_CROSSCHECK_TOL`) and the INDO reconcile (±33% since 2026-11-09).
 - *Derived figures* (`engine.derived.guard_outputs`, new): before `derived.build` writes
   `site/data/*.json` it asserts the stripe's daily CF range and date order/uniqueness, the failure
   counters' nesting (`below_5 ≤ below_10 ≤ observed`), each year's transmission shares summing to

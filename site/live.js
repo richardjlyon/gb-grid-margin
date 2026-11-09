@@ -22,7 +22,7 @@ const NESO_TIMEOUT_MS = 12000;     // NESO CKAN is the slow origin; give it more
 const NESO_RETRIES = 1;            // one retry before abandoning the live reading on a transient NESO blip
 const NESO_RETRY_BACKOFF_MS = 2000; // mirrors NESO_RETRY_BACKOFF_S in engine/grid_engine.py
 const realSleep = (ms) => new Promise((res) => setTimeout(res, ms));
-const RECONCILE_TOL = 0.12;
+const RECONCILE_TOL = 0.33;       // mirrors engine/grid_engine.RECONCILE_TOL (calibrated: scripts/calibrate_reconcile_guard.py)
 const SKEW_TOL_MIN = 3;            // data this far in the future => device clock wrong
 const LIVE_LAG_UNCERTAIN_MIN = 20; // a just-fetched live snapshot older than this => age uncertain
 const STALE_MIN = 60;              // banner past this age (Richard: > 60 min)

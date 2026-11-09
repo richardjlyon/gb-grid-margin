@@ -215,13 +215,38 @@ def test_reconcile_against_indo_survives_heavy_export():
     sanity_check(v, pvlive_solar=0, neso_solar_at_pvlive=None, indo=25447,
                  recon_demand_mw=v["national_demand_mw"], recon_embedded=EMB_EXPORT)
     assert v["reconcile_residual_pct"] == 0.0
-    # A transmission-demand (ITSDO) magnitude reference — national demand + the 4.55 GW
-    # export + station load + PS pumping — would still trip the 12% guard. That mismatch
-    # was the bug; INDO removes it.
+    # The same export night must still trip on a gross fault: an INDO feed reading half
+    # its true value (the doubled-supply shape) is a ~90% gap.
     v2 = compute_verdict(MIX_EXPORT, EMB_EXPORT)
     with pytest.raises(AssertionError, match="reconciliation"):
-        sanity_check(v2, pvlive_solar=0, neso_solar_at_pvlive=None, indo=33000,
+        sanity_check(v2, pvlive_solar=0, neso_solar_at_pvlive=None, indo=12700,
                      recon_demand_mw=v2["national_demand_mw"], recon_embedded=EMB_EXPORT)
+
+
+def test_reconcile_survives_low_demand_night():
+    """Regression for the 2026-11-09 03:50Z false alarm.
+
+    A calm, low-demand night (Britain exporting 2.2 GW, pumped storage pumping 0.9 GW,
+    almost no wind): the supply reconstruction for the 03:00Z INDO period was 28,439 MW
+    against INDO 24,442 + embedded 280 = 24,722 (15.0%). The 12% tolerance failed the
+    build on good data; the normal night gap reaches +24.8% in the 2016-2026 store.
+    """
+    v = _verdict()
+    emb = {"solar_mw": 0, "wind_mw": 280, "time": "2026-11-09T03:15Z"}
+    sanity_check(v, pvlive_solar=0, neso_solar_at_pvlive=None, indo=24442,
+                 recon_demand_mw=28439, recon_embedded=emb)
+    assert v["reconcile_residual_pct"] == 15.0
+
+
+def test_reconcile_catches_zeroed_feed_on_sunny_weekend():
+    """The hardest gross fault to see: FUELINST zeroed when embedded solar is large, so
+    the rebuild still holds the embedded figures. Summer weekend midday, 2026 scale:
+    INDO 19,800 + embedded 14,000 = 33,800 vs a rebuild of 14,000 = 58.6% — must trip."""
+    v = _verdict()
+    emb = {"solar_mw": 13000, "wind_mw": 1000, "time": "2026-07-12T11:45Z"}
+    with pytest.raises(AssertionError, match="reconciliation"):
+        sanity_check(v, pvlive_solar=0, neso_solar_at_pvlive=None, indo=19800,
+                     recon_demand_mw=14000, recon_embedded=emb)
 
 
 def test_sanity_check_passes_for_consistent_inputs():

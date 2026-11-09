@@ -149,10 +149,20 @@ test('heavy export stays LIVE — reconcile against INDO, not ITSDO', async () =
   const httpGet = makeHttpGet({ fuel, neso, demand: demandBody(25447), latest: latestJson() });
   const s = await resolveState(NO_FAULTS, clock, { httpGet });
   assert.equal(s.mode, 'live');
-  // An ITSDO-magnitude reference (national demand + the 4.55 GW export + station load + PS)
-  // would have breached the 12% guard — the bug this regression locks out.
-  const itsdoLike = makeHttpGet({ fuel, neso, demand: demandBody(33000), latest: latestJson() });
-  assert.equal((await resolveState(NO_FAULTS, clock, { httpGet: itsdoLike })).mode, 'fallback');
+  // The same export night must still fall back on a gross fault: an INDO feed reading
+  // half its true value (the doubled-supply shape) is a ~90% gap.
+  const halved = makeHttpGet({ fuel, neso, demand: demandBody(12700), latest: latestJson() });
+  assert.equal((await resolveState(NO_FAULTS, clock, { httpGet: halved })).mode, 'fallback');
+});
+
+// Regression (2026-11-09 03:50Z false alarm): on a calm low-demand night the supply
+// reconstruction runs ~15% above INDO + embedded on good data (pumping, exports, station
+// load). 12% refused it; the calibrated tolerance (scripts/calibrate_reconcile_guard.py)
+// must stay LIVE. computed 26500 vs INDO 14043 + embedded 9000 = 23043 → 15.0%.
+test('low-demand night 15% gap stays LIVE', async () => {
+  const httpGet = makeHttpGet({ fuel: fuelBody(), neso: nesoBody(), demand: demandBody(14043), latest: latestJson() });
+  const s = await resolveState(NO_FAULTS, clock, { httpGet });
+  assert.equal(s.mode, 'live');
 });
 
 // Stale-solar guard: a fallback snapshot too old to represent "now" must NOT show its frozen

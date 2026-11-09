@@ -71,17 +71,24 @@ SOLAR_CROSSCHECK_TOL = 0.50   # NESO forecast vs PV_Live outturn — gross-fault
 # PV_Live 217 = 18% = 39 MW). The tripwire targets a zeroed/doubled/wrong-unit feed,
 # which only distorts published figures once solar is material.
 SOLAR_CROSSCHECK_FLOOR_MW = 1000
-# Reconciliation is loose by design. The supply reconstruction runs ~0.5-1 GW above
-# INDO (transmission losses + FUELINST's 5-min snapshot vs INDO's 30-min settlement
-# average); that offset is roughly demand-independent, so as a fraction it grows when
-# demand is low (a winter night). INDO (national demand) is the right reference, NOT
+# Reconciliation is loose by design. INDO (national demand) is the right reference, NOT
 # ITSDO: ITSDO additionally counts interconnector exports, station load and PS pumping
 # as demand, so it diverged from this national-demand reconstruction by the export
 # volume on an export night and false-alarmed (engine/NOTES.md §3). This guard exists
 # to catch a gross feed failure (zeroed/doubled/wrong-unit), not to certify accuracy —
 # the headline-moving solar figure is policed separately by the PV_Live cross-check.
 # The residual is reported (reconcile_residual_pct) rather than hidden.
-RECONCILE_TOL = 0.12          # denominator vs INDO + embedded
+# The normal gap is NOT a small constant offset: the supply reconstruction runs above
+# INDO, and the gap grows overnight as demand falls while pumping, exports and station
+# load do not (2026-11-09: 6% at 00:30Z rising to 16% at 03:30Z). Over the settled
+# store 2016-2026 the gap peaks at +24.8% on an ordinary night, while a zeroed, doubled
+# or wrong-unit FUELINST injected into any clean half-hour misses by at least 41.4%
+# (smallest on a sunny summer weekend, when embedded solar is large). 12% sat inside
+# the normal range: it tripped the 2026-11-09 03:50Z build (15.0%) on good data and
+# staled site/data/latest.json. 0.33 sits midway between the two, and in ten years
+# trips only the half-hours that are holes in the settled data (0.05%). Recalibrate
+# with scripts/calibrate_reconcile_guard.py, never by taste.
+RECONCILE_TOL = 0.33          # denominator vs INDO + embedded — gross-fault tripwire
 
 # Retry budget for the flaky NESO origin, mirroring NESO_RETRIES in site/live.js so the
 # build tolerates exactly what the live browser layer already tolerates.
