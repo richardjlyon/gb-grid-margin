@@ -3,19 +3,19 @@
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "84%",
+      "figure": "90%",
       "label": "of Britain's grid ran on firm power \u2014 gas, nuclear and biomass that answer on demand.",
       "kind": "live",
-      "version": "327592dfd0",
-      "png": "/share/live-balance.png?v=327592dfd0"
+      "version": "b5c377ff6f",
+      "png": "/share/live-balance.png?v=b5c377ff6f"
     },
     {
       "slug": "recent-lull",
       "figure": "3 days",
       "label": "the most recent wind lull \u2014 8\u201310 Jul 2026, when wind fell as low as 7.3% of capacity. Britain has had 46 such spells since 2016.",
       "kind": "settled",
-      "version": "41940ff21f",
-      "png": "/share/recent-lull.png?v=41940ff21f"
+      "version": "3b13d6da58",
+      "png": "/share/recent-lull.png?v=3b13d6da58"
     }
   ]
 }
