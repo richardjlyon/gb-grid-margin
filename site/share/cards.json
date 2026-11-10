@@ -1,13 +1,13 @@
 {
-  "asof": "09 November 2026",
+  "asof": "10 November 2026",
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "90%",
+      "figure": "99%",
       "label": "of Britain's grid ran on firm power \u2014 gas, nuclear and biomass that answer on demand.",
       "kind": "live",
-      "version": "5eff709bed",
-      "png": "/share/live-balance.png?v=5eff709bed"
+      "version": "8b4f39d73f",
+      "png": "/share/live-balance.png?v=8b4f39d73f"
     },
     {
       "slug": "recent-lull",
