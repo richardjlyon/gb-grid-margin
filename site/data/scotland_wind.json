@@ -1,10 +1,10 @@
 {
   "basis": "Scottish wind = every transmission-connected wind unit in Elexon's register whose grid zone is North Scotland (_P) or South Scotland (_N); the zone comes from gspGroupId where Elexon fills it and otherwise from the unit's transmission loss factor, which Elexon sets per zone. Output = Elexon B1610 settlement meter data, latest settlement run. Capacity = registered capacity of the units that generated in the month. Planned output = Final Physical Notification (FPN). What the wind allowed = the larger of metered and planned output, so a farm paid to switch off is not counted as becalmed. A calm is a run of half-hours in which what the wind allowed stayed below 10% of capacity. Firm = metered Torness + Peterhead. Small distribution-connected wind is not metered by Elexon and is not included.",
   "source": "Elexon B1610 (settlement meter data) + PN (physical notifications) + BM unit register",
-  "generated_utc": "2026-11-11T03:55:44.440123+00:00",
+  "generated_utc": "2026-11-11T13:17:52.136056+00:00",
   "range": {
     "from": "2019-03-01",
-    "to": "2026-11-03"
+    "to": "2026-11-04"
   },
   "partial_years": [
     2019,
@@ -3174,7 +3174,7 @@
         0.1996,
         0.1106,
         0.0855,
-        0.1765,
+        0.1766,
         0.1493,
         0.2125,
         0.4157,
@@ -3277,10 +3277,10 @@
         0.2265,
         0.3849,
         0.1294,
-        0.1533,
-        0.0731,
+        0.1531,
+        0.073,
         0.0406,
-        null,
+        0.0631,
         null,
         null,
         null,
@@ -5024,8 +5024,8 @@
     },
     {
       "start": "2026-11-02",
-      "end": "2026-11-03",
-      "days": 2,
+      "end": "2026-11-04",
+      "days": 3,
       "min_cf": 0.0406,
       "min_cf_date": "2026-11-03",
       "severe": true
@@ -5066,20 +5066,20 @@
         "severe": true
       }
     ],
-    "lulls_3d_plus": 42,
+    "lulls_3d_plus": 43,
     "lulls_7d_plus": 6
   },
   "year": {
-    "from": "2025-11-04",
-    "to": "2026-11-03",
+    "from": "2025-11-05",
+    "to": "2026-11-04",
     "half_hours": 17520,
-    "fleet_mw": 13766,
-    "mean_mw": 2986,
-    "metered_mean_cf": 0.216,
-    "mean_cf": 0.3306,
-    "hours_below_10pct": 1413.0,
-    "hours_below_5pct": 458.5,
-    "share_below_10pct": 0.1613,
+    "fleet_mw": 13781,
+    "mean_mw": 2983,
+    "metered_mean_cf": 0.2157,
+    "mean_cf": 0.3296,
+    "hours_below_10pct": 1434.0,
+    "hours_below_5pct": 467.0,
+    "share_below_10pct": 0.1637,
     "spells_24h_plus": 13,
     "longest_calm": {
       "start": "2026-07-11",
@@ -5093,7 +5093,7 @@
       "fpn_mean_mw": 639,
       "firm_mean_mw": 1852
     },
-    "avail_mean_mw": 4577,
+    "avail_mean_mw": 4564,
     "lowest": {
       "date": "2026-07-16",
       "sp": 18,
@@ -5101,8 +5101,8 @@
       "fleet_mw": 14067
     },
     "calm_fpn_mean_mw": 821,
-    "calm_metered_mean_mw": 705,
-    "calm_firm_mean_mw": 1475
+    "calm_metered_mean_mw": 704,
+    "calm_firm_mean_mw": 1488
   },
   "year_spells": [
     {
@@ -5130,6 +5130,18 @@
       "firm_mean_mw": 1064
     },
     {
+      "start": "2026-11-02",
+      "start_sp": 3,
+      "end": "2026-11-04",
+      "end_sp": 42,
+      "hours": 68.0,
+      "mean_mw": 774,
+      "fleet_mw": 13781,
+      "min_mw": 206,
+      "fpn_mean_mw": 758,
+      "firm_mean_mw": 1862
+    },
+    {
       "start": "2026-04-26",
       "start_sp": 40,
       "end": "2026-04-29",
@@ -5140,18 +5152,6 @@
       "min_mw": 293,
       "fpn_mean_mw": 687,
       "firm_mean_mw": 1480
-    },
-    {
-      "start": "2026-11-02",
-      "start_sp": 3,
-      "end": "2026-11-03",
-      "end_sp": 48,
-      "hours": 47.0,
-      "mean_mw": 769,
-      "fleet_mw": 13766,
-      "min_mw": 206,
-      "fpn_mean_mw": 746,
-      "firm_mean_mw": 1622
     },
     {
       "start": "2026-08-15",
