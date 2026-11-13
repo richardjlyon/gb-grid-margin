@@ -9,7 +9,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "playwright>=1.60.0",
+    "playwright>=1.61",  # 1.61: first with Ubuntu 26.04, the refresh run's image (aios-harness#149)
     "pytest>=8",
 ]
 
