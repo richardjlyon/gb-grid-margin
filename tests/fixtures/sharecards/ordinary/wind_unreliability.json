@@ -1,0 +1,2012 @@
+{
+ "basis": "Daily wind capacity factor = mean-power of (transmission WIND [Elexon FUELHH, settled] + embedded wind [NESO outturn]) over the day's joined half-hours / DUKES total UK wind nameplate (annual-step). Combined basis: a true load factor, artifact-free across years (unlike the transmission-only lower bound). A lull is a run of consecutive days with CF below 10%; severity is the lowest CF reached (below 5% = severe). Supersedes the former stripe/tally figures.",
+ "source": "Elexon FUELHH (settled) + NESO embedded wind / DUKES 6.2 wind nameplate (annual-step)",
+ "generated_utc": "2026-11-13T13:41:38.341368+00:00",
+ "range": {
+  "from": "2016-01-01",
+  "to": "2026-10-19"
+ },
+ "lulls": [
+  {
+   "start": "2016-01-19",
+   "end": "2016-01-20",
+   "days": 2,
+   "min_cf": 0.0211,
+   "min_cf_date": "2016-01-19",
+   "severe": true
+  },
+  {
+   "start": "2016-02-11",
+   "end": "2016-02-11",
+   "days": 1,
+   "min_cf": 0.0973,
+   "min_cf_date": "2016-02-11",
+   "severe": false
+  },
+  {
+   "start": "2016-02-24",
+   "end": "2016-02-26",
+   "days": 3,
+   "min_cf": 0.0529,
+   "min_cf_date": "2016-02-25",
+   "severe": false
+  },
+  {
+   "start": "2016-03-10",
+   "end": "2016-03-10",
+   "days": 1,
+   "min_cf": 0.0541,
+   "min_cf_date": "2016-03-10",
+   "severe": false
+  },
+  {
+   "start": "2016-03-13",
+   "end": "2016-03-13",
+   "days": 1,
+   "min_cf": 0.093,
+   "min_cf_date": "2016-03-13",
+   "severe": false
+  },
+  {
+   "start": "2016-03-17",
+   "end": "2016-03-18",
+   "days": 2,
+   "min_cf": 0.0635,
+   "min_cf_date": "2016-03-17",
+   "severe": false
+  },
+  {
+   "start": "2016-03-22",
+   "end": "2016-03-23",
+   "days": 2,
+   "min_cf": 0.0584,
+   "min_cf_date": "2016-03-22",
+   "severe": false
+  },
+  {
+   "start": "2016-03-31",
+   "end": "2016-03-31",
+   "days": 1,
+   "min_cf": 0.0522,
+   "min_cf_date": "2016-03-31",
+   "severe": false
+  },
+  {
+   "start": "2016-04-14",
+   "end": "2016-04-14",
+   "days": 1,
+   "min_cf": 0.0731,
+   "min_cf_date": "2016-04-14",
+   "severe": false
+  },
+  {
+   "start": "2016-04-19",
+   "end": "2016-04-19",
+   "days": 1,
+   "min_cf": 0.0903,
+   "min_cf_date": "2016-04-19",
+   "severe": false
+  },
+  {
+   "start": "2016-05-06",
+   "end": "2016-05-06",
+   "days": 1,
+   "min_cf": 0.0654,
+   "min_cf_date": "2016-05-06",
+   "severe": false
+  },
+  {
+   "start": "2016-05-15",
+   "end": "2016-05-16",
+   "days": 2,
+   "min_cf": 0.0725,
+   "min_cf_date": "2016-05-16",
+   "severe": false
+  },
+  {
+   "start": "2016-05-22",
+   "end": "2016-05-23",
+   "days": 2,
+   "min_cf": 0.067,
+   "min_cf_date": "2016-05-22",
+   "severe": false
+  },
+  {
+   "start": "2016-05-26",
+   "end": "2016-05-28",
+   "days": 3,
+   "min_cf": 0.0797,
+   "min_cf_date": "2016-05-27",
+   "severe": false
+  },
+  {
+   "start": "2016-06-04",
+   "end": "2016-06-13",
+   "days": 10,
+   "min_cf": 0.0312,
+   "min_cf_date": "2016-06-10",
+   "severe": true
+  },
+  {
+   "start": "2016-06-16",
+   "end": "2016-06-16",
+   "days": 1,
+   "min_cf": 0.0998,
+   "min_cf_date": "2016-06-16",
+   "severe": false
+  },
+  {
+   "start": "2016-06-23",
+   "end": "2016-06-25",
+   "days": 3,
+   "min_cf": 0.0573,
+   "min_cf_date": "2016-06-23",
+   "severe": false
+  },
+  {
+   "start": "2016-07-14",
+   "end": "2016-07-14",
+   "days": 1,
+   "min_cf": 0.088,
+   "min_cf_date": "2016-07-14",
+   "severe": false
+  },
+  {
+   "start": "2016-07-21",
+   "end": "2016-07-24",
+   "days": 4,
+   "min_cf": 0.055,
+   "min_cf_date": "2016-07-23",
+   "severe": false
+  },
+  {
+   "start": "2016-07-26",
+   "end": "2016-07-26",
+   "days": 1,
+   "min_cf": 0.094,
+   "min_cf_date": "2016-07-26",
+   "severe": false
+  },
+  {
+   "start": "2016-07-28",
+   "end": "2016-07-28",
+   "days": 1,
+   "min_cf": 0.0883,
+   "min_cf_date": "2016-07-28",
+   "severe": false
+  },
+  {
+   "start": "2016-08-01",
+   "end": "2016-08-01",
+   "days": 1,
+   "min_cf": 0.0733,
+   "min_cf_date": "2016-08-01",
+   "severe": false
+  },
+  {
+   "start": "2016-08-05",
+   "end": "2016-08-05",
+   "days": 1,
+   "min_cf": 0.0818,
+   "min_cf_date": "2016-08-05",
+   "severe": false
+  },
+  {
+   "start": "2016-08-14",
+   "end": "2016-08-15",
+   "days": 2,
+   "min_cf": 0.0657,
+   "min_cf_date": "2016-08-14",
+   "severe": false
+  },
+  {
+   "start": "2016-08-18",
+   "end": "2016-08-18",
+   "days": 1,
+   "min_cf": 0.0877,
+   "min_cf_date": "2016-08-18",
+   "severe": false
+  },
+  {
+   "start": "2016-08-23",
+   "end": "2016-08-25",
+   "days": 3,
+   "min_cf": 0.053,
+   "min_cf_date": "2016-08-25",
+   "severe": false
+  },
+  {
+   "start": "2016-08-29",
+   "end": "2016-08-29",
+   "days": 1,
+   "min_cf": 0.0914,
+   "min_cf_date": "2016-08-29",
+   "severe": false
+  },
+  {
+   "start": "2016-09-07",
+   "end": "2016-09-07",
+   "days": 1,
+   "min_cf": 0.0998,
+   "min_cf_date": "2016-09-07",
+   "severe": false
+  },
+  {
+   "start": "2016-09-15",
+   "end": "2016-09-15",
+   "days": 1,
+   "min_cf": 0.0656,
+   "min_cf_date": "2016-09-15",
+   "severe": false
+  },
+  {
+   "start": "2016-09-19",
+   "end": "2016-09-20",
+   "days": 2,
+   "min_cf": 0.0437,
+   "min_cf_date": "2016-09-20",
+   "severe": true
+  },
+  {
+   "start": "2016-10-01",
+   "end": "2016-10-01",
+   "days": 1,
+   "min_cf": 0.077,
+   "min_cf_date": "2016-10-01",
+   "severe": false
+  },
+  {
+   "start": "2016-10-08",
+   "end": "2016-10-09",
+   "days": 2,
+   "min_cf": 0.0868,
+   "min_cf_date": "2016-10-09",
+   "severe": false
+  },
+  {
+   "start": "2016-10-25",
+   "end": "2016-10-25",
+   "days": 1,
+   "min_cf": 0.0859,
+   "min_cf_date": "2016-10-25",
+   "severe": false
+  },
+  {
+   "start": "2016-10-29",
+   "end": "2016-10-31",
+   "days": 3,
+   "min_cf": 0.0479,
+   "min_cf_date": "2016-10-29",
+   "severe": true
+  },
+  {
+   "start": "2016-11-26",
+   "end": "2016-11-26",
+   "days": 1,
+   "min_cf": 0.0898,
+   "min_cf_date": "2016-11-26",
+   "severe": false
+  },
+  {
+   "start": "2016-12-02",
+   "end": "2016-12-02",
+   "days": 1,
+   "min_cf": 0.0544,
+   "min_cf_date": "2016-12-02",
+   "severe": false
+  },
+  {
+   "start": "2017-01-07",
+   "end": "2017-01-07",
+   "days": 1,
+   "min_cf": 0.0887,
+   "min_cf_date": "2017-01-07",
+   "severe": false
+  },
+  {
+   "start": "2017-01-17",
+   "end": "2017-01-17",
+   "days": 1,
+   "min_cf": 0.0862,
+   "min_cf_date": "2017-01-17",
+   "severe": false
+  },
+  {
+   "start": "2017-01-19",
+   "end": "2017-01-20",
+   "days": 2,
+   "min_cf": 0.0786,
+   "min_cf_date": "2017-01-19",
+   "severe": false
+  },
+  {
+   "start": "2017-01-22",
+   "end": "2017-01-23",
+   "days": 2,
+   "min_cf": 0.0453,
+   "min_cf_date": "2017-01-22",
+   "severe": true
+  },
+  {
+   "start": "2017-02-05",
+   "end": "2017-02-05",
+   "days": 1,
+   "min_cf": 0.0947,
+   "min_cf_date": "2017-02-05",
+   "severe": false
+  },
+  {
+   "start": "2017-03-27",
+   "end": "2017-03-27",
+   "days": 1,
+   "min_cf": 0.0915,
+   "min_cf_date": "2017-03-27",
+   "severe": false
+  },
+  {
+   "start": "2017-04-07",
+   "end": "2017-04-08",
+   "days": 2,
+   "min_cf": 0.0866,
+   "min_cf_date": "2017-04-07",
+   "severe": false
+  },
+  {
+   "start": "2017-04-19",
+   "end": "2017-04-19",
+   "days": 1,
+   "min_cf": 0.0865,
+   "min_cf_date": "2017-04-19",
+   "severe": false
+  },
+  {
+   "start": "2017-04-28",
+   "end": "2017-04-28",
+   "days": 1,
+   "min_cf": 0.0706,
+   "min_cf_date": "2017-04-28",
+   "severe": false
+  },
+  {
+   "start": "2017-05-09",
+   "end": "2017-05-10",
+   "days": 2,
+   "min_cf": 0.0482,
+   "min_cf_date": "2017-05-10",
+   "severe": true
+  },
+  {
+   "start": "2017-05-17",
+   "end": "2017-05-19",
+   "days": 3,
+   "min_cf": 0.0602,
+   "min_cf_date": "2017-05-18",
+   "severe": false
+  },
+  {
+   "start": "2017-05-25",
+   "end": "2017-05-25",
+   "days": 1,
+   "min_cf": 0.0665,
+   "min_cf_date": "2017-05-25",
+   "severe": false
+  },
+  {
+   "start": "2017-05-31",
+   "end": "2017-05-31",
+   "days": 1,
+   "min_cf": 0.0899,
+   "min_cf_date": "2017-05-31",
+   "severe": false
+  },
+  {
+   "start": "2017-06-02",
+   "end": "2017-06-03",
+   "days": 2,
+   "min_cf": 0.0606,
+   "min_cf_date": "2017-06-02",
+   "severe": false
+  },
+  {
+   "start": "2017-06-18",
+   "end": "2017-06-19",
+   "days": 2,
+   "min_cf": 0.0611,
+   "min_cf_date": "2017-06-19",
+   "severe": false
+  },
+  {
+   "start": "2017-06-26",
+   "end": "2017-06-26",
+   "days": 1,
+   "min_cf": 0.0631,
+   "min_cf_date": "2017-06-26",
+   "severe": false
+  },
+  {
+   "start": "2017-07-04",
+   "end": "2017-07-05",
+   "days": 2,
+   "min_cf": 0.0498,
+   "min_cf_date": "2017-07-05",
+   "severe": true
+  },
+  {
+   "start": "2017-07-10",
+   "end": "2017-07-11",
+   "days": 2,
+   "min_cf": 0.0616,
+   "min_cf_date": "2017-07-10",
+   "severe": false
+  },
+  {
+   "start": "2017-07-25",
+   "end": "2017-07-25",
+   "days": 1,
+   "min_cf": 0.0738,
+   "min_cf_date": "2017-07-25",
+   "severe": false
+  },
+  {
+   "start": "2017-08-08",
+   "end": "2017-08-08",
+   "days": 1,
+   "min_cf": 0.0715,
+   "min_cf_date": "2017-08-08",
+   "severe": false
+  },
+  {
+   "start": "2017-08-13",
+   "end": "2017-08-13",
+   "days": 1,
+   "min_cf": 0.056,
+   "min_cf_date": "2017-08-13",
+   "severe": false
+  },
+  {
+   "start": "2017-08-21",
+   "end": "2017-08-21",
+   "days": 1,
+   "min_cf": 0.0676,
+   "min_cf_date": "2017-08-21",
+   "severe": false
+  },
+  {
+   "start": "2017-08-25",
+   "end": "2017-08-27",
+   "days": 3,
+   "min_cf": 0.0491,
+   "min_cf_date": "2017-08-26",
+   "severe": true
+  },
+  {
+   "start": "2017-08-31",
+   "end": "2017-09-02",
+   "days": 3,
+   "min_cf": 0.0493,
+   "min_cf_date": "2017-09-01",
+   "severe": true
+  },
+  {
+   "start": "2017-09-17",
+   "end": "2017-09-17",
+   "days": 1,
+   "min_cf": 0.0813,
+   "min_cf_date": "2017-09-17",
+   "severe": false
+  },
+  {
+   "start": "2017-09-19",
+   "end": "2017-09-19",
+   "days": 1,
+   "min_cf": 0.0804,
+   "min_cf_date": "2017-09-19",
+   "severe": false
+  },
+  {
+   "start": "2017-09-25",
+   "end": "2017-09-25",
+   "days": 1,
+   "min_cf": 0.0988,
+   "min_cf_date": "2017-09-25",
+   "severe": false
+  },
+  {
+   "start": "2017-10-08",
+   "end": "2017-10-08",
+   "days": 1,
+   "min_cf": 0.0895,
+   "min_cf_date": "2017-10-08",
+   "severe": false
+  },
+  {
+   "start": "2017-11-02",
+   "end": "2017-11-02",
+   "days": 1,
+   "min_cf": 0.0814,
+   "min_cf_date": "2017-11-02",
+   "severe": false
+  },
+  {
+   "start": "2018-01-11",
+   "end": "2018-01-11",
+   "days": 1,
+   "min_cf": 0.0501,
+   "min_cf_date": "2018-01-11",
+   "severe": false
+  },
+  {
+   "start": "2018-02-21",
+   "end": "2018-02-21",
+   "days": 1,
+   "min_cf": 0.0674,
+   "min_cf_date": "2018-02-21",
+   "severe": false
+  },
+  {
+   "start": "2018-03-24",
+   "end": "2018-03-24",
+   "days": 1,
+   "min_cf": 0.0836,
+   "min_cf_date": "2018-03-24",
+   "severe": false
+  },
+  {
+   "start": "2018-03-26",
+   "end": "2018-03-26",
+   "days": 1,
+   "min_cf": 0.0806,
+   "min_cf_date": "2018-03-26",
+   "severe": false
+  },
+  {
+   "start": "2018-04-08",
+   "end": "2018-04-08",
+   "days": 1,
+   "min_cf": 0.0283,
+   "min_cf_date": "2018-04-08",
+   "severe": true
+  },
+  {
+   "start": "2018-04-13",
+   "end": "2018-04-14",
+   "days": 2,
+   "min_cf": 0.087,
+   "min_cf_date": "2018-04-14",
+   "severe": false
+  },
+  {
+   "start": "2018-04-27",
+   "end": "2018-04-27",
+   "days": 1,
+   "min_cf": 0.0909,
+   "min_cf_date": "2018-04-27",
+   "severe": false
+  },
+  {
+   "start": "2018-05-06",
+   "end": "2018-05-07",
+   "days": 2,
+   "min_cf": 0.0803,
+   "min_cf_date": "2018-05-07",
+   "severe": false
+  },
+  {
+   "start": "2018-05-12",
+   "end": "2018-05-13",
+   "days": 2,
+   "min_cf": 0.0686,
+   "min_cf_date": "2018-05-13",
+   "severe": false
+  },
+  {
+   "start": "2018-05-18",
+   "end": "2018-05-18",
+   "days": 1,
+   "min_cf": 0.0517,
+   "min_cf_date": "2018-05-18",
+   "severe": false
+  },
+  {
+   "start": "2018-05-31",
+   "end": "2018-06-04",
+   "days": 5,
+   "min_cf": 0.0233,
+   "min_cf_date": "2018-06-03",
+   "severe": true
+  },
+  {
+   "start": "2018-06-06",
+   "end": "2018-06-10",
+   "days": 5,
+   "min_cf": 0.0406,
+   "min_cf_date": "2018-06-09",
+   "severe": true
+  },
+  {
+   "start": "2018-06-24",
+   "end": "2018-06-27",
+   "days": 4,
+   "min_cf": 0.0387,
+   "min_cf_date": "2018-06-26",
+   "severe": true
+  },
+  {
+   "start": "2018-07-04",
+   "end": "2018-07-09",
+   "days": 6,
+   "min_cf": 0.04,
+   "min_cf_date": "2018-07-06",
+   "severe": true
+  },
+  {
+   "start": "2018-07-11",
+   "end": "2018-07-13",
+   "days": 3,
+   "min_cf": 0.0284,
+   "min_cf_date": "2018-07-13",
+   "severe": true
+  },
+  {
+   "start": "2018-07-16",
+   "end": "2018-07-21",
+   "days": 6,
+   "min_cf": 0.0368,
+   "min_cf_date": "2018-07-18",
+   "severe": true
+  },
+  {
+   "start": "2018-07-24",
+   "end": "2018-07-25",
+   "days": 2,
+   "min_cf": 0.0679,
+   "min_cf_date": "2018-07-25",
+   "severe": false
+  },
+  {
+   "start": "2018-08-03",
+   "end": "2018-08-03",
+   "days": 1,
+   "min_cf": 0.0917,
+   "min_cf_date": "2018-08-03",
+   "severe": false
+  },
+  {
+   "start": "2018-08-05",
+   "end": "2018-08-05",
+   "days": 1,
+   "min_cf": 0.0817,
+   "min_cf_date": "2018-08-05",
+   "severe": false
+  },
+  {
+   "start": "2018-08-07",
+   "end": "2018-08-07",
+   "days": 1,
+   "min_cf": 0.0873,
+   "min_cf_date": "2018-08-07",
+   "severe": false
+  },
+  {
+   "start": "2018-08-13",
+   "end": "2018-08-13",
+   "days": 1,
+   "min_cf": 0.0967,
+   "min_cf_date": "2018-08-13",
+   "severe": false
+  },
+  {
+   "start": "2018-08-20",
+   "end": "2018-08-20",
+   "days": 1,
+   "min_cf": 0.035,
+   "min_cf_date": "2018-08-20",
+   "severe": true
+  },
+  {
+   "start": "2018-08-30",
+   "end": "2018-08-30",
+   "days": 1,
+   "min_cf": 0.044,
+   "min_cf_date": "2018-08-30",
+   "severe": true
+  },
+  {
+   "start": "2018-12-04",
+   "end": "2018-12-04",
+   "days": 1,
+   "min_cf": 0.0884,
+   "min_cf_date": "2018-12-04",
+   "severe": false
+  },
+  {
+   "start": "2018-12-27",
+   "end": "2018-12-27",
+   "days": 1,
+   "min_cf": 0.0981,
+   "min_cf_date": "2018-12-27",
+   "severe": false
+  },
+  {
+   "start": "2019-01-03",
+   "end": "2019-01-03",
+   "days": 1,
+   "min_cf": 0.0755,
+   "min_cf_date": "2019-01-03",
+   "severe": false
+  },
+  {
+   "start": "2019-01-06",
+   "end": "2019-01-06",
+   "days": 1,
+   "min_cf": 0.0961,
+   "min_cf_date": "2019-01-06",
+   "severe": false
+  },
+  {
+   "start": "2019-01-20",
+   "end": "2019-01-20",
+   "days": 1,
+   "min_cf": 0.0975,
+   "min_cf_date": "2019-01-20",
+   "severe": false
+  },
+  {
+   "start": "2019-01-23",
+   "end": "2019-01-24",
+   "days": 2,
+   "min_cf": 0.047,
+   "min_cf_date": "2019-01-24",
+   "severe": true
+  },
+  {
+   "start": "2019-02-27",
+   "end": "2019-02-27",
+   "days": 1,
+   "min_cf": 0.0716,
+   "min_cf_date": "2019-02-27",
+   "severe": false
+  },
+  {
+   "start": "2019-04-29",
+   "end": "2019-05-01",
+   "days": 3,
+   "min_cf": 0.038,
+   "min_cf_date": "2019-05-01",
+   "severe": true
+  },
+  {
+   "start": "2019-05-07",
+   "end": "2019-05-07",
+   "days": 1,
+   "min_cf": 0.0637,
+   "min_cf_date": "2019-05-07",
+   "severe": false
+  },
+  {
+   "start": "2019-05-10",
+   "end": "2019-05-10",
+   "days": 1,
+   "min_cf": 0.0482,
+   "min_cf_date": "2019-05-10",
+   "severe": true
+  },
+  {
+   "start": "2019-05-12",
+   "end": "2019-05-14",
+   "days": 3,
+   "min_cf": 0.0576,
+   "min_cf_date": "2019-05-12",
+   "severe": false
+  },
+  {
+   "start": "2019-05-18",
+   "end": "2019-05-20",
+   "days": 3,
+   "min_cf": 0.0456,
+   "min_cf_date": "2019-05-19",
+   "severe": true
+  },
+  {
+   "start": "2019-06-19",
+   "end": "2019-06-19",
+   "days": 1,
+   "min_cf": 0.0982,
+   "min_cf_date": "2019-06-19",
+   "severe": false
+  },
+  {
+   "start": "2019-06-22",
+   "end": "2019-06-22",
+   "days": 1,
+   "min_cf": 0.0914,
+   "min_cf_date": "2019-06-22",
+   "severe": false
+  },
+  {
+   "start": "2019-07-07",
+   "end": "2019-07-10",
+   "days": 4,
+   "min_cf": 0.0643,
+   "min_cf_date": "2019-07-08",
+   "severe": false
+  },
+  {
+   "start": "2019-07-15",
+   "end": "2019-07-16",
+   "days": 2,
+   "min_cf": 0.047,
+   "min_cf_date": "2019-07-16",
+   "severe": true
+  },
+  {
+   "start": "2019-08-02",
+   "end": "2019-08-03",
+   "days": 2,
+   "min_cf": 0.0507,
+   "min_cf_date": "2019-08-03",
+   "severe": false
+  },
+  {
+   "start": "2019-08-25",
+   "end": "2019-08-25",
+   "days": 1,
+   "min_cf": 0.0977,
+   "min_cf_date": "2019-08-25",
+   "severe": false
+  },
+  {
+   "start": "2019-08-27",
+   "end": "2019-08-27",
+   "days": 1,
+   "min_cf": 0.0883,
+   "min_cf_date": "2019-08-27",
+   "severe": false
+  },
+  {
+   "start": "2019-09-18",
+   "end": "2019-09-19",
+   "days": 2,
+   "min_cf": 0.0546,
+   "min_cf_date": "2019-09-19",
+   "severe": false
+  },
+  {
+   "start": "2019-11-06",
+   "end": "2019-11-06",
+   "days": 1,
+   "min_cf": 0.0977,
+   "min_cf_date": "2019-11-06",
+   "severe": false
+  },
+  {
+   "start": "2020-03-04",
+   "end": "2020-03-04",
+   "days": 1,
+   "min_cf": 0.0978,
+   "min_cf_date": "2020-03-04",
+   "severe": false
+  },
+  {
+   "start": "2020-04-24",
+   "end": "2020-04-25",
+   "days": 2,
+   "min_cf": 0.063,
+   "min_cf_date": "2020-04-24",
+   "severe": false
+  },
+  {
+   "start": "2020-04-27",
+   "end": "2020-04-27",
+   "days": 1,
+   "min_cf": 0.09,
+   "min_cf_date": "2020-04-27",
+   "severe": false
+  },
+  {
+   "start": "2020-05-03",
+   "end": "2020-05-03",
+   "days": 1,
+   "min_cf": 0.0403,
+   "min_cf_date": "2020-05-03",
+   "severe": true
+  },
+  {
+   "start": "2020-05-06",
+   "end": "2020-05-09",
+   "days": 4,
+   "min_cf": 0.0509,
+   "min_cf_date": "2020-05-08",
+   "severe": false
+  },
+  {
+   "start": "2020-05-27",
+   "end": "2020-05-27",
+   "days": 1,
+   "min_cf": 0.0632,
+   "min_cf_date": "2020-05-27",
+   "severe": false
+  },
+  {
+   "start": "2020-06-02",
+   "end": "2020-06-02",
+   "days": 1,
+   "min_cf": 0.0738,
+   "min_cf_date": "2020-06-02",
+   "severe": false
+  },
+  {
+   "start": "2020-06-09",
+   "end": "2020-06-09",
+   "days": 1,
+   "min_cf": 0.0506,
+   "min_cf_date": "2020-06-09",
+   "severe": false
+  },
+  {
+   "start": "2020-06-14",
+   "end": "2020-06-17",
+   "days": 4,
+   "min_cf": 0.0272,
+   "min_cf_date": "2020-06-16",
+   "severe": true
+  },
+  {
+   "start": "2020-07-08",
+   "end": "2020-07-08",
+   "days": 1,
+   "min_cf": 0.0955,
+   "min_cf_date": "2020-07-08",
+   "severe": false
+  },
+  {
+   "start": "2020-07-21",
+   "end": "2020-07-21",
+   "days": 1,
+   "min_cf": 0.0689,
+   "min_cf_date": "2020-07-21",
+   "severe": false
+  },
+  {
+   "start": "2020-08-11",
+   "end": "2020-08-12",
+   "days": 2,
+   "min_cf": 0.0654,
+   "min_cf_date": "2020-08-12",
+   "severe": false
+  },
+  {
+   "start": "2020-08-17",
+   "end": "2020-08-17",
+   "days": 1,
+   "min_cf": 0.0922,
+   "min_cf_date": "2020-08-17",
+   "severe": false
+  },
+  {
+   "start": "2020-08-31",
+   "end": "2020-08-31",
+   "days": 1,
+   "min_cf": 0.0833,
+   "min_cf_date": "2020-08-31",
+   "severe": false
+  },
+  {
+   "start": "2020-09-06",
+   "end": "2020-09-06",
+   "days": 1,
+   "min_cf": 0.0959,
+   "min_cf_date": "2020-09-06",
+   "severe": false
+  },
+  {
+   "start": "2020-09-15",
+   "end": "2020-09-15",
+   "days": 1,
+   "min_cf": 0.0562,
+   "min_cf_date": "2020-09-15",
+   "severe": false
+  },
+  {
+   "start": "2020-09-29",
+   "end": "2020-09-29",
+   "days": 1,
+   "min_cf": 0.0814,
+   "min_cf_date": "2020-09-29",
+   "severe": false
+  },
+  {
+   "start": "2020-10-17",
+   "end": "2020-10-18",
+   "days": 2,
+   "min_cf": 0.069,
+   "min_cf_date": "2020-10-18",
+   "severe": false
+  },
+  {
+   "start": "2020-11-26",
+   "end": "2020-11-27",
+   "days": 2,
+   "min_cf": 0.0504,
+   "min_cf_date": "2020-11-26",
+   "severe": false
+  },
+  {
+   "start": "2020-11-29",
+   "end": "2020-11-29",
+   "days": 1,
+   "min_cf": 0.0818,
+   "min_cf_date": "2020-11-29",
+   "severe": false
+  },
+  {
+   "start": "2020-12-06",
+   "end": "2020-12-06",
+   "days": 1,
+   "min_cf": 0.0582,
+   "min_cf_date": "2020-12-06",
+   "severe": false
+  },
+  {
+   "start": "2021-02-27",
+   "end": "2021-03-03",
+   "days": 5,
+   "min_cf": 0.0381,
+   "min_cf_date": "2021-03-03",
+   "severe": true
+  },
+  {
+   "start": "2021-03-06",
+   "end": "2021-03-07",
+   "days": 2,
+   "min_cf": 0.0731,
+   "min_cf_date": "2021-03-06",
+   "severe": false
+  },
+  {
+   "start": "2021-04-12",
+   "end": "2021-04-14",
+   "days": 3,
+   "min_cf": 0.0335,
+   "min_cf_date": "2021-04-13",
+   "severe": true
+  },
+  {
+   "start": "2021-04-16",
+   "end": "2021-04-17",
+   "days": 2,
+   "min_cf": 0.0934,
+   "min_cf_date": "2021-04-16",
+   "severe": false
+  },
+  {
+   "start": "2021-04-19",
+   "end": "2021-04-20",
+   "days": 2,
+   "min_cf": 0.0609,
+   "min_cf_date": "2021-04-20",
+   "severe": false
+  },
+  {
+   "start": "2021-04-23",
+   "end": "2021-04-23",
+   "days": 1,
+   "min_cf": 0.0895,
+   "min_cf_date": "2021-04-23",
+   "severe": false
+  },
+  {
+   "start": "2021-04-30",
+   "end": "2021-05-02",
+   "days": 3,
+   "min_cf": 0.0472,
+   "min_cf_date": "2021-05-01",
+   "severe": true
+  },
+  {
+   "start": "2021-05-13",
+   "end": "2021-05-14",
+   "days": 2,
+   "min_cf": 0.0715,
+   "min_cf_date": "2021-05-14",
+   "severe": false
+  },
+  {
+   "start": "2021-05-16",
+   "end": "2021-05-16",
+   "days": 1,
+   "min_cf": 0.0946,
+   "min_cf_date": "2021-05-16",
+   "severe": false
+  },
+  {
+   "start": "2021-05-18",
+   "end": "2021-05-19",
+   "days": 2,
+   "min_cf": 0.0814,
+   "min_cf_date": "2021-05-19",
+   "severe": false
+  },
+  {
+   "start": "2021-05-27",
+   "end": "2021-05-30",
+   "days": 4,
+   "min_cf": 0.0424,
+   "min_cf_date": "2021-05-28",
+   "severe": true
+  },
+  {
+   "start": "2021-06-05",
+   "end": "2021-06-06",
+   "days": 2,
+   "min_cf": 0.0454,
+   "min_cf_date": "2021-06-06",
+   "severe": true
+  },
+  {
+   "start": "2021-06-23",
+   "end": "2021-06-23",
+   "days": 1,
+   "min_cf": 0.0733,
+   "min_cf_date": "2021-06-23",
+   "severe": false
+  },
+  {
+   "start": "2021-06-28",
+   "end": "2021-06-28",
+   "days": 1,
+   "min_cf": 0.0977,
+   "min_cf_date": "2021-06-28",
+   "severe": false
+  },
+  {
+   "start": "2021-07-02",
+   "end": "2021-07-02",
+   "days": 1,
+   "min_cf": 0.0409,
+   "min_cf_date": "2021-07-02",
+   "severe": true
+  },
+  {
+   "start": "2021-07-08",
+   "end": "2021-07-12",
+   "days": 5,
+   "min_cf": 0.0274,
+   "min_cf_date": "2021-07-10",
+   "severe": true
+  },
+  {
+   "start": "2021-07-18",
+   "end": "2021-07-22",
+   "days": 5,
+   "min_cf": 0.0286,
+   "min_cf_date": "2021-07-22",
+   "severe": true
+  },
+  {
+   "start": "2021-07-25",
+   "end": "2021-07-27",
+   "days": 3,
+   "min_cf": 0.0551,
+   "min_cf_date": "2021-07-26",
+   "severe": false
+  },
+  {
+   "start": "2021-08-01",
+   "end": "2021-08-04",
+   "days": 4,
+   "min_cf": 0.0403,
+   "min_cf_date": "2021-08-03",
+   "severe": true
+  },
+  {
+   "start": "2021-08-10",
+   "end": "2021-08-10",
+   "days": 1,
+   "min_cf": 0.0961,
+   "min_cf_date": "2021-08-10",
+   "severe": false
+  },
+  {
+   "start": "2021-08-19",
+   "end": "2021-08-20",
+   "days": 2,
+   "min_cf": 0.0684,
+   "min_cf_date": "2021-08-19",
+   "severe": false
+  },
+  {
+   "start": "2021-08-22",
+   "end": "2021-08-22",
+   "days": 1,
+   "min_cf": 0.0809,
+   "min_cf_date": "2021-08-22",
+   "severe": false
+  },
+  {
+   "start": "2021-09-06",
+   "end": "2021-09-07",
+   "days": 2,
+   "min_cf": 0.0676,
+   "min_cf_date": "2021-09-06",
+   "severe": false
+  },
+  {
+   "start": "2021-09-09",
+   "end": "2021-09-09",
+   "days": 1,
+   "min_cf": 0.095,
+   "min_cf_date": "2021-09-09",
+   "severe": false
+  },
+  {
+   "start": "2021-09-12",
+   "end": "2021-09-12",
+   "days": 1,
+   "min_cf": 0.073,
+   "min_cf_date": "2021-09-12",
+   "severe": false
+  },
+  {
+   "start": "2021-09-15",
+   "end": "2021-09-16",
+   "days": 2,
+   "min_cf": 0.0815,
+   "min_cf_date": "2021-09-15",
+   "severe": false
+  },
+  {
+   "start": "2021-09-18",
+   "end": "2021-09-18",
+   "days": 1,
+   "min_cf": 0.0787,
+   "min_cf_date": "2021-09-18",
+   "severe": false
+  },
+  {
+   "start": "2021-12-17",
+   "end": "2021-12-21",
+   "days": 5,
+   "min_cf": 0.0669,
+   "min_cf_date": "2021-12-21",
+   "severe": false
+  },
+  {
+   "start": "2022-01-14",
+   "end": "2022-01-14",
+   "days": 1,
+   "min_cf": 0.0872,
+   "min_cf_date": "2022-01-14",
+   "severe": false
+  },
+  {
+   "start": "2022-03-23",
+   "end": "2022-03-29",
+   "days": 7,
+   "min_cf": 0.0246,
+   "min_cf_date": "2022-03-28",
+   "severe": true
+  },
+  {
+   "start": "2022-04-02",
+   "end": "2022-04-02",
+   "days": 1,
+   "min_cf": 0.0879,
+   "min_cf_date": "2022-04-02",
+   "severe": false
+  },
+  {
+   "start": "2022-04-10",
+   "end": "2022-04-10",
+   "days": 1,
+   "min_cf": 0.0917,
+   "min_cf_date": "2022-04-10",
+   "severe": false
+  },
+  {
+   "start": "2022-04-14",
+   "end": "2022-04-14",
+   "days": 1,
+   "min_cf": 0.0626,
+   "min_cf_date": "2022-04-14",
+   "severe": false
+  },
+  {
+   "start": "2022-04-28",
+   "end": "2022-04-29",
+   "days": 2,
+   "min_cf": 0.0682,
+   "min_cf_date": "2022-04-29",
+   "severe": false
+  },
+  {
+   "start": "2022-05-01",
+   "end": "2022-05-03",
+   "days": 3,
+   "min_cf": 0.0544,
+   "min_cf_date": "2022-05-02",
+   "severe": false
+  },
+  {
+   "start": "2022-05-07",
+   "end": "2022-05-07",
+   "days": 1,
+   "min_cf": 0.0797,
+   "min_cf_date": "2022-05-07",
+   "severe": false
+  },
+  {
+   "start": "2022-05-30",
+   "end": "2022-06-02",
+   "days": 4,
+   "min_cf": 0.0459,
+   "min_cf_date": "2022-06-01",
+   "severe": true
+  },
+  {
+   "start": "2022-06-07",
+   "end": "2022-06-07",
+   "days": 1,
+   "min_cf": 0.0955,
+   "min_cf_date": "2022-06-07",
+   "severe": false
+  },
+  {
+   "start": "2022-06-14",
+   "end": "2022-06-15",
+   "days": 2,
+   "min_cf": 0.0949,
+   "min_cf_date": "2022-06-15",
+   "severe": false
+  },
+  {
+   "start": "2022-06-21",
+   "end": "2022-06-21",
+   "days": 1,
+   "min_cf": 0.0675,
+   "min_cf_date": "2022-06-21",
+   "severe": false
+  },
+  {
+   "start": "2022-06-30",
+   "end": "2022-06-30",
+   "days": 1,
+   "min_cf": 0.0695,
+   "min_cf_date": "2022-06-30",
+   "severe": false
+  },
+  {
+   "start": "2022-07-10",
+   "end": "2022-07-10",
+   "days": 1,
+   "min_cf": 0.0816,
+   "min_cf_date": "2022-07-10",
+   "severe": false
+  },
+  {
+   "start": "2022-07-16",
+   "end": "2022-07-16",
+   "days": 1,
+   "min_cf": 0.0871,
+   "min_cf_date": "2022-07-16",
+   "severe": false
+  },
+  {
+   "start": "2022-07-22",
+   "end": "2022-07-22",
+   "days": 1,
+   "min_cf": 0.0701,
+   "min_cf_date": "2022-07-22",
+   "severe": false
+  },
+  {
+   "start": "2022-07-27",
+   "end": "2022-07-27",
+   "days": 1,
+   "min_cf": 0.0576,
+   "min_cf_date": "2022-07-27",
+   "severe": false
+  },
+  {
+   "start": "2022-08-11",
+   "end": "2022-08-15",
+   "days": 5,
+   "min_cf": 0.0524,
+   "min_cf_date": "2022-08-14",
+   "severe": false
+  },
+  {
+   "start": "2022-08-26",
+   "end": "2022-08-28",
+   "days": 3,
+   "min_cf": 0.0422,
+   "min_cf_date": "2022-08-26",
+   "severe": true
+  },
+  {
+   "start": "2022-09-20",
+   "end": "2022-09-20",
+   "days": 1,
+   "min_cf": 0.0637,
+   "min_cf_date": "2022-09-20",
+   "severe": false
+  },
+  {
+   "start": "2022-11-29",
+   "end": "2022-11-29",
+   "days": 1,
+   "min_cf": 0.0438,
+   "min_cf_date": "2022-11-29",
+   "severe": true
+  },
+  {
+   "start": "2022-12-11",
+   "end": "2022-12-12",
+   "days": 2,
+   "min_cf": 0.0496,
+   "min_cf_date": "2022-12-11",
+   "severe": true
+  },
+  {
+   "start": "2023-03-05",
+   "end": "2023-03-05",
+   "days": 1,
+   "min_cf": 0.0792,
+   "min_cf_date": "2023-03-05",
+   "severe": false
+  },
+  {
+   "start": "2023-04-17",
+   "end": "2023-04-17",
+   "days": 1,
+   "min_cf": 0.0984,
+   "min_cf_date": "2023-04-17",
+   "severe": false
+  },
+  {
+   "start": "2023-04-26",
+   "end": "2023-04-26",
+   "days": 1,
+   "min_cf": 0.06,
+   "min_cf_date": "2023-04-26",
+   "severe": false
+  },
+  {
+   "start": "2023-04-29",
+   "end": "2023-04-29",
+   "days": 1,
+   "min_cf": 0.052,
+   "min_cf_date": "2023-04-29",
+   "severe": false
+  },
+  {
+   "start": "2023-05-02",
+   "end": "2023-05-02",
+   "days": 1,
+   "min_cf": 0.082,
+   "min_cf_date": "2023-05-02",
+   "severe": false
+  },
+  {
+   "start": "2023-05-11",
+   "end": "2023-05-11",
+   "days": 1,
+   "min_cf": 0.0497,
+   "min_cf_date": "2023-05-11",
+   "severe": true
+  },
+  {
+   "start": "2023-06-16",
+   "end": "2023-06-17",
+   "days": 2,
+   "min_cf": 0.0558,
+   "min_cf_date": "2023-06-16",
+   "severe": false
+  },
+  {
+   "start": "2023-06-22",
+   "end": "2023-06-22",
+   "days": 1,
+   "min_cf": 0.0542,
+   "min_cf_date": "2023-06-22",
+   "severe": false
+  },
+  {
+   "start": "2023-07-18",
+   "end": "2023-07-20",
+   "days": 3,
+   "min_cf": 0.053,
+   "min_cf_date": "2023-07-18",
+   "severe": false
+  },
+  {
+   "start": "2023-08-16",
+   "end": "2023-08-16",
+   "days": 1,
+   "min_cf": 0.0468,
+   "min_cf_date": "2023-08-16",
+   "severe": true
+  },
+  {
+   "start": "2023-08-23",
+   "end": "2023-08-23",
+   "days": 1,
+   "min_cf": 0.0919,
+   "min_cf_date": "2023-08-23",
+   "severe": false
+  },
+  {
+   "start": "2023-08-26",
+   "end": "2023-08-26",
+   "days": 1,
+   "min_cf": 0.0875,
+   "min_cf_date": "2023-08-26",
+   "severe": false
+  },
+  {
+   "start": "2023-08-31",
+   "end": "2023-09-02",
+   "days": 3,
+   "min_cf": 0.076,
+   "min_cf_date": "2023-09-02",
+   "severe": false
+  },
+  {
+   "start": "2023-09-07",
+   "end": "2023-09-10",
+   "days": 4,
+   "min_cf": 0.0218,
+   "min_cf_date": "2023-09-08",
+   "severe": true
+  },
+  {
+   "start": "2023-11-16",
+   "end": "2023-11-17",
+   "days": 2,
+   "min_cf": 0.0599,
+   "min_cf_date": "2023-11-16",
+   "severe": false
+  },
+  {
+   "start": "2023-12-01",
+   "end": "2023-12-02",
+   "days": 2,
+   "min_cf": 0.069,
+   "min_cf_date": "2023-12-02",
+   "severe": false
+  },
+  {
+   "start": "2024-02-24",
+   "end": "2024-02-24",
+   "days": 1,
+   "min_cf": 0.0435,
+   "min_cf_date": "2024-02-24",
+   "severe": true
+  },
+  {
+   "start": "2024-03-20",
+   "end": "2024-03-20",
+   "days": 1,
+   "min_cf": 0.0962,
+   "min_cf_date": "2024-03-20",
+   "severe": false
+  },
+  {
+   "start": "2024-04-26",
+   "end": "2024-04-26",
+   "days": 1,
+   "min_cf": 0.064,
+   "min_cf_date": "2024-04-26",
+   "severe": false
+  },
+  {
+   "start": "2024-05-05",
+   "end": "2024-05-07",
+   "days": 3,
+   "min_cf": 0.0462,
+   "min_cf_date": "2024-05-05",
+   "severe": true
+  },
+  {
+   "start": "2024-05-09",
+   "end": "2024-05-10",
+   "days": 2,
+   "min_cf": 0.0559,
+   "min_cf_date": "2024-05-10",
+   "severe": false
+  },
+  {
+   "start": "2024-05-15",
+   "end": "2024-05-18",
+   "days": 4,
+   "min_cf": 0.0622,
+   "min_cf_date": "2024-05-17",
+   "severe": false
+  },
+  {
+   "start": "2024-05-21",
+   "end": "2024-05-21",
+   "days": 1,
+   "min_cf": 0.0648,
+   "min_cf_date": "2024-05-21",
+   "severe": false
+  },
+  {
+   "start": "2024-05-24",
+   "end": "2024-05-24",
+   "days": 1,
+   "min_cf": 0.0666,
+   "min_cf_date": "2024-05-24",
+   "severe": false
+  },
+  {
+   "start": "2024-06-12",
+   "end": "2024-06-12",
+   "days": 1,
+   "min_cf": 0.0876,
+   "min_cf_date": "2024-06-12",
+   "severe": false
+  },
+  {
+   "start": "2024-06-20",
+   "end": "2024-06-20",
+   "days": 1,
+   "min_cf": 0.0966,
+   "min_cf_date": "2024-06-20",
+   "severe": false
+  },
+  {
+   "start": "2024-06-25",
+   "end": "2024-06-25",
+   "days": 1,
+   "min_cf": 0.08,
+   "min_cf_date": "2024-06-25",
+   "severe": false
+  },
+  {
+   "start": "2024-07-08",
+   "end": "2024-07-08",
+   "days": 1,
+   "min_cf": 0.0559,
+   "min_cf_date": "2024-07-08",
+   "severe": false
+  },
+  {
+   "start": "2024-07-15",
+   "end": "2024-07-15",
+   "days": 1,
+   "min_cf": 0.0594,
+   "min_cf_date": "2024-07-15",
+   "severe": false
+  },
+  {
+   "start": "2024-07-17",
+   "end": "2024-07-17",
+   "days": 1,
+   "min_cf": 0.089,
+   "min_cf_date": "2024-07-17",
+   "severe": false
+  },
+  {
+   "start": "2024-07-23",
+   "end": "2024-07-23",
+   "days": 1,
+   "min_cf": 0.0906,
+   "min_cf_date": "2024-07-23",
+   "severe": false
+  },
+  {
+   "start": "2024-07-27",
+   "end": "2024-07-28",
+   "days": 2,
+   "min_cf": 0.0468,
+   "min_cf_date": "2024-07-27",
+   "severe": true
+  },
+  {
+   "start": "2024-07-31",
+   "end": "2024-08-01",
+   "days": 2,
+   "min_cf": 0.0733,
+   "min_cf_date": "2024-08-01",
+   "severe": false
+  },
+  {
+   "start": "2024-09-04",
+   "end": "2024-09-04",
+   "days": 1,
+   "min_cf": 0.0672,
+   "min_cf_date": "2024-09-04",
+   "severe": false
+  },
+  {
+   "start": "2024-09-07",
+   "end": "2024-09-07",
+   "days": 1,
+   "min_cf": 0.0701,
+   "min_cf_date": "2024-09-07",
+   "severe": false
+  },
+  {
+   "start": "2024-10-30",
+   "end": "2024-10-30",
+   "days": 1,
+   "min_cf": 0.0901,
+   "min_cf_date": "2024-10-30",
+   "severe": false
+  },
+  {
+   "start": "2024-11-03",
+   "end": "2024-11-05",
+   "days": 3,
+   "min_cf": 0.0451,
+   "min_cf_date": "2024-11-05",
+   "severe": true
+  },
+  {
+   "start": "2024-11-09",
+   "end": "2024-11-09",
+   "days": 1,
+   "min_cf": 0.0696,
+   "min_cf_date": "2024-11-09",
+   "severe": false
+  },
+  {
+   "start": "2024-12-12",
+   "end": "2024-12-13",
+   "days": 2,
+   "min_cf": 0.0644,
+   "min_cf_date": "2024-12-12",
+   "severe": false
+  },
+  {
+   "start": "2024-12-27",
+   "end": "2024-12-27",
+   "days": 1,
+   "min_cf": 0.0819,
+   "min_cf_date": "2024-12-27",
+   "severe": false
+  },
+  {
+   "start": "2025-01-20",
+   "end": "2025-01-20",
+   "days": 1,
+   "min_cf": 0.0975,
+   "min_cf_date": "2025-01-20",
+   "severe": false
+  },
+  {
+   "start": "2025-01-22",
+   "end": "2025-01-22",
+   "days": 1,
+   "min_cf": 0.0263,
+   "min_cf_date": "2025-01-22",
+   "severe": true
+  },
+  {
+   "start": "2025-03-19",
+   "end": "2025-03-19",
+   "days": 1,
+   "min_cf": 0.0647,
+   "min_cf_date": "2025-03-19",
+   "severe": false
+  },
+  {
+   "start": "2025-04-07",
+   "end": "2025-04-08",
+   "days": 2,
+   "min_cf": 0.0435,
+   "min_cf_date": "2025-04-08",
+   "severe": true
+  },
+  {
+   "start": "2025-04-29",
+   "end": "2025-04-30",
+   "days": 2,
+   "min_cf": 0.0714,
+   "min_cf_date": "2025-04-29",
+   "severe": false
+  },
+  {
+   "start": "2025-05-07",
+   "end": "2025-05-07",
+   "days": 1,
+   "min_cf": 0.0998,
+   "min_cf_date": "2025-05-07",
+   "severe": false
+  },
+  {
+   "start": "2025-05-20",
+   "end": "2025-05-20",
+   "days": 1,
+   "min_cf": 0.0816,
+   "min_cf_date": "2025-05-20",
+   "severe": false
+  },
+  {
+   "start": "2025-07-10",
+   "end": "2025-07-12",
+   "days": 3,
+   "min_cf": 0.0601,
+   "min_cf_date": "2025-07-11",
+   "severe": false
+  },
+  {
+   "start": "2025-07-21",
+   "end": "2025-07-21",
+   "days": 1,
+   "min_cf": 0.098,
+   "min_cf_date": "2025-07-21",
+   "severe": false
+  },
+  {
+   "start": "2025-07-29",
+   "end": "2025-07-29",
+   "days": 1,
+   "min_cf": 0.0456,
+   "min_cf_date": "2025-07-29",
+   "severe": true
+  },
+  {
+   "start": "2025-08-12",
+   "end": "2025-08-12",
+   "days": 1,
+   "min_cf": 0.0982,
+   "min_cf_date": "2025-08-12",
+   "severe": false
+  },
+  {
+   "start": "2025-08-22",
+   "end": "2025-08-24",
+   "days": 3,
+   "min_cf": 0.0424,
+   "min_cf_date": "2025-08-23",
+   "severe": true
+  },
+  {
+   "start": "2025-09-28",
+   "end": "2025-09-29",
+   "days": 2,
+   "min_cf": 0.0801,
+   "min_cf_date": "2025-09-29",
+   "severe": false
+  },
+  {
+   "start": "2025-10-12",
+   "end": "2025-10-14",
+   "days": 3,
+   "min_cf": 0.0393,
+   "min_cf_date": "2025-10-12",
+   "severe": true
+  },
+  {
+   "start": "2025-10-16",
+   "end": "2025-10-17",
+   "days": 2,
+   "min_cf": 0.0526,
+   "min_cf_date": "2025-10-17",
+   "severe": false
+  },
+  {
+   "start": "2026-03-19",
+   "end": "2026-03-19",
+   "days": 1,
+   "min_cf": 0.0937,
+   "min_cf_date": "2026-03-19",
+   "severe": false
+  },
+  {
+   "start": "2026-03-21",
+   "end": "2026-03-21",
+   "days": 1,
+   "min_cf": 0.0973,
+   "min_cf_date": "2026-03-21",
+   "severe": false
+  },
+  {
+   "start": "2026-04-24",
+   "end": "2026-04-25",
+   "days": 2,
+   "min_cf": 0.0526,
+   "min_cf_date": "2026-04-24",
+   "severe": false
+  },
+  {
+   "start": "2026-04-27",
+   "end": "2026-04-27",
+   "days": 1,
+   "min_cf": 0.0884,
+   "min_cf_date": "2026-04-27",
+   "severe": false
+  },
+  {
+   "start": "2026-05-04",
+   "end": "2026-05-04",
+   "days": 1,
+   "min_cf": 0.0972,
+   "min_cf_date": "2026-05-04",
+   "severe": false
+  },
+  {
+   "start": "2026-06-21",
+   "end": "2026-06-21",
+   "days": 1,
+   "min_cf": 0.0901,
+   "min_cf_date": "2026-06-21",
+   "severe": false
+  },
+  {
+   "start": "2026-07-08",
+   "end": "2026-07-10",
+   "days": 3,
+   "min_cf": 0.0732,
+   "min_cf_date": "2026-07-09",
+   "severe": false
+  },
+  {
+   "start": "2026-07-16",
+   "end": "2026-07-16",
+   "days": 1,
+   "min_cf": 0.0997,
+   "min_cf_date": "2026-07-16",
+   "severe": false
+  },
+  {
+   "start": "2026-08-02",
+   "end": "2026-08-02",
+   "days": 1,
+   "min_cf": 0.0847,
+   "min_cf_date": "2026-08-02",
+   "severe": false
+  },
+  {
+   "start": "2026-08-13",
+   "end": "2026-08-13",
+   "days": 1,
+   "min_cf": 0.0847,
+   "min_cf_date": "2026-08-13",
+   "severe": false
+  },
+  {
+   "start": "2026-08-16",
+   "end": "2026-08-17",
+   "days": 2,
+   "min_cf": 0.0393,
+   "min_cf_date": "2026-08-16",
+   "severe": true
+  },
+  {
+   "start": "2026-08-23",
+   "end": "2026-08-23",
+   "days": 1,
+   "min_cf": 0.0618,
+   "min_cf_date": "2026-08-23",
+   "severe": false
+  },
+  {
+   "start": "2026-09-13",
+   "end": "2026-09-13",
+   "days": 1,
+   "min_cf": 0.081,
+   "min_cf_date": "2026-09-13",
+   "severe": false
+  },
+  {
+   "start": "2026-10-06",
+   "end": "2026-10-06",
+   "days": 1,
+   "min_cf": 0.0805,
+   "min_cf_date": "2026-10-06",
+   "severe": false
+  }
+ ],
+ "summary": {
+  "counts": {
+   "ge_1d": 249,
+   "ge_3d": 46,
+   "ge_7d": 2,
+   "ge_14d": 0
+  }
+ },
+ "_fixture": "Trimmed copy of site/data/wind_unreliability.json as built 13 Nov 2026 (carpet dropped; lulls and counts as published). aios-harness#149."
+}

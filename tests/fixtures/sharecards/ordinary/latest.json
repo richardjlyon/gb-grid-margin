@@ -1,0 +1,54 @@
+{
+ "schema_version": 1,
+ "verdict": {
+  "snapshot": "2026-11-13T13:35:00Z",
+  "embedded_time": "2026-11-13T13:30Z",
+  "national_demand_mw": 40862,
+  "wind_mw": 8733,
+  "solar_mw": 5545,
+  "gas_mw": 10991,
+  "net_import_mw": 6533,
+  "nuclear_mw": 5139,
+  "biomass_mw": 3044,
+  "other_mw": 877,
+  "firm_mw": 20051,
+  "notfirm_mw": 20811,
+  "wind_pct": 21.4,
+  "solar_pct": 13.6,
+  "gas_pct": 26.9,
+  "import_pct": 16.0,
+  "nuclear_pct": 12.6,
+  "biomass_pct": 7.4,
+  "other_pct": 2.1,
+  "firm_pct": 49.1,
+  "notfirm_pct": 50.9,
+  "gas_plus_imports_pct": 42.9,
+  "renewables_pct": 34.9,
+  "solar_included": true,
+  "reconcile_residual_pct": 5.9
+ },
+ "import": {
+  "rate_per_h": 1469925.0,
+  "net_import_mw": 6533,
+  "import_pct": 16.0,
+  "price_per_mwh": 225.0,
+  "price_stamp": "latest settled half-hour \u00b7 13 Nov, 12:30"
+ },
+ "provenance": {
+  "build_time_utc": "2026-11-13T13:41:53.016407+00:00",
+  "snapshot": "2026-11-13T13:35:00Z",
+  "embedded_time": "2026-11-13T13:30Z",
+  "embedded_age_min": 5.0,
+  "indo": 32020,
+  "pvlive_solar_mw": 7743.14,
+  "reconcile_residual_pct": 5.9,
+  "solar_capacity_mw": 23963,
+  "wind_capacity_mw": 5908,
+  "source_urls": {
+   "fuelinst": "https://data.elexon.co.uk/bmrs/api/v1/datasets/FUELINST/stream",
+   "neso_embedded": "https://api.neso.energy/api/3/action/datastore_search?resource_id=db6c038f-98af-4570-ab60-24d71ebd0ae5",
+   "indo": "https://data.elexon.co.uk/bmrs/api/v1/demand/outturn",
+   "pvlive": "https://api.solar.sheffield.ac.uk/pvlive/api/v4/gsp/0"
+  }
+ }
+}
