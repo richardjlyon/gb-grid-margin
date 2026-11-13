@@ -126,8 +126,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def build(out_dir: Path = SITE_DATA) -> int:
-    """Recompute every derived series from the store and write site/data/*.json."""
+def build(out_dir: Path = SITE_DATA, site: Path = Path("site")) -> int:
+    """Recompute every derived series from the store and write site/data/*.json.
+
+    `site` is the folder whose pages are regenerated (post-mortems, method page, chrome);
+    tests pass a copy so a test run never writes into the real site/ (aios-harness#149).
+    """
     rows = read_store()
     if not rows:
         print("store empty — nothing to derive")
@@ -309,7 +313,8 @@ def build(out_dir: Path = SITE_DATA) -> int:
     # embedded store, non-fatal).
     from engine import scenarios as _scenarios
     try:
-        scenario_named = _scenarios.build_all(rows, embedded_rows, price_rows, ns, caps, generated)
+        scenario_named = _scenarios.build_all(rows, embedded_rows, price_rows, ns, caps, generated,
+                                               site=site)
     except GuardError as e:
         print(f"scenario build failed (GuardError): {e}", file=sys.stderr); return 1
     reliability_files.extend(scenario_named)
@@ -317,11 +322,11 @@ def build(out_dir: Path = SITE_DATA) -> int:
         print(f"generated {len(scenario_named)} post-mortem page(s)")
 
     # Regenerate the methodology page's source cards from the same registry (build-time, static).
-    methodology.build(sources_payload)
+    methodology.build(sources_payload, path=site / "methodology.html")
     print("regenerated site/methodology.html source cards")
 
     # Keep the shared page chrome (masthead/nav, footer, head assets) single-sourced across pages.
-    chrome.build()
+    chrome.build(site)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     for name, payload in [("ytd_shares", ytd), ("nameplate", nameplate),

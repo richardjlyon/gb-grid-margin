@@ -153,7 +153,7 @@ def test_derived_build_emits_reliability_when_embedded_present(tmp_path):
     # If embedded store is present, build() must emit both reliability files with values.
     if not embedded_history.read_store():
         pytest.skip("embedded store not built in this checkout")
-    rc = derived.build(out_dir=tmp_path)
+    rc = derived.build(out_dir=tmp_path, site=_copy_of_site(tmp_path))
     assert rc == 0
     for name in ("reliability_year", "reliability_carpet"):
         payload = json.loads((tmp_path / f"{name}.json").read_text())
@@ -163,6 +163,33 @@ def test_derived_build_emits_reliability_when_embedded_present(tmp_path):
     assert year_payload["values"]              # non-empty
     carpet_payload = json.loads((tmp_path / "reliability_carpet.json").read_text())
     assert carpet_payload["days"]              # non-empty
+
+
+def _copy_of_site(tmp_path):
+    import shutil
+    from pathlib import Path
+    return Path(shutil.copytree("site", tmp_path / "site"))
+
+
+def _tree_digest(root):
+    """Every file under root (tracked or not) mapped to a hash of its bytes."""
+    import hashlib
+    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(root.rglob("*")) if p.is_file()}
+
+
+def test_derived_build_under_test_leaves_the_real_site_untouched(tmp_path):
+    # A build run by the tests must write only to a temporary folder. It used to write the
+    # post-mortem pages into the real site/post-mortem/, leaving an unreviewed page one
+    # `git add` away from publishing (aios-harness#149).
+    if not embedded_history.read_store():
+        pytest.skip("embedded store not built in this checkout")
+    from pathlib import Path
+    real = {d: _tree_digest(Path(d)) for d in ("site", "data")}
+    rc = derived.build(out_dir=tmp_path / "data", site=_copy_of_site(tmp_path))
+    assert rc == 0
+    assert {d: _tree_digest(Path(d)) for d in ("site", "data")} == real
+    assert (tmp_path / "site" / "post-mortem" / "index.html").exists()
 
 
 # ---------------------------------------------------------------------------
