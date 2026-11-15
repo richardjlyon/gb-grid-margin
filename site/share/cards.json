@@ -1,13 +1,13 @@
 {
-  "asof": "14 November 2026",
+  "asof": "15 November 2026",
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "61%",
-      "label": "of Britain's grid depended on weather and imports \u2014 wind, solar and interconnectors that fall away together.",
+      "figure": "41%",
+      "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
       "kind": "live",
-      "version": "699e986774",
-      "png": "/share/live-balance.png?v=699e986774"
+      "version": "ce9eff080d",
+      "png": "/share/live-balance.png?v=ce9eff080d"
     },
     {
       "slug": "recent-lull",
