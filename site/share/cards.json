@@ -3,11 +3,11 @@
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "61%",
-      "label": "of Britain's grid depended on weather and imports \u2014 wind, solar and interconnectors that fall away together.",
+      "figure": "48%",
+      "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
       "kind": "live",
-      "version": "26a38e6533",
-      "png": "/share/live-balance.png?v=26a38e6533"
+      "version": "c271bcce81",
+      "png": "/share/live-balance.png?v=c271bcce81"
     },
     {
       "slug": "recent-lull",
