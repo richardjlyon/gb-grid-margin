@@ -3,10 +3,10 @@
   "source": "Elexon FUELHH net interconnector flow \u00d7 Elexon system (cash-out) price, settled, back to 2016",
   "metric_label": "net imported energy valued at the GB system price",
   "caveat": "Net imported energy valued at the GB system (cash-out) price \u2014 not the contractual cost of the imports, which clear in the day-ahead auction.",
-  "generated_utc": "2026-11-19T14:58:11.685112+00:00",
+  "generated_utc": "2026-11-20T00:04:11.837309+00:00",
   "range": {
     "first": "2016-01-01",
-    "last": "2026-11-14"
+    "last": "2026-11-15"
   },
   "partial_years": [
     2026
@@ -22,11 +22,11 @@
   },
   "distribution": {
     "p10": 702461.2,
-    "p25": 1914153.0,
-    "p50": 3239359.5,
-    "p75": 7141539.0,
-    "p90": 11155817.8,
-    "mean": 4965786.5
+    "p25": 1915234.7,
+    "p50": 3241518.4,
+    "p75": 7150338.7,
+    "p90": 11175705.4,
+    "mean": 4973979.1
   },
   "carpet": {
     "years": [
@@ -4411,7 +4411,7 @@
         15157998.8,
         32577311.9,
         27583521.0,
-        null,
+        37506722.1,
         null,
         null,
         null,
@@ -4483,16 +4483,16 @@
       "value_gbp": 40490488.8
     },
     {
+      "date": "2026-11-15",
+      "value_gbp": 37506722.1
+    },
+    {
       "date": "2021-12-18",
       "value_gbp": 36089994.8
     },
     {
       "date": "2021-11-02",
       "value_gbp": 34104177.6
-    },
-    {
-      "date": "2022-03-06",
-      "value_gbp": 32611525.3
     }
   ],
   "summary": {
@@ -4511,8 +4511,8 @@
       "2023": 2658141582.8,
       "2024": 2567642834.3,
       "2025": 2645874927.1,
-      "2026": 2773657755.8
+      "2026": 2811164477.9
     },
-    "year_to_date": 2773657755.8
+    "year_to_date": 2811164477.9
   }
 }
