@@ -1,13 +1,13 @@
 {
-  "asof": "19 November 2026",
+  "asof": "20 November 2026",
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "65%",
-      "label": "of Britain's grid was firm power \u2014 the rest depended on weather and imports, in roughly equal measure.",
+      "figure": "72%",
+      "label": "of Britain's grid ran on firm power \u2014 gas, nuclear and biomass that answer on demand.",
       "kind": "live",
-      "version": "79fdea43e6",
-      "png": "/share/live-balance.png?v=79fdea43e6"
+      "version": "72f17108f1",
+      "png": "/share/live-balance.png?v=72f17108f1"
     },
     {
       "slug": "recent-lull",
