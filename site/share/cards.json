@@ -3,11 +3,11 @@
   "cards": [
     {
       "slug": "live-balance",
-      "figure": "72%",
+      "figure": "70%",
       "label": "of Britain's grid ran on firm power \u2014 gas, nuclear and biomass that answer on demand.",
       "kind": "live",
-      "version": "72f17108f1",
-      "png": "/share/live-balance.png?v=72f17108f1"
+      "version": "a3b1103fce",
+      "png": "/share/live-balance.png?v=a3b1103fce"
     },
     {
       "slug": "recent-lull",
